@@ -269,6 +269,32 @@ export async function registerRoutes(
       res.status(500).json({ error: err.message });
     }
   });
+  
+  // Resolve alert (admin only)
+  app.patch("/api/alerts/:id", requireAdmin, async (req, res) => {
+    try {
+      const alert = await storage.updateAlert(req.params.id, req.body);
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+      res.json(alert);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Update application status (admin only)
+  app.patch("/api/applications/:id", requireAdmin, async (req, res) => {
+    try {
+      const application = await storage.updateApplication(req.params.id, req.body);
+      if (!application) {
+        return res.status(404).json({ error: "Application not found" });
+      }
+      res.json(application);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   return httpServer;
 }

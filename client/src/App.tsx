@@ -19,6 +19,7 @@ import AdminAegis from "@/pages/admin-aegis";
 import AdminSites from "@/pages/admin-sites";
 import AdminLogs from "@/pages/admin-logs";
 import AdminAchievements from "@/pages/admin-achievements";
+import AdminApplications from "@/pages/admin-applications";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/admin/sites" component={AdminSites} />
       <Route path="/admin/logs" component={AdminLogs} />
       <Route path="/admin/achievements" component={AdminAchievements} />
+      <Route path="/admin/applications" component={AdminApplications} />
       <Route path="/pitch" component={Pitch} />
       <Route component={NotFound} />
     </Switch>

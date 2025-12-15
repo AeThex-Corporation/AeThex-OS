@@ -30,9 +30,11 @@ export interface IStorage {
   
   // Applications
   getApplications(): Promise<any[]>;
+  updateApplication(id: string, updates: any): Promise<any>;
   
   // Alerts
   getAlerts(): Promise<any[]>;
+  updateAlert(id: string, updates: any): Promise<any>;
   
   // Metrics
   getMetrics(): Promise<{
@@ -195,6 +197,46 @@ export class SupabaseStorage implements IStorage {
     
     if (error) return [];
     return data || [];
+  }
+  
+  async updateAlert(id: string, updates: any): Promise<any> {
+    const updateData: any = {};
+    if ('is_resolved' in updates) {
+      updateData.is_resolved = updates.is_resolved;
+    }
+    
+    const { data, error } = await supabase
+      .from('aethex_alerts')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Update alert error:', error);
+      throw new Error(error.message);
+    }
+    return data;
+  }
+  
+  async updateApplication(id: string, updates: any): Promise<any> {
+    const updateData: any = {};
+    if ('status' in updates) {
+      updateData.status = updates.status;
+    }
+    
+    const { data, error } = await supabase
+      .from('applications')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Update application error:', error);
+      throw new Error(error.message);
+    }
+    return data;
   }
   
   async getMetrics(): Promise<{

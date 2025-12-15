@@ -1,15 +1,16 @@
 import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { 
   Users, FileCode, Shield, Activity, LogOut, 
-  BarChart3, User, AlertTriangle, CheckCircle, XCircle, Eye, Globe, Award, Key
+  BarChart3, User, AlertTriangle, CheckCircle, XCircle, Globe, Award, Key, Inbox
 } from "lucide-react";
 
 export default function AdminAegis() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -35,6 +36,21 @@ export default function AdminAegis() {
       return res.json();
     },
     enabled: isAuthenticated,
+  });
+
+  const resolveAlertMutation = useMutation({
+    mutationFn: async ({ id, is_resolved }: { id: string; is_resolved: boolean }) => {
+      const res = await fetch(`/api/alerts/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_resolved }),
+      });
+      if (!res.ok) throw new Error("Failed to update alert");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alerts"] });
+    },
   });
 
   if (authLoading || !isAuthenticated) {
@@ -130,6 +146,18 @@ export default function AdminAegis() {
                       }`}>
                         {alert.is_resolved ? 'resolved' : 'active'}
                       </span>
+                      <button
+                        onClick={() => resolveAlertMutation.mutate({ id: alert.id, is_resolved: !alert.is_resolved })}
+                        disabled={resolveAlertMutation.isPending}
+                        className={`px-3 py-1 text-xs font-bold uppercase transition-colors ${
+                          alert.is_resolved 
+                            ? 'bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20'
+                            : 'bg-green-500/10 text-green-500 hover:bg-green-500/20'
+                        }`}
+                        data-testid={`button-resolve-${alert.id}`}
+                      >
+                        {alert.is_resolved ? 'Reopen' : 'Resolve'}
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -179,6 +207,7 @@ function Sidebar({ user, onLogout, active }: { user: any; onLogout: () => void; 
       <nav className="flex-1 p-4 space-y-2">
         <NavItem icon={<BarChart3 className="w-4 h-4" />} label="Dashboard" href="/admin" active={active === 'dashboard'} />
         <NavItem icon={<Users className="w-4 h-4" />} label="Architects" href="/admin/architects" active={active === 'architects'} />
+        <NavItem icon={<Inbox className="w-4 h-4" />} label="Applications" href="/admin/applications" active={active === 'applications'} />
         <NavItem icon={<Award className="w-4 h-4" />} label="Achievements" href="/admin/achievements" active={active === 'achievements'} />
         <NavItem icon={<FileCode className="w-4 h-4" />} label="Credentials" href="/admin/credentials" active={active === 'credentials'} />
         <NavItem icon={<Activity className="w-4 h-4" />} label="Projects" href="/admin/projects" active={active === 'projects'} />
