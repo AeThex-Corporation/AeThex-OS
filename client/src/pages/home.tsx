@@ -1,14 +1,18 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Shield, FileCode, Terminal as TerminalIcon, ChevronRight, BarChart3, Network, 
   ExternalLink, Lock, Zap, Users, Globe, CheckCircle, ArrowRight, Star,
-  Award, Cpu, Building
+  Award, Cpu, Building, Sparkles
 } from "lucide-react";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
+import { useTutorial, homeTutorialSteps, TutorialButton } from "@/components/Tutorial";
 
 export default function Home() {
+  const { startTutorial, hasCompletedTutorial, isActive } = useTutorial();
+  
   const { data: metrics } = useQuery({
     queryKey: ["metrics"],
     queryFn: async () => {
@@ -99,6 +103,7 @@ export default function Home() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
               className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 w-full max-w-4xl"
+              data-tutorial="metrics-section"
             >
               <div className="text-center p-4 border border-white/5 bg-card/30 hover:border-primary/30 transition-colors">
                 <div className="text-3xl font-display font-bold text-primary">{metrics.totalProfiles}</div>
@@ -130,6 +135,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
                 className="group relative border border-white/10 bg-card/50 p-8 hover:border-primary/50 transition-colors duration-300 cursor-pointer overflow-hidden h-full"
+                data-tutorial="axiom-card"
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-6">
@@ -152,6 +158,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
                 className="group relative border border-white/10 bg-card/50 p-8 hover:border-secondary/50 transition-colors duration-300 cursor-pointer overflow-hidden h-full"
+                data-tutorial="codex-card"
               >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                 <div className="flex justify-between items-start mb-6">
@@ -168,7 +175,7 @@ export default function Home() {
               </motion.div>
             </a>
 
-            <a href="https://aethex.studio" target="_blank" rel="noopener noreferrer" className="block">
+            <a href="https://aethex.studio" target="_blank" rel="noopener noreferrer" className="block" data-tutorial="aegis-card">
               <motion.div 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -330,7 +337,7 @@ export default function Home() {
               <p className="text-2xl font-display text-white uppercase">See It In Action</p>
             </motion.div>
             
-            <div className="flex flex-wrap justify-center gap-4">
+            <div className="flex flex-wrap justify-center gap-4" data-tutorial="demo-section">
               <Link href="/passport">
                 <button className="text-sm border border-white/10 px-6 py-3 text-muted-foreground hover:text-white hover:border-white/30 transition-colors" data-testid="button-sample-passport">
                   View Sample Passport
@@ -376,6 +383,11 @@ export default function Home() {
         </div>
 
       </div>
+      
+      {/* Tutorial Button */}
+      {!isActive && (
+        <TutorialButton onClick={() => startTutorial(homeTutorialSteps)} />
+      )}
     </div>
   );
 }
