@@ -6,6 +6,8 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Passport from "@/pages/passport";
 import Terminal from "@/pages/terminal";
+import Dashboard from "@/pages/dashboard";
+import Curriculum from "@/pages/curriculum";
 
 function Router() {
   return (
@@ -13,6 +15,8 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/passport" component={Passport} />
       <Route path="/terminal" component={Terminal} />
+      <Route path="/dashboard" component={Dashboard} />
+      <Route path="/curriculum" component={Curriculum} />
       <Route component={NotFound} />
     </Switch>
   );

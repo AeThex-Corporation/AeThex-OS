@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { Shield, FileCode, Terminal as TerminalIcon, ChevronRight } from "lucide-react";
+import { Shield, FileCode, Terminal as TerminalIcon, ChevronRight, BarChart3, Network } from "lucide-react";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 
 export default function Home() {
@@ -34,59 +34,67 @@ export default function Home() {
         {/* The Trinity Cards */}
         <div className="grid md:grid-cols-3 gap-6 w-full max-w-6xl">
           
-          {/* Axiom */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="group relative border border-white/10 bg-card/50 p-8 hover:border-primary/50 transition-colors duration-300 overflow-hidden"
-          >
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Shield className="w-12 h-12 text-muted-foreground group-hover:text-primary mb-6 transition-colors" />
-            <h2 className="text-2xl font-display text-white mb-4">Axiom</h2>
-            <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-              The Foundation. The Law. We define the rules of engagement for the digital frontier.
-            </p>
-            <div className="text-xs text-primary/70 uppercase tracking-widest font-bold">
-              Protocol: Active
-            </div>
-          </motion.div>
-
-          {/* Codex (Link to Passport) */}
-          <Link href="/passport">
+          {/* Axiom -> Dashboard */}
+          <Link href="/dashboard">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="group relative border border-white/10 bg-card/50 p-8 hover:border-secondary/50 transition-colors duration-300 cursor-pointer overflow-hidden"
+              transition={{ delay: 0.1 }}
+              className="group relative border border-white/10 bg-card/50 p-8 hover:border-primary/50 transition-colors duration-300 cursor-pointer overflow-hidden h-full"
             >
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <FileCode className="w-12 h-12 text-muted-foreground group-hover:text-secondary mb-6 transition-colors" />
-              <h2 className="text-2xl font-display text-white mb-4">Codex</h2>
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-primary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex justify-between items-start mb-6">
+                <Shield className="w-12 h-12 text-muted-foreground group-hover:text-primary transition-colors" />
+                <BarChart3 className="w-6 h-6 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
+              </div>
+              <h2 className="text-2xl font-display text-white mb-4">Axiom</h2>
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                The Standard. Verification of talent not by degree, but by mastery of the code.
+                The Foundation. View the global command center, active architect metrics, and ecosystem health.
               </p>
-              <div className="flex items-center text-secondary hover:text-secondary/80 text-sm font-bold uppercase tracking-wider">
-                View Passport <ChevronRight className="w-4 h-4 ml-1" />
+              <div className="flex items-center text-primary hover:text-primary/80 text-sm font-bold uppercase tracking-wider mt-auto">
+                Open Dashboard <ChevronRight className="w-4 h-4 ml-1" />
               </div>
             </motion.div>
           </Link>
 
-          {/* Aegis (Link to Terminal) */}
+          {/* Codex -> Curriculum (with Passport link inside) */}
+          <Link href="/curriculum">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="group relative border border-white/10 bg-card/50 p-8 hover:border-secondary/50 transition-colors duration-300 cursor-pointer overflow-hidden h-full"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-secondary/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex justify-between items-start mb-6">
+                <FileCode className="w-12 h-12 text-muted-foreground group-hover:text-secondary transition-colors" />
+                <Network className="w-6 h-6 text-muted-foreground/30 group-hover:text-secondary/50 transition-colors" />
+              </div>
+              <h2 className="text-2xl font-display text-white mb-4">Codex</h2>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                The Standard. Explore the skill tree, mastery nodes, and view your Architect Credential.
+              </p>
+              <div className="flex items-center text-secondary hover:text-secondary/80 text-sm font-bold uppercase tracking-wider mt-auto">
+                View Tech Tree <ChevronRight className="w-4 h-4 ml-1" />
+              </div>
+            </motion.div>
+          </Link>
+
+          {/* Aegis -> Terminal */}
           <Link href="/terminal">
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="group relative border border-white/10 bg-card/50 p-8 hover:border-destructive/50 transition-colors duration-300 cursor-pointer overflow-hidden"
+              className="group relative border border-white/10 bg-card/50 p-8 hover:border-destructive/50 transition-colors duration-300 cursor-pointer overflow-hidden h-full"
             >
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-destructive/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               <TerminalIcon className="w-12 h-12 text-muted-foreground group-hover:text-destructive mb-6 transition-colors" />
               <h2 className="text-2xl font-display text-white mb-4">Aegis</h2>
               <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-                The Shield. Real-time intervention and security protocols for the build environment.
+                The Shield. Enter the secure build environment. <span className="text-destructive font-bold">New:</span> Live Threat Simulation available.
               </p>
-              <div className="flex items-center text-destructive hover:text-destructive/80 text-sm font-bold uppercase tracking-wider">
+              <div className="flex items-center text-destructive hover:text-destructive/80 text-sm font-bold uppercase tracking-wider mt-auto">
                 Launch Terminal <ChevronRight className="w-4 h-4 ml-1" />
               </div>
             </motion.div>
