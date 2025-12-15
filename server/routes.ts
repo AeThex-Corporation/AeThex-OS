@@ -3,12 +3,14 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { loginSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
+import crypto from "crypto";
 
 // Extend session type
 declare module 'express-session' {
   interface SessionData {
     userId?: string;
     isAdmin?: boolean;
+    token?: string;
   }
 }
 
@@ -31,6 +33,21 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
+// Generate JWT-like token
+function generateToken(userId: string, username: string): string {
+  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    userId,
+    username,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour
+  })).toString('base64url');
+  const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'dev-secret')
+    .update(`${header}.${payload}`)
+    .digest('base64url');
+  return `${header}.${payload}.${signature}`;
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -38,7 +55,7 @@ export async function registerRoutes(
   
   // ========== AUTH ROUTES ==========
   
-  // Login
+  // Login - creates JWT token and stores in sessions table
   app.post("/api/auth/login", async (req, res) => {
     try {
       const result = loginSchema.safeParse(req.body);
@@ -58,7 +75,19 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
-      // Regenerate session on login to prevent session fixation
+      // Generate token like your other apps
+      const token = generateToken(user.id, user.username);
+      const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
+      
+      // Store session in sessions table (like your other apps)
+      await storage.createSession({
+        user_id: user.id,
+        username: user.username,
+        token,
+        expires_at: expiresAt.toISOString()
+      });
+      
+      // Also set express session for this app
       req.session.regenerate((err) => {
         if (err) {
           return res.status(500).json({ error: "Session error" });
@@ -66,9 +95,11 @@ export async function registerRoutes(
         
         req.session.userId = user.id;
         req.session.isAdmin = user.is_admin ?? false;
+        req.session.token = token;
         
         res.json({ 
           success: true, 
+          token,
           user: { 
             id: user.id, 
             username: user.username, 
@@ -77,6 +108,7 @@ export async function registerRoutes(
         });
       });
     } catch (err: any) {
+      console.error('Login error:', err);
       res.status(500).json({ error: err.message });
     }
   });
@@ -181,6 +213,58 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Project not found" });
       }
       res.json(project);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // ========== NEW ADMIN ROUTES ==========
+  
+  // Get all aethex sites (admin only)
+  app.get("/api/sites", requireAdmin, async (req, res) => {
+    try {
+      const sites = await storage.getSites();
+      res.json(sites);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get auth logs (admin only)
+  app.get("/api/auth-logs", requireAdmin, async (req, res) => {
+    try {
+      const logs = await storage.getAuthLogs();
+      res.json(logs);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get achievements (admin only)
+  app.get("/api/achievements", requireAdmin, async (req, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get applications (admin only)
+  app.get("/api/applications", requireAdmin, async (req, res) => {
+    try {
+      const applications = await storage.getApplications();
+      res.json(applications);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get alerts for Aegis (admin only)
+  app.get("/api/alerts", requireAdmin, async (req, res) => {
+    try {
+      const alerts = await storage.getAlerts();
+      res.json(alerts);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

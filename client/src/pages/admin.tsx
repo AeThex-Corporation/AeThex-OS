@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { 
   Users, FileCode, Shield, Activity, LogOut, 
-  Home, BarChart3, Settings, ChevronRight, User
+  Home, BarChart3, Settings, ChevronRight, User, Globe, Award, Key
 } from "lucide-react";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 
@@ -77,8 +77,11 @@ export default function Admin() {
         <nav className="flex-1 p-4 space-y-2">
           <NavItem icon={<BarChart3 className="w-4 h-4" />} label="Dashboard" href="/admin" active />
           <NavItem icon={<Users className="w-4 h-4" />} label="Architects" href="/admin/architects" />
+          <NavItem icon={<Award className="w-4 h-4" />} label="Achievements" href="/admin/achievements" />
           <NavItem icon={<FileCode className="w-4 h-4" />} label="Credentials" href="/admin/credentials" />
           <NavItem icon={<Activity className="w-4 h-4" />} label="Projects" href="/admin/projects" />
+          <NavItem icon={<Globe className="w-4 h-4" />} label="Sites" href="/admin/sites" />
+          <NavItem icon={<Key className="w-4 h-4" />} label="Auth Logs" href="/admin/logs" />
           <NavItem icon={<Shield className="w-4 h-4" />} label="Aegis Monitor" href="/admin/aegis" />
         </nav>
         

@@ -6,6 +6,9 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   
+  // Sessions
+  createSession(session: { user_id: string; username: string; token: string; expires_at: string }): Promise<any>;
+  
   // Profiles
   getProfiles(): Promise<Profile[]>;
   getProfile(id: string): Promise<Profile | undefined>;
@@ -15,6 +18,21 @@ export interface IStorage {
   // Projects
   getProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
+  
+  // Sites
+  getSites(): Promise<any[]>;
+  
+  // Auth Logs
+  getAuthLogs(): Promise<any[]>;
+  
+  // Achievements
+  getAchievements(): Promise<any[]>;
+  
+  // Applications
+  getApplications(): Promise<any[]>;
+  
+  // Alerts
+  getAlerts(): Promise<any[]>;
   
   // Metrics
   getMetrics(): Promise<{
@@ -49,6 +67,17 @@ export class SupabaseStorage implements IStorage {
     
     if (error || !data) return undefined;
     return data as User;
+  }
+  
+  async createSession(session: { user_id: string; username: string; token: string; expires_at: string }): Promise<any> {
+    const { data, error } = await supabase
+      .from('sessions')
+      .insert(session)
+      .select()
+      .single();
+    
+    if (error) throw error;
+    return data;
   }
   
   async getProfiles(): Promise<Profile[]> {
@@ -116,6 +145,58 @@ export class SupabaseStorage implements IStorage {
     return data as Project;
   }
   
+  async getSites(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('aethex_sites')
+      .select('*')
+      .order('last_check', { ascending: false });
+    
+    if (error) return [];
+    return data || [];
+  }
+  
+  async getAuthLogs(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('auth_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    
+    if (error) return [];
+    return data || [];
+  }
+  
+  async getAchievements(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('achievements')
+      .select('*')
+      .order('name', { ascending: true });
+    
+    if (error) return [];
+    return data || [];
+  }
+  
+  async getApplications(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('applications')
+      .select('*')
+      .order('submitted_at', { ascending: false });
+    
+    if (error) return [];
+    return data || [];
+  }
+  
+  async getAlerts(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('aethex_alerts')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    
+    if (error) return [];
+    return data || [];
+  }
+  
   async getMetrics(): Promise<{
     totalProfiles: number;
     totalProjects: number;
@@ -124,7 +205,6 @@ export class SupabaseStorage implements IStorage {
     totalXP: number;
     avgLevel: number;
   }> {
-    // Get profiles for metrics
     const profiles = await this.getProfiles();
     const projects = await this.getProjects();
     
