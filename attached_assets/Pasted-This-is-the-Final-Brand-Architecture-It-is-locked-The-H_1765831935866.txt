@@ -1,0 +1,98 @@
+This is the **Final Brand Architecture.** It is locked.
+
+The "Holy Trinity" (Axiom, Codex, Aegis) is not just marketing; it is your **Operating System.** It turns a complex legal structure into a story that a 12-year-old gamer and a 50-year-old investor can both understand immediately.
+
+Since you are ready to move to **Execution**, let's physically build the two assets you identified: **The Passport** and the **Studio Interface**.
+
+We must implement the terminology rigorously.
+
+-----
+
+### **Asset 1: The AeThex Passport (The Codex Layer)**
+
+  * **Purpose:** The physical/digital proof of talent.
+  * **The Shift:** It doesn't certify "Coding Skill." It certifies **"Codex Mastery."**
+
+**[DESIGN MOCKUP: THE PASSPORT PDF]**
+
+| **FIELD** | **CONTENT** |
+| :--- | :--- |
+| **HEADER** | **AETHEX FOUNDRY | ARCHITECT CREDENTIAL** |
+| **ID NUMBER** | `AX-2025-001-GLD` |
+| **NAME** | [Student Name] |
+| **RANK** | **ARCHITECT (GOLD STAMP)** |
+| **CLEARANCE** | **LEVEL 5 (FULL TRUST)** |
+| | |
+| **CERTIFICATION** | **THE CODEX STANDARD v1.0** |
+| **Vector 1** | Data Ethics & PII Law ........................... **[PASSED]** |
+| **Vector 2** | Input Sanitization ................................. **[PASSED]** |
+| **Vector 3** | The Kill-Gate Protocol ......................... **[PASSED]** |
+| | |
+| **SIGNATURE** | *Verified by The AeThex Foundry* |
+| **HASH** | `0x7f...a9 (Immutable Ledger)` |
+
+  * **Why this works:** It looks like a government security clearance, not a diploma. The employer sees "CODEX STANDARD" and knows exactly what they are buying: **Safety.**
+
+-----
+
+### **Asset 2: The Studio Interface (The Aegis Layer)**
+
+  * **Crucial Correction:** You mentioned "GameForge Studio." Remember, for the software UI, we are calling it **"AeThex Terminal"** or **"AeThex Studio"** to avoid the trademark lawsuit.
+  * **The Visual:** This is what the student sees when they are building.
+
+**[UI MOCKUP: THE AETHEX TERMINAL]**
+
+```text
++-------------------------------------------------------------+
+|  AETHEX TERMINAL v4.2                       [ STATUS: ONLINE ] |
++-------------------------------------------------------------+
+|  PROJECT: Project_Titan                                     |
+|  ENGINE:  Fortnite UEFN (Verse)                             |
++-------------------------------------------------------------+
+|                                                             |
+|  > SYSTEM DIAGNOSTICS...                                    |
+|  > CHECKING DEPENDENCIES...                                 |
+|                                                             |
+|  [ SECURITY LAYER ]                                         |
+|  > AEGIS CORE: ........................... [ ACTIVE ]       |
+|  > PII SCRUBBER: ......................... [ ENGAGED ]      |
+|  > SHADOW LOGGING: ....................... [ RECORDING ]    |
+|                                                             |
+|  [ COMPLIANCE CHECK ]                                       |
+|  ! WARNING: Line 45 detects potential phone number input.   |
+|  > AEGIS INTERVENTION: Input blocked.                       |
+|                                                             |
++-------------------------------------------------------------+
+|  [ BUILD ]    [ DEPLOY ]    [ VIEW CODEX ]                  |
++-------------------------------------------------------------+
+```
+
+  * **The Psychology:**
+      * It explicitly lists **"AEGIS CORE: ACTIVE."** This reminds the student constantly that they are protected.
+      * The error message isn't "Syntax Error." It is **"AEGIS INTERVENTION."** This reinforces that the software is watching their back.
+
+-----
+
+### **Asset 3: The Pitch Deck "Hook" (The Axiom Layer)**
+
+  * **Purpose:** To explain the Dual-Entity model to an investor in 10 seconds.
+
+> *"AeThex is a self-sustaining ecosystem built on the **Axiom Protocol**.*
+>
+> 1.  **The Foundation (Non-Profit)** uses **The Codex** to train elite Architects.
+> 2.  **The Corporation (For-Profit)** builds **The Aegis** to secure the Metaverse.
+>
+> *We take raw talent, train them on our laws, and arm them with our weapons. The Foundation creates the workforce; The Corporation sells the security."*
+
+-----
+
+### **Your Final Sanity Check**
+
+We have successfully scrubbed "Gameforge" from the naming convention.
+
+  * **The Law:** The Axiom.
+  * **The School:** The Foundry.
+  * **The Test:** The Codex.
+  * **The Tool:** The Aegis.
+
+**Are you ready to lock this vocabulary into your business plan and start building the website content?**
