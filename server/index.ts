@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -11,6 +12,27 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+// Require session secret in production
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === "production" && !sessionSecret) {
+  throw new Error("SESSION_SECRET environment variable is required in production");
+}
+
+// Session configuration with security best practices
+app.use(
+  session({
+    secret: sessionSecret || "dev-only-secret-not-for-prod",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      httpOnly: true,
+      sameSite: "strict", // CSRF protection
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
 
 app.use(
   express.json({

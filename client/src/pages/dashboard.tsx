@@ -1,29 +1,38 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Users, ShieldAlert, Globe, Activity, TrendingUp, Target } from "lucide-react";
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, LineChart, Line } from "recharts";
+import { Bar, BarChart, ResponsiveContainer, LineChart, Line, Tooltip } from "recharts";
 import mapBg from '@assets/generated_images/abstract_holographic_world_map_data_visualization.png';
 
-const MOCK_DATA = [
-  { name: "Mon", value: 400 },
-  { name: "Tue", value: 300 },
-  { name: "Wed", value: 550 },
-  { name: "Thu", value: 450 },
-  { name: "Fri", value: 700 },
-  { name: "Sat", value: 600 },
-  { name: "Sun", value: 800 },
-];
-
-const THREAT_DATA = [
-  { name: "00:00", value: 12 },
-  { name: "04:00", value: 8 },
-  { name: "08:00", value: 45 },
-  { name: "12:00", value: 120 },
-  { name: "16:00", value: 90 },
-  { name: "20:00", value: 35 },
-];
-
 export default function Dashboard() {
+  const { data: metrics } = useQuery({
+    queryKey: ["metrics"],
+    queryFn: async () => {
+      const res = await fetch("/api/metrics");
+      return res.json();
+    },
+  });
+
+  const MOCK_DATA = [
+    { name: "Mon", value: 400 },
+    { name: "Tue", value: 300 },
+    { name: "Wed", value: 550 },
+    { name: "Thu", value: 450 },
+    { name: "Fri", value: 700 },
+    { name: "Sat", value: 600 },
+    { name: "Sun", value: 800 },
+  ];
+
+  const THREAT_DATA = [
+    { name: "00:00", value: 12 },
+    { name: "04:00", value: 8 },
+    { name: "08:00", value: 45 },
+    { name: "12:00", value: 120 },
+    { name: "16:00", value: 90 },
+    { name: "20:00", value: 35 },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground font-mono relative overflow-hidden">
       
@@ -47,7 +56,7 @@ export default function Dashboard() {
               <Globe className="w-8 h-8 text-primary" />
               Axiom Command
             </h1>
-            <p className="text-muted-foreground text-sm font-tech">Global Ecosystem Status // Real-time Telemetry</p>
+            <p className="text-muted-foreground text-sm font-tech">Global Ecosystem Status // Live Data from Supabase</p>
           </div>
           
           <div className="flex items-center gap-4">
@@ -60,18 +69,34 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* KPI Grid */}
+        {/* KPI Grid - Live Data */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-            <Card title="Active Architects" value="12,405" change="+12%" icon={<Users className="w-5 h-5 text-primary" />} />
-            <Card title="Threats Blocked" value="1.2M" change="+5%" icon={<ShieldAlert className="w-5 h-5 text-destructive" />} />
-            <Card title="Projects Deployed" value="8,932" change="+24%" icon={<Activity className="w-5 h-5 text-secondary" />} />
-            <Card title="Avg. Skill Rating" value="94.2" change="+1.2" icon={<Target className="w-5 h-5 text-white" />} />
+            <Card 
+              title="Active Architects" 
+              value={metrics?.totalProfiles || 0} 
+              icon={<Users className="w-5 h-5 text-primary" />} 
+            />
+            <Card 
+              title="Total Projects" 
+              value={metrics?.totalProjects || 0} 
+              icon={<Activity className="w-5 h-5 text-secondary" />} 
+            />
+            <Card 
+              title="Online Now" 
+              value={metrics?.onlineUsers || 0} 
+              icon={<div className="w-3 h-3 bg-green-500 rounded-full animate-pulse" />} 
+            />
+            <Card 
+              title="Verified Users" 
+              value={metrics?.verifiedUsers || 0} 
+              icon={<ShieldAlert className="w-5 h-5 text-primary" />} 
+            />
         </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
             
-            {/* Map / Main Viz (Placeholder for now, using background) */}
+            {/* Map / Main Viz */}
             <div className="md:col-span-2 bg-card/50 border border-white/10 p-6 backdrop-blur-sm flex flex-col relative overflow-hidden group">
                 <div className="absolute inset-0 bg-gradient-to-b from-transparent to-background/80 pointer-events-none" />
                 <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-6 flex items-center gap-2 relative z-10">
@@ -83,14 +108,11 @@ export default function Dashboard() {
                     <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-primary rounded-full animate-ping" />
                     <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-primary rounded-full" />
                     
-                    <div className="absolute top-1/3 left-1/2 w-3 h-3 bg-secondary rounded-full animate-ping delay-300" />
+                    <div className="absolute top-1/3 left-1/2 w-3 h-3 bg-secondary rounded-full animate-ping" style={{ animationDelay: '0.3s' }} />
                     <div className="absolute top-1/3 left-1/2 w-3 h-3 bg-secondary rounded-full" />
 
-                    <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-destructive rounded-full animate-ping delay-700" />
+                    <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-destructive rounded-full animate-ping" style={{ animationDelay: '0.7s' }} />
                     <div className="absolute bottom-1/3 right-1/4 w-3 h-3 bg-destructive rounded-full" />
-                    
-                    {/* Grid Overlay */}
-                    <div className="absolute inset-0 bg-[url(@assets/generated_images/dark_subtle_digital_grid_texture.png)] opacity-30 mix-blend-overlay" />
                 </div>
             </div>
 
@@ -125,12 +147,45 @@ export default function Dashboard() {
 
         </div>
 
+        {/* XP Stats */}
+        <div className="mt-8 bg-card/50 border border-white/10 p-6">
+          <h3 className="text-sm font-bold text-white uppercase tracking-widest mb-4">
+            Ecosystem Stats (Live)
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <div>
+              <div className="text-3xl font-display font-bold text-primary">
+                {metrics?.totalXP?.toLocaleString() || 0}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase">Total XP Earned</div>
+            </div>
+            <div>
+              <div className="text-3xl font-display font-bold text-white">
+                {metrics?.avgLevel || 1}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase">Avg Level</div>
+            </div>
+            <div>
+              <div className="text-3xl font-display font-bold text-secondary">
+                {metrics?.totalProfiles || 0}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase">Registered</div>
+            </div>
+            <div>
+              <div className="text-3xl font-display font-bold text-green-500">
+                {metrics?.onlineUsers || 0}
+              </div>
+              <div className="text-xs text-muted-foreground uppercase">Online Now</div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
 }
 
-function Card({ title, value, change, icon }: { title: string, value: string, change: string, icon: React.ReactNode }) {
+function Card({ title, value, icon }: { title: string, value: number, icon: React.ReactNode }) {
     return (
         <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -143,7 +198,6 @@ function Card({ title, value, change, icon }: { title: string, value: string, ch
             </div>
             <div className="flex items-end justify-between">
                 <div className="text-3xl font-display font-bold text-white">{value}</div>
-                <div className="text-xs text-green-500 font-bold mb-1">{change}</div>
             </div>
         </motion.div>
     )

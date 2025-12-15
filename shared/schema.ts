@@ -1,12 +1,15 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, integer, timestamp, json } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Users table (auth)
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  id: varchar("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  is_active: boolean("is_active").default(true),
+  is_admin: boolean("is_admin").default(false),
+  created_at: timestamp("created_at").defaultNow(),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
@@ -16,3 +19,73 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Profiles table (rich user data)
+export const profiles = pgTable("profiles", {
+  id: varchar("id").primaryKey(),
+  username: text("username"),
+  role: text("role").default("member"),
+  onboarded: boolean("onboarded").default(false),
+  bio: text("bio"),
+  skills: json("skills").$type<string[] | null>(),
+  avatar_url: text("avatar_url"),
+  banner_url: text("banner_url"),
+  social_links: json("social_links").$type<Record<string, string>>(),
+  loyalty_points: integer("loyalty_points").default(0),
+  email: text("email"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  user_type: text("user_type").default("community_member"),
+  experience_level: text("experience_level").default("beginner"),
+  full_name: text("full_name"),
+  location: text("location"),
+  total_xp: integer("total_xp").default(0),
+  level: integer("level").default(1),
+  aethex_passport_id: varchar("aethex_passport_id"),
+  status: text("status").default("offline"),
+  is_verified: boolean("is_verified").default(false),
+});
+
+export const insertProfileSchema = createInsertSchema(profiles).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertProfile = z.infer<typeof insertProfileSchema>;
+export type Profile = typeof profiles.$inferSelect;
+
+// Projects table
+export const projects = pgTable("projects", {
+  id: varchar("id").primaryKey(),
+  owner_id: varchar("owner_id"),
+  title: text("title").notNull(),
+  description: text("description"),
+  status: text("status").default("planning"),
+  github_url: text("github_url"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  user_id: varchar("user_id"),
+  engine: text("engine"),
+  priority: text("priority").default("medium"),
+  progress: integer("progress").default(0),
+  live_url: text("live_url"),
+  technologies: json("technologies").$type<string[] | null>(),
+});
+
+export const insertProjectSchema = createInsertSchema(projects).omit({
+  id: true,
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertProject = z.infer<typeof insertProjectSchema>;
+export type Project = typeof projects.$inferSelect;
+
+// Login schema for validation
+export const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export type LoginInput = z.infer<typeof loginSchema>;
