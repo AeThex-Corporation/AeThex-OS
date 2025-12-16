@@ -299,7 +299,7 @@ export async function registerRoutes(
 
   // ========== CHATBOT API (Auth + Rate limited) ==========
   
-  const chatRateLimits = new Map<number, { count: number; resetTime: number }>();
+  const chatRateLimits = new Map<string, { count: number; resetTime: number }>();
   
   app.post("/api/chat", requireAuth, async (req, res) => {
     try {
@@ -308,8 +308,9 @@ export async function registerRoutes(
         return res.status(401).json({ error: "Authentication required" });
       }
       
+      const userKey = String(userId);
       const now = Date.now();
-      const rateLimit = chatRateLimits.get(userId);
+      const rateLimit = chatRateLimits.get(userKey);
       
       if (rateLimit) {
         if (now < rateLimit.resetTime) {
@@ -318,10 +319,10 @@ export async function registerRoutes(
           }
           rateLimit.count++;
         } else {
-          chatRateLimits.set(userId, { count: 1, resetTime: now + 60000 });
+          chatRateLimits.set(userKey, { count: 1, resetTime: now + 60000 });
         }
       } else {
-        chatRateLimits.set(userId, { count: 1, resetTime: now + 60000 });
+        chatRateLimits.set(userKey, { count: 1, resetTime: now + 60000 });
       }
       
       const { message, history } = req.body;
