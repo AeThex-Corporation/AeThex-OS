@@ -297,32 +297,31 @@ export async function registerRoutes(
     }
   });
 
-  // ========== CHATBOT API (Auth + Rate limited) ==========
+  // ========== CHATBOT API (Rate limited) ==========
   
   const chatRateLimits = new Map<string, { count: number; resetTime: number }>();
   
-  app.post("/api/chat", requireAuth, async (req, res) => {
+  app.post("/api/chat", async (req, res) => {
     try {
       const userId = req.session?.userId;
-      if (!userId) {
-        return res.status(401).json({ error: "Authentication required" });
-      }
+      const clientIP = req.ip || req.socket.remoteAddress || 'unknown';
+      const rateLimitKey = userId ? `user:${userId}` : `ip:${clientIP}`;
+      const maxRequests = userId ? 30 : 10;
       
-      const userKey = String(userId);
       const now = Date.now();
-      const rateLimit = chatRateLimits.get(userKey);
+      const rateLimit = chatRateLimits.get(rateLimitKey);
       
       if (rateLimit) {
         if (now < rateLimit.resetTime) {
-          if (rateLimit.count >= 30) {
+          if (rateLimit.count >= maxRequests) {
             return res.status(429).json({ error: "Rate limit exceeded. Please wait before sending more messages." });
           }
           rateLimit.count++;
         } else {
-          chatRateLimits.set(userKey, { count: 1, resetTime: now + 60000 });
+          chatRateLimits.set(rateLimitKey, { count: 1, resetTime: now + 60000 });
         }
       } else {
-        chatRateLimits.set(userKey, { count: 1, resetTime: now + 60000 });
+        chatRateLimits.set(rateLimitKey, { count: 1, resetTime: now + 60000 });
       }
       
       const { message, history } = req.body;
