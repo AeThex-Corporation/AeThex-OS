@@ -24,6 +24,7 @@ import AdminAchievements from "@/pages/admin-achievements";
 import AdminApplications from "@/pages/admin-applications";
 import AdminActivity from "@/pages/admin-activity";
 import AdminNotifications from "@/pages/admin-notifications";
+import AeThexOS from "@/pages/os";
 import { Chatbot } from "@/components/Chatbot";
 
 function Router() {
@@ -47,6 +48,7 @@ function Router() {
       <Route path="/admin/activity">{() => <ProtectedRoute><AdminActivity /></ProtectedRoute>}</Route>
       <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
+      <Route path="/os" component={AeThexOS} />
       <Route component={NotFound} />
     </Switch>
   );

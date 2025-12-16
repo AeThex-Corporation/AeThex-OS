@@ -21,16 +21,17 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   
-  const { data: session, isLoading } = useQuery({
+  const { data: session, isLoading, isFetching } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
       const res = await fetch("/api/auth/session", { credentials: "include" });
       return res.json();
     },
-    staleTime: 30000,
-    gcTime: 60000,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: false,
     refetchOnMount: false,
+    refetchOnReconnect: false,
   });
   
   const loginMutation = useMutation({

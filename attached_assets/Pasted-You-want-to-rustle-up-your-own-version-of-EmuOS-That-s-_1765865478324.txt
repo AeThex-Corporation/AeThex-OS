@@ -1,0 +1,47 @@
+You want to rustle up your own version of EmuOS? That’s ambitious. Most people just play in the sandbox; you want to build the castle. I respect that.
+
+EmuOS isn't magic—it’s a clever stack of **static web technology** mixed with **WebAssembly emulators**. It’s essentially a very fancy website that tricks your browser into acting like a Windows 95 desktop.
+
+Here is the blueprint to build your own "AeThex Outpost" version of EmuOS.
+
+### 1. The Blueprint (The Source Code)
+The entire project is hosted publicly on GitHub. EmuOS is part of the **Emupedia** project. They run it as a static site (GitHub Pages), which means you don't need a complex backend server to run it—just a place to host HTML and JS files.
+
+* **Target Repo:** `Emupedia/emupedia.github.io`
+* **The Mission:** You need to clone this repository.
+    * *Cowboy Tip:* Don't just fork it blindly. Look at the file structure. The "meat" of the OS is usually in the `beta/emuos/` folder.
+
+### 2. The Engine (How It Runs)
+EmuOS relies on a few heavy lifters to make the emulation happen in the browser. You need to understand these if you want to modify it:
+
+* **v86:** This is the x86 emulator that runs the actual operating systems (Windows 95, 98, ME). It translates x86 machine code into WebAssembly so your browser can execute it.
+* **EmulatorJS / JS-DOS:** These handle the specific game consoles (NES, SNES) and DOS games.
+* **The Glue:** The "Desktop" you see is just a web interface (HTML/CSS) styled to look like Windows. The icons are just buttons that launch an iframe or a canvas element running the emulator.
+
+### 3. The Supply Line (Where the Games Live)
+**This is the catch.** You can copy the code, but you can't easily copy the *content*.
+The GitHub repo generally does **not** host the terabytes of commercial ROMs and ISOs due to copyright.
+
+* **The Configuration:** The system knows what games to show based on a JSON manifest. Look for a file like `beta/emuos/assets/data/desktop.json` (or similar inside `assets/data`).
+    * *What it does:* This file lists every icon on the desktop, the title, and **the URL to the ROM/ISO**.
+* **Your Job:** If you copy the site, the games might break if they point to servers that check for "hotlinking" (stealing bandwidth). You will likely need to:
+    1.  Host your own ROMs (ISOs, game files).
+    2.  Update the `json` config to point to *your* file locations.
+
+### 4. How to Deploy Your Own
+If you want to spin this up right now to impress your friends:
+
+1.  **Clone the Repo:** Download the `emupedia.github.io` repo to your local machine.
+2.  **Run Locally:** You can't just double-click `index.html` because of browser security (CORS) regarding WebAssembly. You need a local server.
+    * *Quick Fix:* Install Python, open the folder in terminal, and run `python -m http.server`.
+    * *Browse:* Go to `localhost:8000/beta/emuos/` in your browser.
+3.  **Customize:** Go into the `assets` folder, swap the background image, change the startup sound, or edit that `desktop.json` file to remove the "bloatware" games you don't want.
+4.  **Publish:** Upload your modified folder to **GitHub Pages** or **Netlify**. It’s static, so it’s free to host (minus the massive ROM files).
+
+### The "MrPiglr" Advice
+Don't just copy it 1:1. That’s boring.
+Use this tech to build a **Portfolio OS.**
+
+Instead of "Doom" and "Quake," make the desktop icons launch *your* projects, *your* music, and *your* code. Make a "My Documents" folder that is actually your Resume.
+
+That’s how you turn a toy into a weapon. Now get to building.

@@ -64,8 +64,13 @@ export default function AdminSites() {
                 Loading sites...
               </div>
             ) : sites?.length === 0 ? (
-              <div className="col-span-full text-center text-muted-foreground py-12">
-                No sites found
+              <div className="col-span-full bg-card/50 border border-white/10 p-12 text-center">
+                <Globe className="w-16 h-16 text-muted-foreground/30 mx-auto mb-4" />
+                <h3 className="text-lg font-display text-white uppercase mb-2">No Sites Configured</h3>
+                <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                  Site monitoring will display here once sites are added to your Supabase database. 
+                  Add entries to the "sites" table to track uptime and performance.
+                </p>
               </div>
             ) : (
               sites?.map((site: any) => (

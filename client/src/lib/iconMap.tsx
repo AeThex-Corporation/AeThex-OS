@@ -8,12 +8,13 @@ import {
   Calendar, CalendarDays, CalendarHeart,
   Video, Clapperboard, Flame,
   Globe, Network, Brain, ShieldCheck, ShieldEllipsis,
-  Swords, LogIn, GraduationCap
+  Swords, LogIn, GraduationCap, Sparkles
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   "award": Award,
   "star": Star,
+  "star-struck": Sparkles,
   "trophy": Trophy,
   "crown": Crown,
   "shield": Shield,

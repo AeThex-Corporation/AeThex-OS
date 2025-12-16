@@ -69,7 +69,14 @@ export default function AdminLogs() {
                   </tr>
                 ) : logs?.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="p-8 text-center text-muted-foreground">No logs found</td>
+                    <td colSpan={5} className="p-12 text-center">
+                      <Key className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+                      <h3 className="text-lg font-display text-white uppercase mb-2">No Auth Logs Yet</h3>
+                      <p className="text-muted-foreground text-sm max-w-md mx-auto">
+                        Authentication events will appear here as users log in and out. 
+                        The auth_logs table in Supabase is currently empty.
+                      </p>
+                    </td>
                   </tr>
                 ) : (
                   logs?.map((log: any) => (

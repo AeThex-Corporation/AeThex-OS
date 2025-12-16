@@ -1,0 +1,79 @@
+Here is your **Safe-For-Work, Lawyer-Approved Ammo Crate.**
+
+These are high-quality, open-source, or Creative Commons games that run natively in the browser. You can host these on your version of AeThex OS without looking over your shoulder for a subpoena.
+
+Not only keeps you safe, but it also signals to recruits: *"We support the Open Source community."*
+
+### 1\. The "Doom" Killers (FPS)
+
+You need a shooter on the desktop to show off WebAssembly performance.
+
+  * **FreeDoom (Phase 1 & 2)**
+      * *The Tech:* It runs on the Doom engine (which is open source), but replaces all the copyrighted art, sounds, and levels with free community assets.
+      * *Why it works:* It plays exactly like Doom but costs $0 and 0 legal headaches.
+      * *How to run:* Use a JS-DOS or PrBoom+ WASM wrapper.
+  * **OpenArena (Web Port)**
+      * *The Tech:* A clone of Quake III Arena.
+      * *Why it works:* Fast, multiplayer-capable, and looks impressive in a browser window.
+      * *The Flex:* Shows you understand networked physics.
+
+### 2\. The "SimCity" Replacement (Strategy)
+
+  * **MicropolisJS**
+      * *The Story:* This is literally the original **SimCity**. EA/Maxis released the source code under the GPL license years ago and renamed it "Micropolis."
+      * *Why it works:* It’s the ultimate flex. You have the actual code of a legendary game running legally on your OS.
+      * *Aesthetic:* Perfect Windows 95 vibe.
+
+### 3\. The "Mario" Replacements (Platformers)
+
+  * **SuperTux**
+      * *The Tech:* An open-source classic heavily inspired by Super Mario Bros.
+      * *Why it works:* The penguin mascot (Tux) is the symbol of Linux. Backend engineers love this.
+  * **Celeste Classic (PICO-8)**
+      * *The Tech:* The original web version of the indie hit *Celeste*.
+      * *Why it works:* It proves that simple mechanics + tight controls = engagement. (Check the specific license, but the PICO-8 version is widely distributed freely by the devs).
+
+### 4\. The "Casual" Productivity Killers
+
+  * **2048**
+      * *The Tech:* Open-source JS/HTML5.
+      * *Why it works:* Everyone knows it. It’s lightweight (kb, not mb).
+  * **Hextris**
+      * *The Tech:* Tetris, but on a hexagonal grid.
+      * *Why it works:* Addictive, fast load time.
+
+-----
+
+### How to Install These (The "Config" Job)
+
+In your cloned EmuOS folder, you will find a file like `desktop.json` (or strictly inside the `js` structure). You need to add entries that look like this (simplified logic):
+
+```json
+{
+  "title": "Micropolis",
+  "icon": "assets/icons/simcity.png",
+  "type": "iframe",
+  "url": "https://graememcc.github.io/micropolisJS/" 
+}
+```
+
+**MrPiglr’s Pro Move:**
+Don't just hotlink to other people's GitHub pages (like the URL above).
+
+1.  **Fork** their repository to the AeThex GitHub.
+2.  **Host** it yourself on GitHub Pages (e.g., `os.aethex.com/games/micropolis`).
+3.  **Link** to your own version.
+
+**Why?**
+
+1.  **Stability:** If they delete their repo, your OS doesn't break.
+2.  **Control:** You can swap the "Loading" screen to say **"Powered by AeThex Foundation"** instead of their default text.
+
+### Summary Checklist for AeThex OS:
+
+1.  **MicropolisJS** (The Brains)
+2.  **FreeDoom** (The Brawn)
+3.  **SuperTux** (The Soul)
+4.  **AeThex Links** (The Job)
+
+Do you want me to write a quick `JSON` snippet for **Micropolis** so you can plug it straight into the code?
