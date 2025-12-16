@@ -98,14 +98,20 @@ export async function registerRoutes(
         req.session.isAdmin = user.is_admin ?? false;
         req.session.token = token;
         
-        res.json({ 
-          success: true, 
-          token,
-          user: { 
-            id: user.id, 
-            username: user.username, 
-            isAdmin: user.is_admin 
-          } 
+        req.session.save((saveErr) => {
+          if (saveErr) {
+            return res.status(500).json({ error: "Session save error" });
+          }
+          
+          res.json({ 
+            success: true, 
+            token,
+            user: { 
+              id: user.id, 
+              username: user.username, 
+              isAdmin: user.is_admin 
+            } 
+          });
         });
       });
     } catch (err: any) {

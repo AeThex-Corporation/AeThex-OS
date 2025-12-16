@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isLoading } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/session");
+      const res = await fetch("/api/auth/session", { credentials: "include" });
       return res.json();
     },
   });
@@ -34,6 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
       if (!res.ok) {
@@ -49,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["session"] });
