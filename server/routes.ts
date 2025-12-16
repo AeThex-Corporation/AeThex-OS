@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { loginSchema } from "@shared/schema";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { getChatResponse } from "./openai";
 
 // Extend session type
 declare module 'express-session' {
@@ -293,6 +294,46 @@ export async function registerRoutes(
       res.json(application);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ========== CHATBOT API (Auth + Rate limited) ==========
+  
+  const chatRateLimits = new Map<number, { count: number; resetTime: number }>();
+  
+  app.post("/api/chat", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const now = Date.now();
+      const rateLimit = chatRateLimits.get(userId);
+      
+      if (rateLimit) {
+        if (now < rateLimit.resetTime) {
+          if (rateLimit.count >= 30) {
+            return res.status(429).json({ error: "Rate limit exceeded. Please wait before sending more messages." });
+          }
+          rateLimit.count++;
+        } else {
+          chatRateLimits.set(userId, { count: 1, resetTime: now + 60000 });
+        }
+      } else {
+        chatRateLimits.set(userId, { count: 1, resetTime: now + 60000 });
+      }
+      
+      const { message, history } = req.body;
+      if (!message || typeof message !== "string") {
+        return res.status(400).json({ error: "Message is required" });
+      }
+      
+      const response = await getChatResponse(message, history);
+      res.json({ response });
+    } catch (err: any) {
+      console.error("Chat error:", err);
+      res.status(500).json({ error: "Failed to get response" });
     }
   });
 

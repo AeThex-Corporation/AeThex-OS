@@ -96,6 +96,43 @@
   --chart-5: 0 100% 50%;
 }
 
+/* LIGHT MODE - AE-THEX THEME */
+.light {
+  --background: 0 0% 98%;
+  --foreground: 240 10% 10%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 10%;
+
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 10%;
+
+  --primary: 45 100% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 180 80% 35%;
+  --secondary-foreground: 0 0% 100%;
+
+  --muted: 240 5% 90%;
+  --muted-foreground: 240 5% 40%;
+
+  --accent: 200 70% 90%;
+  --accent-foreground: 200 80% 25%;
+
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+
+  --border: 240 5% 85%;
+  --input: 240 5% 85%;
+  --ring: 45 100% 40%;
+
+  --chart-1: 45 100% 45%;
+  --chart-2: 180 80% 45%;
+  --chart-3: 200 80% 45%;
+  --chart-4: 280 80% 45%;
+  --chart-5: 0 80% 45%;
+}
+
 @layer base {
   * {
     @apply border-border;

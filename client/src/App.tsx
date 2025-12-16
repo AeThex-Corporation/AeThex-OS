@@ -21,6 +21,9 @@ import AdminSites from "@/pages/admin-sites";
 import AdminLogs from "@/pages/admin-logs";
 import AdminAchievements from "@/pages/admin-achievements";
 import AdminApplications from "@/pages/admin-applications";
+import AdminActivity from "@/pages/admin-activity";
+import AdminNotifications from "@/pages/admin-notifications";
+import { Chatbot } from "@/components/Chatbot";
 
 function Router() {
   return (
@@ -40,6 +43,8 @@ function Router() {
       <Route path="/admin/logs" component={AdminLogs} />
       <Route path="/admin/achievements" component={AdminAchievements} />
       <Route path="/admin/applications" component={AdminApplications} />
+      <Route path="/admin/activity" component={AdminActivity} />
+      <Route path="/admin/notifications" component={AdminNotifications} />
       <Route path="/pitch" component={Pitch} />
       <Route component={NotFound} />
     </Switch>
@@ -53,6 +58,7 @@ function App() {
         <TutorialProvider>
           <Toaster />
           <Router />
+          <Chatbot />
         </TutorialProvider>
       </AuthProvider>
     </QueryClientProvider>

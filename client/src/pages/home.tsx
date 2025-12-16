@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 import { useTutorial, homeTutorialSteps, TutorialButton } from "@/components/Tutorial";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   const { startTutorial, hasCompletedTutorial, isActive } = useTutorial();
@@ -60,6 +61,7 @@ export default function Home() {
               <Lock className="w-3 h-3" /> Admin
             </button>
           </Link>
+          <ThemeToggle />
         </div>
       </nav>
       
