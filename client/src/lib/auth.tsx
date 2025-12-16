@@ -43,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return res.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["session"] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ["session"] });
     },
   });
   
