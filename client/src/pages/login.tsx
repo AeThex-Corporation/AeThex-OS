@@ -15,15 +15,17 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
+    
     setError("");
     setIsLoading(true);
     
     try {
       await login(username, password);
+      await new Promise(resolve => setTimeout(resolve, 100));
       setLocation("/admin");
     } catch (err: any) {
       setError(err.message || "Login failed");
-    } finally {
       setIsLoading(false);
     }
   };
