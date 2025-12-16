@@ -16,9 +16,12 @@ export default function AdminApplications() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setLocation("/login");
-    }
+    const timer = setTimeout(() => {
+      if (!authLoading && !isAuthenticated) {
+        setLocation("/login");
+      }
+    }, 200);
+    return () => clearTimeout(timer);
   }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: applications, isLoading } = useQuery({

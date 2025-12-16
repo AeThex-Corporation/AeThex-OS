@@ -45,9 +45,12 @@ export default function AdminNotifications() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setLocation("/login");
-    }
+    const timer = setTimeout(() => {
+      if (!authLoading && !isAuthenticated) {
+        setLocation("/login");
+      }
+    }, 200);
+    return () => clearTimeout(timer);
   }, [authLoading, isAuthenticated, setLocation]);
 
   const toggleSetting = (id: string) => {

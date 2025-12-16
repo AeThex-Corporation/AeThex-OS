@@ -13,9 +13,12 @@ export default function AdminAegis() {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setLocation("/login");
-    }
+    const timer = setTimeout(() => {
+      if (!authLoading && !isAuthenticated) {
+        setLocation("/login");
+      }
+    }, 200);
+    return () => clearTimeout(timer);
   }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: alerts } = useQuery({
