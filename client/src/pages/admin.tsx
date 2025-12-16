@@ -120,6 +120,18 @@ export default function Admin() {
         
         <div className="relative z-10 p-8">
           <div className="mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-4 bg-primary/10 border border-primary/30"
+            >
+              <h2 className="text-xl font-display font-bold text-primary" data-testid="text-welcome">
+                Welcome back, {user?.username?.split('@')[0] || 'Admin'}!
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening'}. Here's your ecosystem overview.
+              </p>
+            </motion.div>
             <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
               Dashboard
             </h2>
