@@ -47,11 +47,16 @@ interface ContextMenuState {
 }
 
 const WALLPAPERS = [
-  { id: 'default', name: 'Cyber Grid', bg: 'linear-gradient(to bottom right, #0f172a, #1e1b4b, #0f172a)' },
-  { id: 'matrix', name: 'Matrix', bg: 'linear-gradient(to bottom, #001100, #002200, #001100)' },
-  { id: 'sunset', name: 'Neon Sunset', bg: 'linear-gradient(to bottom, #1a0533, #4a1942, #0f172a)' },
-  { id: 'ocean', name: 'Deep Ocean', bg: 'linear-gradient(to bottom, #0a1628, #0d3b66, #0a1628)' },
+  { id: 'default', name: 'Cyber Grid', bg: 'linear-gradient(to bottom right, #0f172a, #1e1b4b, #0f172a)', secret: false },
+  { id: 'matrix', name: 'Matrix', bg: 'linear-gradient(to bottom, #001100, #002200, #001100)', secret: false },
+  { id: 'sunset', name: 'Neon Sunset', bg: 'linear-gradient(to bottom, #1a0533, #4a1942, #0f172a)', secret: false },
+  { id: 'ocean', name: 'Deep Ocean', bg: 'linear-gradient(to bottom, #0a1628, #0d3b66, #0a1628)', secret: false },
+  { id: 'vaporwave', name: '⚡ Vaporwave', bg: 'linear-gradient(135deg, #ff71ce, #01cdfe, #05ffa1, #b967ff)', secret: true },
+  { id: 'bloodmoon', name: '🔥 Blood Moon', bg: 'linear-gradient(to bottom, #1a0000, #4a0000, #1a0000)', secret: true },
+  { id: 'galaxy', name: '🌌 Galaxy', bg: 'radial-gradient(ellipse at center, #1b2735 0%, #090a0f 100%)', secret: true },
 ];
+
+const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 
 export default function AeThexOS() {
   const [isBooting, setIsBooting] = useState(true);
@@ -68,6 +73,8 @@ export default function AeThexOS() {
   const [showScreensaver, setShowScreensaver] = useState(false);
   const [notifications, setNotifications] = useState<string[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [secretsUnlocked, setSecretsUnlocked] = useState(false);
+  const [konamiProgress, setKonamiProgress] = useState<string[]>([]);
   const desktopRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
   const { user, isAuthenticated, logout } = useAuth();
@@ -135,6 +142,30 @@ export default function AeThexOS() {
       if (idleTimer.current) clearTimeout(idleTimer.current);
     };
   }, [showScreensaver]);
+
+  useEffect(() => {
+    const handleKonami = (e: KeyboardEvent) => {
+      setKonamiProgress(prev => {
+        const newProgress = [...prev, e.key].slice(-10);
+        if (newProgress.length === 10 && newProgress.every((k, i) => k === KONAMI_CODE[i])) {
+          setSecretsUnlocked(true);
+          setNotifications(prev => ['🎮 SECRETS UNLOCKED! Check Settings for new wallpapers.', ...prev]);
+          return [];
+        }
+        return newProgress;
+      });
+    };
+    const handleTerminalUnlock = () => {
+      setSecretsUnlocked(true);
+      setNotifications(prev => ['🔓 Terminal unlock activated! Check Settings.', ...prev]);
+    };
+    window.addEventListener('keydown', handleKonami);
+    window.addEventListener('aethex-unlock-secrets', handleTerminalUnlock);
+    return () => {
+      window.removeEventListener('keydown', handleKonami);
+      window.removeEventListener('aethex-unlock-secrets', handleTerminalUnlock);
+    };
+  }, []);
 
   const apps: DesktopApp[] = [
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
@@ -289,7 +320,7 @@ export default function AeThexOS() {
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
-      case 'settings': return <SettingsApp wallpaper={wallpaper} setWallpaper={setWallpaper} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} />;
+      case 'settings': return <SettingsApp wallpaper={wallpaper} setWallpaper={setWallpaper} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} secretsUnlocked={secretsUnlocked} />;
       default: return null;
     }
   };
@@ -1102,6 +1133,38 @@ function TerminalApp() {
         ], setHistory);
         break;
 
+      case 'sudo':
+        if (args[1] === 'unlock' && args[2] === 'secrets') {
+          setHistory(prev => [...prev, "Verifying administrator credentials..."]);
+          await progressBar("UNLOCKING", 15);
+          await delay(500);
+          window.dispatchEvent(new CustomEvent('aethex-unlock-secrets'));
+          await typeEffect([
+            "",
+            "╔═══════════════════════════════════════════╗",
+            "║         🎉 SECRETS UNLOCKED! 🎉           ║",
+            "╠═══════════════════════════════════════════╣",
+            "║ New wallpapers are now available in       ║",
+            "║ Settings. Congratulations, Architect!     ║",
+            "╚═══════════════════════════════════════════╝",
+            ""
+          ], setHistory);
+        } else {
+          setHistory(prev => [...prev, "Usage: sudo unlock secrets", ""]);
+        }
+        break;
+
+      case 'secret':
+        await typeEffect([
+          "",
+          "🔐 SECRET COMMANDS:",
+          "  - sudo unlock secrets : Unlock hidden features",
+          "  - Try the Konami Code on the desktop",
+          "  - ↑↑↓↓←→←→BA",
+          ""
+        ], setHistory);
+        break;
+
       default:
         setHistory(prev => [...prev, `Command not found: ${cmd}`, "Type 'help' for available commands.", ""]);
     }
@@ -1503,25 +1566,30 @@ function PitchApp({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled }: { 
+function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, secretsUnlocked }: { 
   wallpaper: typeof WALLPAPERS[0]; 
   setWallpaper: (w: typeof WALLPAPERS[0]) => void;
   soundEnabled: boolean;
   setSoundEnabled: (v: boolean) => void;
+  secretsUnlocked: boolean;
 }) {
+  const visibleWallpapers = WALLPAPERS.filter(wp => !wp.secret || secretsUnlocked);
+  
   return (
     <div className="h-full p-6 bg-slate-950 overflow-auto">
       <h2 className="text-lg font-display text-white uppercase tracking-wider mb-6">System Settings</h2>
       
       <div className="space-y-6">
         <div>
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-3">Appearance</div>
+          <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
+            Appearance {secretsUnlocked && <span className="text-yellow-400 ml-2">✨ SECRETS UNLOCKED</span>}
+          </div>
           <div className="grid grid-cols-2 gap-2">
-            {WALLPAPERS.map(wp => (
+            {visibleWallpapers.map(wp => (
               <button
                 key={wp.id}
                 onClick={() => setWallpaper(wp)}
-                className={`p-3 rounded-lg border transition-colors ${wallpaper.id === wp.id ? 'border-cyan-500 bg-cyan-500/10' : 'border-white/10 hover:border-white/20'}`}
+                className={`p-3 rounded-lg border transition-colors ${wallpaper.id === wp.id ? 'border-cyan-500 bg-cyan-500/10' : wp.secret ? 'border-yellow-500/30 hover:border-yellow-500/50' : 'border-white/10 hover:border-white/20'}`}
               >
                 <div className="w-full h-12 rounded mb-2" style={{ background: wp.bg }} />
                 <div className="text-xs text-white/80">{wp.name}</div>
@@ -1558,6 +1626,13 @@ function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled }:
           <div className="text-cyan-400 text-sm font-mono">AeThex OS v3.0.0</div>
           <div className="text-white/50 text-xs mt-1">Build 2025.12.16</div>
         </div>
+
+        {!secretsUnlocked && (
+          <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+            <div className="text-white/40 text-xs font-mono">🔒 Hidden features available...</div>
+            <div className="text-white/20 text-[10px] mt-1">Try the Konami Code or find secrets in Terminal</div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { 
   Shield, FileCode, Terminal as TerminalIcon, ChevronRight, BarChart3, Network, 
   ExternalLink, Lock, Zap, Users, Globe, CheckCircle, ArrowRight, Star,
-  Award, Cpu, Building, Sparkles
+  Award, Cpu, Building, Sparkles, Monitor
 } from "lucide-react";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 import { useTutorial, homeTutorialSteps, TutorialButton } from "@/components/Tutorial";
@@ -85,6 +85,11 @@ export default function Home() {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
+              <Link href="/os">
+                <button className="bg-gradient-to-r from-cyan-500 to-purple-600 text-white px-8 py-4 font-bold uppercase tracking-wider hover:from-cyan-400 hover:to-purple-500 transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/30" data-testid="button-launch-os">
+                  Launch AeThex OS <Monitor className="w-4 h-4" />
+                </button>
+              </Link>
               <Link href="/pitch">
                 <button className="bg-primary text-background px-8 py-4 font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors flex items-center gap-2" data-testid="button-learn-more">
                   Learn More <ArrowRight className="w-4 h-4" />
