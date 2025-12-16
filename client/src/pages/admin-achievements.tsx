@@ -1,25 +1,16 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { getIcon } from "@/lib/iconMap";
 import { 
   Users, FileCode, Shield, Activity, LogOut, 
   BarChart3, User, Globe, Key, Award, Star, Trophy
 } from "lucide-react";
 
 export default function AdminAchievements() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: achievements, isLoading } = useQuery({
     queryKey: ["achievements"],
@@ -28,16 +19,7 @@ export default function AdminAchievements() {
       if (!res.ok) throw new Error("Failed to fetch achievements");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await logout();
@@ -84,7 +66,7 @@ export default function AdminAchievements() {
                 >
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 bg-black/20 rounded-lg flex items-center justify-center text-2xl">
-                      {achievement.icon || '🏆'}
+                      {getIcon(achievement.icon)}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-display text-white uppercase text-sm">{achievement.name}</h3>

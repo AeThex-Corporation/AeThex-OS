@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,20 +10,11 @@ import {
 } from "lucide-react";
 
 export default function AdminArchitects() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: profiles, isLoading } = useQuery({
     queryKey: ["profiles"],
@@ -31,7 +22,6 @@ export default function AdminArchitects() {
       const res = await fetch("/api/profiles");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const updateProfileMutation = useMutation({
@@ -49,14 +39,6 @@ export default function AdminArchitects() {
       setSelectedProfile(null);
     },
   });
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const filteredProfiles = profiles?.filter((p: any) => 
     p.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||

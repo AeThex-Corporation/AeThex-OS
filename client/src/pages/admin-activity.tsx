@@ -18,17 +18,11 @@ interface ActivityEvent {
 }
 
 export default function AdminActivity() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [liveEvents, setLiveEvents] = useState<ActivityEvent[]>([]);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [seenEventIds, setSeenEventIds] = useState<Set<string>>(new Set());
-
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      setLocation("/login");
-    }
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: profiles } = useQuery({
     queryKey: ["profiles"],
@@ -37,7 +31,6 @@ export default function AdminActivity() {
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: isAuthenticated,
     refetchInterval: 10000,
   });
 
@@ -48,7 +41,6 @@ export default function AdminActivity() {
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: isAuthenticated,
     refetchInterval: 5000,
   });
 
@@ -88,14 +80,6 @@ export default function AdminActivity() {
       setLastRefresh(new Date());
     }
   }, [authLogs]);
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await logout();

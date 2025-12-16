@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -8,18 +7,9 @@ import {
 } from "lucide-react";
 
 export default function AdminAegis() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: alerts } = useQuery({
     queryKey: ["alerts"],
@@ -28,7 +18,6 @@ export default function AdminAegis() {
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const { data: authLogs } = useQuery({
@@ -38,7 +27,6 @@ export default function AdminAegis() {
       if (!res.ok) return [];
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const resolveAlertMutation = useMutation({
@@ -55,14 +43,6 @@ export default function AdminAegis() {
       queryClient.invalidateQueries({ queryKey: ["alerts"] });
     },
   });
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await logout();

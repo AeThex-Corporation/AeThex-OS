@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,19 +10,10 @@ import {
 } from "lucide-react";
 
 export default function AdminApplications() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: applications, isLoading } = useQuery({
     queryKey: ["applications"],
@@ -31,7 +22,6 @@ export default function AdminApplications() {
       if (!res.ok) throw new Error("Failed to fetch applications");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const updateApplicationMutation = useMutation({
@@ -49,14 +39,6 @@ export default function AdminApplications() {
       setSelectedApp(null);
     },
   });
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await logout();

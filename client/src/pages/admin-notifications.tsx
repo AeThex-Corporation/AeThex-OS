@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { 
@@ -27,7 +27,7 @@ const defaultSettings: NotificationSetting[] = [
 ];
 
 export default function AdminNotifications() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
   const [settings, setSettings] = useState<NotificationSetting[]>(() => {
     if (typeof window !== "undefined") {
@@ -44,15 +44,6 @@ export default function AdminNotifications() {
   });
   const [saved, setSaved] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
-
   const toggleSetting = (id: string) => {
     setSettings((prev) =>
       prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
@@ -66,14 +57,6 @@ export default function AdminNotifications() {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
   };
-
-  if (authLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
 
   const handleLogout = async () => {
     await logout();

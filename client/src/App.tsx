@@ -4,6 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/auth";
 import { TutorialProvider } from "@/components/Tutorial";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Passport from "@/pages/passport";
@@ -34,17 +35,17 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/curriculum" component={Curriculum} />
       <Route path="/login" component={Login} />
-      <Route path="/admin" component={Admin} />
-      <Route path="/admin/architects" component={AdminArchitects} />
-      <Route path="/admin/projects" component={AdminProjects} />
-      <Route path="/admin/credentials" component={AdminCredentials} />
-      <Route path="/admin/aegis" component={AdminAegis} />
-      <Route path="/admin/sites" component={AdminSites} />
-      <Route path="/admin/logs" component={AdminLogs} />
-      <Route path="/admin/achievements" component={AdminAchievements} />
-      <Route path="/admin/applications" component={AdminApplications} />
-      <Route path="/admin/activity" component={AdminActivity} />
-      <Route path="/admin/notifications" component={AdminNotifications} />
+      <Route path="/admin">{() => <ProtectedRoute><Admin /></ProtectedRoute>}</Route>
+      <Route path="/admin/architects">{() => <ProtectedRoute><AdminArchitects /></ProtectedRoute>}</Route>
+      <Route path="/admin/projects">{() => <ProtectedRoute><AdminProjects /></ProtectedRoute>}</Route>
+      <Route path="/admin/credentials">{() => <ProtectedRoute><AdminCredentials /></ProtectedRoute>}</Route>
+      <Route path="/admin/aegis">{() => <ProtectedRoute><AdminAegis /></ProtectedRoute>}</Route>
+      <Route path="/admin/sites">{() => <ProtectedRoute><AdminSites /></ProtectedRoute>}</Route>
+      <Route path="/admin/logs">{() => <ProtectedRoute><AdminLogs /></ProtectedRoute>}</Route>
+      <Route path="/admin/achievements">{() => <ProtectedRoute><AdminAchievements /></ProtectedRoute>}</Route>
+      <Route path="/admin/applications">{() => <ProtectedRoute><AdminApplications /></ProtectedRoute>}</Route>
+      <Route path="/admin/activity">{() => <ProtectedRoute><AdminActivity /></ProtectedRoute>}</Route>
+      <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
       <Route component={NotFound} />
     </Switch>

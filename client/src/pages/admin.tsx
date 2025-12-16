@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -10,17 +9,8 @@ import {
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 
 export default function Admin() {
-  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!authLoading && !isAuthenticated) {
-        setLocation("/login");
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [authLoading, isAuthenticated, setLocation]);
 
   const { data: metrics } = useQuery({
     queryKey: ["metrics"],
@@ -28,7 +18,6 @@ export default function Admin() {
       const res = await fetch("/api/metrics");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const { data: profiles } = useQuery({
@@ -37,7 +26,6 @@ export default function Admin() {
       const res = await fetch("/api/profiles");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
 
   const { data: projects } = useQuery({
@@ -46,20 +34,7 @@ export default function Admin() {
       const res = await fetch("/api/projects");
       return res.json();
     },
-    enabled: isAuthenticated,
   });
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary animate-pulse">Loading...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
 
   const handleLogout = async () => {
     await logout();
