@@ -27,6 +27,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/auth/session", { credentials: "include" });
       return res.json();
     },
+    staleTime: 30000,
+    gcTime: 60000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
   
   const loginMutation = useMutation({
