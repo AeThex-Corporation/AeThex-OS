@@ -303,6 +303,66 @@ export async function registerRoutes(
     }
   });
 
+  // ========== PUBLIC OS API ROUTES ==========
+  
+  // Get public project summaries for OS (limited data, no auth required)
+  app.get("/api/os/projects", async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      const summaries = projects.slice(0, 10).map(p => ({
+        id: p.id,
+        title: p.title,
+        status: p.status,
+        engine: p.engine,
+      }));
+      res.json(summaries);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get public architect summaries for OS (limited data, no auth required)
+  app.get("/api/os/architects", async (req, res) => {
+    try {
+      const profiles = await storage.getProfiles();
+      const summaries = profiles.slice(0, 10).map(p => ({
+        id: p.id,
+        username: p.username,
+        level: p.level || 1,
+        xp: p.total_xp || 0,
+        verified: p.is_verified || false,
+      }));
+      res.json(summaries);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get achievements list for OS (public)
+  app.get("/api/os/achievements", async (req, res) => {
+    try {
+      const achievements = await storage.getAchievements();
+      res.json(achievements.slice(0, 20));
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get recent activity/notifications for OS (public summary)
+  app.get("/api/os/notifications", async (req, res) => {
+    try {
+      const metrics = await storage.getMetrics();
+      const notifications = [
+        { id: 1, message: `${metrics.totalProfiles} architects in network`, type: 'info' },
+        { id: 2, message: `${metrics.totalProjects} active projects`, type: 'info' },
+        { id: 3, message: 'Aegis security active', type: 'success' },
+      ];
+      res.json(notifications);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // ========== CHATBOT API (Rate limited) ==========
   
   const chatRateLimits = new Map<string, { count: number; resetTime: number }>();
