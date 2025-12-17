@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
-import { Shield, Lock, AlertCircle, UserPlus } from "lucide-react";
+import { Shield, Lock, AlertCircle } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import gridBg from '@assets/generated_images/dark_subtle_digital_grid_texture.png';
 
@@ -9,10 +9,8 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
-  const { login, signup } = useAuth();
+  const { login } = useAuth();
   const [, setLocation] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -20,21 +18,14 @@ export default function Login() {
     if (isLoading) return;
     
     setError("");
-    setSuccess("");
     setIsLoading(true);
     
     try {
-      if (mode === 'login') {
-        await login(email, password);
-        await new Promise(resolve => setTimeout(resolve, 100));
-        setLocation("/admin");
-      } else {
-        const result = await signup(email, password);
-        setSuccess(result.message || "Account created! Please check your email to confirm.");
-        setMode('login');
-      }
+      await login(email, password);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setLocation("/admin");
     } catch (err: any) {
-      setError(err.message || `${mode === 'login' ? 'Login' : 'Signup'} failed`);
+      setError(err.message || "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -60,29 +51,8 @@ export default function Login() {
             AeThex Command
           </h1>
           <p className="text-muted-foreground text-sm mt-2">
-            {mode === 'login' ? 'Authorized Personnel Only' : 'Create Your Account'}
+            Authorized Personnel Only
           </p>
-        </div>
-
-        <div className="flex mb-6 border border-white/10 rounded overflow-hidden">
-          <button
-            type="button"
-            onClick={() => { setMode('login'); setError(''); setSuccess(''); }}
-            className={`flex-1 py-2 text-sm uppercase tracking-wider transition-colors ${
-              mode === 'login' ? 'bg-primary text-background' : 'bg-card text-muted-foreground hover:text-white'
-            }`}
-          >
-            Login
-          </button>
-          <button
-            type="button"
-            onClick={() => { setMode('signup'); setError(''); setSuccess(''); }}
-            className={`flex-1 py-2 text-sm uppercase tracking-wider transition-colors ${
-              mode === 'signup' ? 'bg-primary text-background' : 'bg-card text-muted-foreground hover:text-white'
-            }`}
-          >
-            Sign Up
-          </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -90,12 +60,6 @@ export default function Login() {
             <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/30 text-destructive text-sm" data-testid="error-message">
               <AlertCircle className="w-4 h-4" />
               {error}
-            </div>
-          )}
-          
-          {success && (
-            <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/30 text-green-400 text-sm" data-testid="success-message">
-              {success}
             </div>
           )}
           
@@ -123,10 +87,9 @@ export default function Login() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-card border border-white/10 px-4 py-3 text-white placeholder-muted-foreground focus:border-primary/50 focus:outline-none transition-colors"
-              placeholder={mode === 'signup' ? 'Min 6 characters' : 'Enter password'}
+              placeholder="Enter password"
               data-testid="input-password"
               required
-              minLength={mode === 'signup' ? 6 : undefined}
             />
           </div>
 
@@ -138,15 +101,10 @@ export default function Login() {
           >
             {isLoading ? (
               <>Processing...</>
-            ) : mode === 'login' ? (
+            ) : (
               <>
                 <Lock className="w-4 h-4" />
                 Authenticate
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4" />
-                Create Account
               </>
             )}
           </button>
