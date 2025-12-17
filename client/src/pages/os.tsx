@@ -28,7 +28,23 @@ interface WindowState {
   minimized: boolean;
   maximized: boolean;
   zIndex: number;
+  accentColor?: string;
 }
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+}
+
+const ACCENT_COLORS = [
+  { id: 'cyan', name: 'Cyan', color: '#06b6d4', ring: 'ring-cyan-400/50', shadow: 'shadow-cyan-500/20', bg: 'bg-cyan-500' },
+  { id: 'purple', name: 'Purple', color: '#a855f7', ring: 'ring-purple-400/50', shadow: 'shadow-purple-500/20', bg: 'bg-purple-500' },
+  { id: 'green', name: 'Green', color: '#22c55e', ring: 'ring-green-400/50', shadow: 'shadow-green-500/20', bg: 'bg-green-500' },
+  { id: 'orange', name: 'Orange', color: '#f97316', ring: 'ring-orange-400/50', shadow: 'shadow-orange-500/20', bg: 'bg-orange-500' },
+  { id: 'pink', name: 'Pink', color: '#ec4899', ring: 'ring-pink-400/50', shadow: 'shadow-pink-500/20', bg: 'bg-pink-500' },
+  { id: 'red', name: 'Red', color: '#ef4444', ring: 'ring-red-400/50', shadow: 'shadow-red-500/20', bg: 'bg-red-500' },
+];
 
 interface DesktopApp {
   id: string;
@@ -75,10 +91,24 @@ export default function AeThexOS() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [secretsUnlocked, setSecretsUnlocked] = useState(false);
   const [konamiProgress, setKonamiProgress] = useState<string[]>([]);
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  const [showSpotlight, setShowSpotlight] = useState(false);
+  const [spotlightQuery, setSpotlightQuery] = useState('');
+  const [currentDesktop, setCurrentDesktop] = useState(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+  const [desktopIcons, setDesktopIcons] = useState<string[]>([]);
   const desktopRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
+  const spotlightRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
+
+  const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
+    const id = Date.now().toString();
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+  }, []);
 
   useEffect(() => {
     const bootSequence = async () => {
@@ -166,6 +196,40 @@ export default function AeThexOS() {
       window.removeEventListener('aethex-unlock-secrets', handleTerminalUnlock);
     };
   }, []);
+
+  useEffect(() => {
+    if (showSpotlight && spotlightRef.current) {
+      spotlightRef.current.focus();
+    }
+  }, [showSpotlight]);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('aethex-window-positions');
+    if (saved) {
+      try {
+        const positions = JSON.parse(saved);
+        setWindows(prev => prev.map(w => {
+          const savedPos = positions[w.id];
+          return savedPos ? { ...w, ...savedPos } : w;
+        }));
+      } catch {}
+    }
+    const hasVisited = localStorage.getItem('aethex-visited');
+    if (!hasVisited) {
+      setShowOnboarding(true);
+      localStorage.setItem('aethex-visited', 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (windows.length > 0) {
+      const positions: Record<string, { x: number; y: number; width: number; height: number }> = {};
+      windows.forEach(w => {
+        positions[w.id] = { x: w.x, y: w.y, width: w.width, height: w.height };
+      });
+      localStorage.setItem('aethex-window-positions', JSON.stringify(positions));
+    }
+  }, [windows]);
 
   const apps: DesktopApp[] = [
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
@@ -299,6 +363,36 @@ export default function AeThexOS() {
     await logout();
     setLocation("/");
   };
+
+  useEffect(() => {
+    const handleGlobalKeys = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === ' ') {
+        e.preventDefault();
+        setShowSpotlight(prev => !prev);
+        setSpotlightQuery('');
+      }
+      if (e.key === 'Escape') {
+        setShowSpotlight(false);
+        setShowStartMenu(false);
+        setContextMenu(null);
+      }
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey) {
+        const shortcuts: Record<string, string> = { 't': 'terminal', 'n': 'notes', 'e': 'codeeditor', 'p': 'passport', 'm': 'metrics' };
+        if (shortcuts[e.key]) {
+          e.preventDefault();
+          const app = apps.find(a => a.id === shortcuts[e.key]);
+          if (app) openApp(app);
+        }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key >= '1' && e.key <= '4') {
+        e.preventDefault();
+        setCurrentDesktop(parseInt(e.key) - 1);
+        addToast(`Switched to Desktop ${e.key}`, 'info');
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeys);
+    return () => window.removeEventListener('keydown', handleGlobalKeys);
+  }, [apps, openApp, addToast]);
 
   const renderAppContent = (component: string) => {
     switch (component) {
@@ -466,7 +560,36 @@ export default function AeThexOS() {
         onAppClick={openApp}
         onLogout={handleLogout}
         onNavigate={setLocation}
+        currentDesktop={currentDesktop}
+        onDesktopChange={setCurrentDesktop}
       />
+
+      <ParticleField />
+
+      <AnimatePresence>
+        {showSpotlight && (
+          <SpotlightSearch
+            query={spotlightQuery}
+            setQuery={setSpotlightQuery}
+            apps={apps}
+            onSelectApp={(app) => { openApp(app); setShowSpotlight(false); }}
+            onClose={() => setShowSpotlight(false)}
+            inputRef={spotlightRef}
+          />
+        )}
+      </AnimatePresence>
+
+      <ToastContainer toasts={toasts} />
+
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingTour
+            step={onboardingStep}
+            onNext={() => setOnboardingStep(s => s + 1)}
+            onClose={() => setShowOnboarding(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -723,9 +846,187 @@ interface TaskbarProps {
   onAppClick: (app: DesktopApp) => void;
   onLogout: () => void;
   onNavigate: (path: string) => void;
+  currentDesktop: number;
+  onDesktopChange: (d: number) => void;
 }
 
-function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate }: TaskbarProps) {
+function ParticleField() {
+  const particles = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    size: Math.random() * 2 + 1,
+    duration: Math.random() * 20 + 10,
+    delay: Math.random() * 5,
+  }));
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+      {particles.map(p => (
+        <motion.div
+          key={p.id}
+          className="absolute rounded-full bg-cyan-400/20"
+          style={{ left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size }}
+          animate={{
+            y: [0, -30, 0],
+            opacity: [0.2, 0.5, 0.2],
+          }}
+          transition={{
+            duration: p.duration,
+            repeat: Infinity,
+            delay: p.delay,
+            ease: "easeInOut",
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+function SpotlightSearch({ query, setQuery, apps, onSelectApp, onClose, inputRef }: {
+  query: string;
+  setQuery: (q: string) => void;
+  apps: DesktopApp[];
+  onSelectApp: (app: DesktopApp) => void;
+  onClose: () => void;
+  inputRef: React.RefObject<HTMLInputElement | null>;
+}) {
+  const filtered = apps.filter(a => a.title.toLowerCase().includes(query.toLowerCase()));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95, y: -20 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, y: -20 }}
+      className="fixed inset-0 flex items-start justify-center pt-[20vh] z-[99999]"
+      onClick={onClose}
+    >
+      <div 
+        className="w-[500px] bg-slate-900/95 backdrop-blur-2xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="p-4 border-b border-white/10 flex items-center gap-3">
+          <Globe className="w-5 h-5 text-cyan-400" />
+          <input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search apps... (Ctrl+Space)"
+            className="flex-1 bg-transparent text-white text-lg outline-none placeholder:text-white/30"
+            autoFocus
+          />
+          <kbd className="px-2 py-1 text-xs text-white/40 bg-white/5 rounded">ESC</kbd>
+        </div>
+        <div className="max-h-[300px] overflow-y-auto">
+          {filtered.length === 0 ? (
+            <div className="p-4 text-center text-white/40">No apps found</div>
+          ) : (
+            filtered.map(app => (
+              <button
+                key={app.id}
+                onClick={() => onSelectApp(app)}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/10 transition-colors text-left"
+              >
+                <div className="w-8 h-8 bg-cyan-500/20 rounded-lg flex items-center justify-center text-cyan-400">
+                  {app.icon}
+                </div>
+                <span className="text-white font-mono">{app.title}</span>
+              </button>
+            ))
+          )}
+        </div>
+        <div className="p-2 border-t border-white/10 text-xs text-white/30 text-center">
+          Ctrl+T Terminal • Ctrl+N Notes • Ctrl+E Code • Ctrl+P Passport
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ToastContainer({ toasts }: { toasts: Toast[] }) {
+  const colors = {
+    info: 'border-cyan-500/50 bg-cyan-500/10',
+    success: 'border-green-500/50 bg-green-500/10',
+    warning: 'border-yellow-500/50 bg-yellow-500/10',
+    error: 'border-red-500/50 bg-red-500/10',
+  };
+
+  return (
+    <div className="fixed top-4 right-4 z-[99999] space-y-2" style={{ pointerEvents: 'none' }}>
+      <AnimatePresence>
+        {toasts.map(toast => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 100, scale: 0.9 }}
+            className={`px-4 py-3 rounded-lg border backdrop-blur-xl ${colors[toast.type]}`}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <span className="text-white text-sm font-mono">{toast.message}</span>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function OnboardingTour({ step, onNext, onClose }: { step: number; onNext: () => void; onClose: () => void }) {
+  const steps = [
+    { title: 'Welcome to AeThex OS', content: 'Your operating system for the Metaverse. Double-click icons to open apps.' },
+    { title: 'Desktop Navigation', content: 'Use Ctrl+Space to open Spotlight search. Press Ctrl+1-4 to switch desktops.' },
+    { title: 'Keyboard Shortcuts', content: 'Ctrl+T for Terminal, Ctrl+N for Notes, Ctrl+E for Code Editor.' },
+    { title: 'Discover Secrets', content: 'Try the Konami code or explore Terminal commands. There are hidden surprises!' },
+  ];
+
+  if (step >= steps.length) {
+    onClose();
+    return null;
+  }
+
+  const current = steps[step];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[99999]"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        className="w-[400px] bg-slate-900 border border-cyan-500/30 rounded-xl p-6 shadow-2xl"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <Zap className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="text-lg font-display text-white uppercase tracking-wider">{current.title}</h3>
+        </div>
+        <p className="text-white/70 text-sm mb-6">{current.content}</p>
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1">
+            {steps.map((_, i) => (
+              <div key={i} className={`w-2 h-2 rounded-full ${i === step ? 'bg-cyan-400' : 'bg-white/20'}`} />
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white transition-colors text-sm">
+              Skip
+            </button>
+            <button onClick={onNext} className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 transition-colors text-sm">
+              {step === steps.length - 1 ? 'Get Started' : 'Next'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange }: TaskbarProps) {
   return (
     <>
       <AnimatePresence>
@@ -790,18 +1091,41 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
 
         <div className="flex-1 flex items-center gap-1 overflow-x-auto">
           {windows.map(window => (
-            <button
+            <motion.button
               key={window.id}
               onClick={() => onWindowClick(window.id)}
-              className={`h-8 px-3 flex items-center gap-2 rounded transition-colors min-w-0 ${
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`h-8 px-3 flex flex-col items-center justify-center gap-0.5 rounded transition-colors min-w-0 relative ${
                 activeWindowId === window.id && !window.minimized
-                  ? 'bg-cyan-500/20 text-cyan-400 border-b-2 border-cyan-400'
+                  ? 'bg-cyan-500/20 text-cyan-400'
                   : window.minimized ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-white/10 text-white/80 hover:bg-white/15'
               }`}
               data-testid={`taskbar-${window.id}`}
             >
-              <div className="w-4 h-4 flex-shrink-0">{window.icon}</div>
-              <span className="text-xs font-mono truncate max-w-[100px]">{window.title}</span>
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 flex-shrink-0">{window.icon}</div>
+                <span className="text-xs font-mono truncate max-w-[100px]">{window.title}</span>
+              </div>
+              <div className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full transition-colors ${
+                !window.minimized ? 'bg-cyan-400' : 'bg-transparent'
+              }`} />
+            </motion.button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1 mr-2">
+          {[0, 1, 2, 3].map(d => (
+            <button
+              key={d}
+              onClick={() => onDesktopChange(d)}
+              className={`w-6 h-4 rounded text-[10px] font-mono transition-all ${
+                currentDesktop === d 
+                  ? 'bg-cyan-500 text-white scale-110' 
+                  : 'bg-white/10 text-white/40 hover:bg-white/20'
+              }`}
+            >
+              {d + 1}
             </button>
           ))}
         </div>
