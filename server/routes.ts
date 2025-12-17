@@ -64,7 +64,7 @@ export async function registerRoutes(
       const profile = await storage.getProfile(data.user.id);
       
       // Check if user is admin (based on profile role or email)
-      const isAdmin = profile?.role === 'admin' || email.includes('admin');
+      const isAdmin = ['admin', 'oversee', 'employee'].includes(profile?.role || '') || email.includes('admin');
       
       // Set express session
       req.session.regenerate((err) => {
