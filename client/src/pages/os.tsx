@@ -74,6 +74,21 @@ interface ClearanceTheme {
   fontStyle: string;
 }
 
+const DAILY_TIPS = [
+  { title: "Quick Launch", tip: "Press Ctrl+Space to open Spotlight search and quickly find apps." },
+  { title: "Virtual Desktops", tip: "Use the numbered buttons (1-4) in the taskbar to switch between virtual desktops." },
+  { title: "Window Management", tip: "Double-click a window title bar to maximize/restore it." },
+  { title: "Keyboard Shortcuts", tip: "Ctrl+T opens Terminal, Ctrl+S opens Settings, Ctrl+F opens Files." },
+  { title: "Theme Switching", tip: "Click the Start menu and use 'Switch Clearance' to change between Foundation and Corp modes." },
+  { title: "Sound Settings", tip: "Toggle system sounds in Settings to enable audio feedback for actions." },
+  { title: "Dock Apps", tip: "Your most-used apps are pinned to the quick-launch dock for easy access." },
+  { title: "Right-Click Menu", tip: "Right-click on the desktop to access quick options like refresh and settings." },
+  { title: "Calculator", tip: "Need quick math? Open Calculator from the app menu or dock." },
+  { title: "Notifications", tip: "Click the bell icon in the taskbar to view system notifications." },
+];
+
+const PINNED_APPS = ['terminal', 'files', 'calculator', 'settings'];
+
 const CLEARANCE_THEMES: Record<ClearanceMode, ClearanceTheme> = {
   foundation: {
     id: 'foundation',
@@ -168,6 +183,10 @@ export default function AeThexOS() {
     return (saved as ClearanceMode) || 'foundation';
   });
   const [isSwitchingClearance, setIsSwitchingClearance] = useState(false);
+  const [showDailyTip, setShowDailyTip] = useState(false);
+  const [dailyTip, setDailyTip] = useState(DAILY_TIPS[0]);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const audioContextRef = useRef<AudioContext | null>(null);
   const clearanceTheme = CLEARANCE_THEMES[clearanceMode];
   const desktopRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
@@ -175,7 +194,7 @@ export default function AeThexOS() {
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: weatherData } = useQuery({
+  const { data: weatherData, isFetching: weatherFetching } = useQuery({
     queryKey: ['weather'],
     queryFn: async () => {
       const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.0060&current_weather=true&temperature_unit=fahrenheit');
@@ -203,17 +222,13 @@ export default function AeThexOS() {
     localStorage.setItem('aethex-clearance', clearanceMode);
   }, [clearanceMode]);
 
-  const switchClearance = useCallback(() => {
-    const newMode: ClearanceMode = clearanceMode === 'foundation' ? 'corp' : 'foundation';
-    setIsSwitchingClearance(true);
-    setShowStartMenu(false);
-    
-    setTimeout(() => {
-      setClearanceMode(newMode);
-      setIsSwitchingClearance(false);
-      addToast(`Switched to ${CLEARANCE_THEMES[newMode].name}`, 'success');
-    }, 600);
-  }, [clearanceMode, addToast]);
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   useEffect(() => {
     const bootSequence = async () => {
@@ -235,6 +250,10 @@ export default function AeThexOS() {
       
       await new Promise(r => setTimeout(r, 500));
       setIsBooting(false);
+      
+      const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
+      setDailyTip(randomTip);
+      setTimeout(() => setShowDailyTip(true), 1000);
     };
     
     bootSequence();
@@ -347,6 +366,7 @@ export default function AeThexOS() {
     { id: "arcade", title: "Arcade", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
     { id: "profiles", title: "Architects", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
     { id: "chat", title: "Comms", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
+    { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
 
@@ -365,14 +385,52 @@ export default function AeThexOS() {
 
   const apps = clearanceMode === 'foundation' ? foundationApps : corpApps;
 
-  const playSound = useCallback((type: 'open' | 'close' | 'minimize' | 'click') => {
+  const playSound = useCallback((type: 'open' | 'close' | 'minimize' | 'click' | 'notification' | 'switch') => {
     if (!soundEnabled) return;
-    // Visual feedback instead of actual sound
-    const flash = document.createElement('div');
-    flash.className = 'fixed inset-0 bg-cyan-400/5 pointer-events-none z-[99999]';
-    document.body.appendChild(flash);
-    setTimeout(() => flash.remove(), 50);
+    try {
+      if (!audioContextRef.current) {
+        audioContextRef.current = new AudioContext();
+      }
+      const ctx = audioContextRef.current;
+      const oscillator = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      
+      const sounds: Record<string, { freq: number; duration: number; type: OscillatorType }> = {
+        open: { freq: 523, duration: 0.1, type: 'sine' },
+        close: { freq: 392, duration: 0.1, type: 'sine' },
+        minimize: { freq: 330, duration: 0.08, type: 'sine' },
+        click: { freq: 800, duration: 0.03, type: 'square' },
+        notification: { freq: 880, duration: 0.15, type: 'sine' },
+        switch: { freq: 440, duration: 0.2, type: 'sawtooth' },
+      };
+      
+      const sound = sounds[type] || sounds.click;
+      oscillator.type = sound.type;
+      oscillator.frequency.setValueAtTime(sound.freq, ctx.currentTime);
+      gainNode.gain.setValueAtTime(0.1, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + sound.duration);
+      
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + sound.duration);
+    } catch (e) {
+      console.log('Audio not available');
+    }
   }, [soundEnabled]);
+
+  const switchClearance = useCallback(() => {
+    const newMode: ClearanceMode = clearanceMode === 'foundation' ? 'corp' : 'foundation';
+    setIsSwitchingClearance(true);
+    setShowStartMenu(false);
+    playSound('switch');
+    
+    setTimeout(() => {
+      setClearanceMode(newMode);
+      setIsSwitchingClearance(false);
+      addToast(`Switched to ${CLEARANCE_THEMES[newMode].name}`, 'success');
+    }, 600);
+  }, [clearanceMode, addToast, playSound]);
 
   const openApp = useCallback((app: DesktopApp) => {
     playSound('open');
@@ -633,10 +691,17 @@ export default function AeThexOS() {
     );
   }
 
+  const parallaxX = (mousePosition.x / window.innerWidth - 0.5) * 10;
+  const parallaxY = (mousePosition.y / window.innerHeight - 0.5) * 10;
+
   return (
     <div 
       className="h-screen w-screen overflow-hidden select-none relative transition-all duration-700"
-      style={{ background: clearanceTheme.wallpaper }}
+      style={{ 
+        background: clearanceTheme.wallpaper,
+        backgroundPosition: `${50 + parallaxX}% ${50 + parallaxY}%`,
+        backgroundSize: '110% 110%'
+      }}
     >
       <div 
         ref={desktopRef}
@@ -788,6 +853,67 @@ export default function AeThexOS() {
       </AnimatePresence>
 
       <ToastContainer toasts={toasts} />
+
+      <AnimatePresence>
+        {showDailyTip && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-20 right-4 z-[9998] w-80 rounded-xl overflow-hidden shadow-2xl"
+            style={{ 
+              background: clearanceTheme.id === 'foundation' ? 'rgba(26, 5, 5, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+              border: `1px solid ${clearanceTheme.accent}40`
+            }}
+          >
+            <div 
+              className="px-4 py-3 flex items-center justify-between"
+              style={{ borderBottom: `1px solid ${clearanceTheme.accent}30` }}
+            >
+              <div className="flex items-center gap-2">
+                <Zap className="w-4 h-4" style={{ color: clearanceTheme.accent }} />
+                <span className="text-sm font-semibold text-white">Daily Tip</span>
+              </div>
+              <button 
+                onClick={() => setShowDailyTip(false)}
+                className="text-white/40 hover:text-white transition-colors"
+                data-testid="close-daily-tip"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4">
+              <div className="text-xs uppercase tracking-wider mb-2" style={{ color: clearanceTheme.accent }}>
+                {dailyTip.title}
+              </div>
+              <p className="text-sm text-white/80 leading-relaxed">
+                {dailyTip.tip}
+              </p>
+            </div>
+            <div className="px-4 pb-4">
+              <button
+                onClick={() => setShowDailyTip(false)}
+                className="w-full py-2 rounded-lg text-sm font-medium transition-all hover:scale-[1.02]"
+                style={{ 
+                  background: `${clearanceTheme.accent}20`,
+                  color: clearanceTheme.accent,
+                  border: `1px solid ${clearanceTheme.accent}40`
+                }}
+                data-testid="dismiss-daily-tip"
+              >
+                Got it!
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {weatherFetching && (
+        <div className="fixed top-4 right-4 z-[9999] flex items-center gap-2 px-3 py-2 rounded-lg bg-black/50 backdrop-blur-sm" data-testid="loading-indicator">
+          <Loader2 className="w-4 h-4 animate-spin" style={{ color: clearanceTheme.accent }} />
+          <span className="text-xs text-white/60">Syncing...</span>
+        </div>
+      )}
 
       <AnimatePresence>
         {showOnboarding && (
@@ -1445,6 +1571,40 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
             {clearanceTheme.id === 'foundation' ? 'Foundation' : 'Corp'}
           </span>
         </button>
+
+        <div className="w-px h-6 bg-white/10" />
+
+        <div className="flex items-center gap-1 px-1">
+          {PINNED_APPS.map(appId => {
+            const app = apps.find(a => a.id === appId);
+            if (!app) return null;
+            const isOpen = windows.some(w => w.id === appId);
+            return (
+              <motion.button
+                key={appId}
+                onClick={() => onAppClick(app)}
+                whileHover={{ scale: 1.1, y: -2 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center relative transition-colors"
+                style={{ 
+                  background: isOpen ? `${clearanceTheme.accent}20` : 'rgba(255,255,255,0.05)',
+                  border: isOpen ? `1px solid ${clearanceTheme.accent}40` : '1px solid transparent'
+                }}
+                data-testid={`dock-${appId}`}
+              >
+                <div className="w-5 h-5" style={{ color: isOpen ? clearanceTheme.accent : 'rgba(255,255,255,0.7)' }}>
+                  {app.icon}
+                </div>
+                {isOpen && (
+                  <div 
+                    className="absolute -bottom-1 w-1 h-1 rounded-full"
+                    style={{ background: clearanceTheme.accent }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
 
         <div className="w-px h-6 bg-white/10" />
 
