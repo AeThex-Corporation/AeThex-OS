@@ -99,3 +99,32 @@ Preferred communication style: Simple, everyday language.
 - Vite development server with HMR
 - Replit-specific plugins for development (cartographer, dev-banner, error overlay)
 - TypeScript with strict mode enabled
+
+## Multi-Platform Strategy (Q3 2025 Roadmap)
+
+### Current State: Web-First
+The AeThex OS (`/os` route) is currently a web application. The codebase has been prepared for future multi-platform deployment with abstraction layers.
+
+### Platform Abstraction Layer
+Located in `client/src/lib/`:
+- **`platform.ts`**: Detects runtime environment (web, desktop, mobile) and provides platform-specific configuration
+- **`storage.ts`**: Abstract storage adapter that uses localStorage for web and can use secure storage (keychain) for desktop/mobile
+- **`api.ts`**: Centralized API request layer with configurable base URLs for different deployment contexts
+
+### Future: Flutter Desktop App (Q3 2025)
+**Why Flutter over Tauri/Electron:**
+1. **Custom Rendering**: Skia/Impeller engine draws every pixel - perfect for the cyberpunk/Aegis Terminal aesthetic
+2. **Cross-Platform Code Sharing**: Same codebase for iOS, Android, Windows, macOS
+3. **Native Performance**: 60/120 FPS custom animations without browser overhead
+4. **Passport Use Case**: Ideal for secure "Wallet/Authenticator" style apps
+
+**Migration Path:**
+1. Web remains the primary platform until revenue milestone ($50k+)
+2. Flutter app will consume the same backend API (hosted on aethex.network)
+3. Desktop builds will use secure storage for Supabase tokens
+4. Mobile app serves as "Aegis Companion" - authenticator/passport viewer, not game client
+
+### Environment Configuration
+For desktop/mobile builds, set:
+- `VITE_API_BASE_URL`: Points to production API (https://aethex.network)
+- Platform detection automatically adjusts storage and API handling
