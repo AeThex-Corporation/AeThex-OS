@@ -17,14 +17,17 @@ export default function Login() {
     e.preventDefault();
     if (isLoading) return;
     
+    console.log('Login attempt:', email);
     setError("");
     setIsLoading(true);
     
     try {
       await login(email, password);
+      console.log('Login success');
       await new Promise(resolve => setTimeout(resolve, 100));
       setLocation("/admin");
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || "Login failed");
     } finally {
       setIsLoading(false);
