@@ -37,6 +37,18 @@ interface Toast {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+interface ThemeSettings {
+  mode: 'dark' | 'light' | 'system';
+  accentColor: string;
+  transparency: number;
+}
+
+interface DesktopLayout {
+  name: string;
+  windows: Array<{ appId: string; x: number; y: number; width: number; height: number }>;
+  desktop: number;
+}
+
 const ACCENT_COLORS = [
   { id: 'cyan', name: 'Cyan', color: '#06b6d4', ring: 'ring-cyan-400/50', shadow: 'shadow-cyan-500/20', bg: 'bg-cyan-500' },
   { id: 'purple', name: 'Purple', color: '#a855f7', ring: 'ring-purple-400/50', shadow: 'shadow-purple-500/20', bg: 'bg-purple-500' },
@@ -98,17 +110,43 @@ export default function AeThexOS() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [desktopIcons, setDesktopIcons] = useState<string[]>([]);
+  const [theme, setTheme] = useState<ThemeSettings>(() => {
+    const saved = localStorage.getItem('aethex-theme');
+    return saved ? JSON.parse(saved) : { mode: 'dark', accentColor: 'cyan', transparency: 80 };
+  });
+  const [savedLayouts, setSavedLayouts] = useState<DesktopLayout[]>(() => {
+    const saved = localStorage.getItem('aethex-layouts');
+    return saved ? JSON.parse(saved) : [];
+  });
   const desktopRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
   const spotlightRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
 
+  const { data: weatherData } = useQuery({
+    queryKey: ['weather'],
+    queryFn: async () => {
+      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=40.7128&longitude=-74.0060&current_weather=true&temperature_unit=fahrenheit');
+      return res.json();
+    },
+    refetchInterval: 600000,
+    staleTime: 300000,
+  });
+
   const addToast = useCallback((message: string, type: Toast['type'] = 'info') => {
     const id = Date.now().toString();
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('aethex-theme', JSON.stringify(theme));
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('aethex-layouts', JSON.stringify(savedLayouts));
+  }, [savedLayouts]);
 
   useEffect(() => {
     const bootSequence = async () => {
@@ -414,7 +452,54 @@ export default function AeThexOS() {
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
-      case 'settings': return <SettingsApp wallpaper={wallpaper} setWallpaper={setWallpaper} soundEnabled={soundEnabled} setSoundEnabled={setSoundEnabled} secretsUnlocked={secretsUnlocked} />;
+      case 'settings': return <SettingsApp 
+        wallpaper={wallpaper} 
+        setWallpaper={setWallpaper} 
+        soundEnabled={soundEnabled} 
+        setSoundEnabled={setSoundEnabled} 
+        secretsUnlocked={secretsUnlocked}
+        theme={theme}
+        setTheme={setTheme}
+        savedLayouts={savedLayouts}
+        onSaveLayout={(name) => {
+          const layout: DesktopLayout = {
+            name,
+            windows: windows.map(w => ({ appId: w.component, x: w.x, y: w.y, width: w.width, height: w.height })),
+            desktop: currentDesktop,
+          };
+          setSavedLayouts(prev => [...prev.filter(l => l.name !== name), layout]);
+          addToast(`Layout "${name}" saved`, 'success');
+        }}
+        onLoadLayout={(layout) => {
+          setWindows([]);
+          setTimeout(() => {
+            layout.windows.forEach((w, i) => {
+              const app = apps.find(a => a.component === w.appId);
+              if (app) {
+                setWindows(prev => [...prev, {
+                  id: `${app.id}-${Date.now()}-${i}`,
+                  title: app.title,
+                  icon: app.icon,
+                  component: app.component,
+                  x: w.x,
+                  y: w.y,
+                  width: w.width,
+                  height: w.height,
+                  minimized: false,
+                  maximized: false,
+                  zIndex: i + 1,
+                }]);
+              }
+            });
+            setCurrentDesktop(layout.desktop);
+            addToast(`Layout "${layout.name}" loaded`, 'success');
+          }, 100);
+        }}
+        onDeleteLayout={(name) => {
+          setSavedLayouts(prev => prev.filter(l => l.name !== name));
+          addToast(`Layout "${name}" deleted`, 'info');
+        }}
+      />;
       default: return null;
     }
   };
@@ -487,7 +572,7 @@ export default function AeThexOS() {
       >
         <div className="absolute inset-0 bg-[linear-gradient(rgba(0,255,170,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(0,255,170,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none" />
 
-        <DesktopWidgets time={time} />
+        <DesktopWidgets time={time} weather={weatherData} notifications={notifications} />
 
         <div className="absolute top-4 left-4 grid grid-cols-2 gap-2 w-48">
           {apps.slice(0, 9).map((app) => (
@@ -594,7 +679,11 @@ export default function AeThexOS() {
   );
 }
 
-function DesktopWidgets({ time }: { time: Date }) {
+function DesktopWidgets({ time, weather, notifications }: { 
+  time: Date; 
+  weather?: { current_weather?: { temperature: number; windspeed: number; weathercode: number } };
+  notifications?: string[];
+}) {
   const { data: metrics } = useQuery({
     queryKey: ['os-metrics'],
     queryFn: async () => {
@@ -604,19 +693,57 @@ function DesktopWidgets({ time }: { time: Date }) {
     refetchInterval: 30000,
   });
 
+  const getWeatherIcon = (code: number) => {
+    if (code === 0) return '☀️';
+    if (code <= 3) return '⛅';
+    if (code <= 48) return '🌫️';
+    if (code <= 67) return '🌧️';
+    if (code <= 77) return '🌨️';
+    if (code <= 82) return '🌧️';
+    if (code <= 86) return '🌨️';
+    return '⛈️';
+  };
+
   return (
-    <div className="absolute top-4 right-4 space-y-3">
-      <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-48">
+    <div className="absolute top-4 right-4 space-y-3 z-10">
+      <motion.div 
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
+      >
         <div className="text-3xl font-mono text-white font-bold">
           {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>
         <div className="text-xs text-white/50 font-mono">
           {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
         </div>
-      </div>
+      </motion.div>
+
+      {weather?.current_weather && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
+        >
+          <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Weather</div>
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">{getWeatherIcon(weather.current_weather.weathercode)}</span>
+            <div>
+              <div className="text-2xl font-mono text-white">{Math.round(weather.current_weather.temperature)}°F</div>
+              <div className="text-xs text-white/50">Wind: {weather.current_weather.windspeed} mph</div>
+            </div>
+          </div>
+        </motion.div>
+      )}
       
       {metrics && (
-        <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-48">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
+        >
           <div className="text-xs text-white/50 uppercase tracking-wider mb-2">System Status</div>
           <div className="space-y-1 text-xs font-mono">
             <div className="flex justify-between">
@@ -632,7 +759,23 @@ function DesktopWidgets({ time }: { time: Date }) {
               <span className="text-green-400">{metrics.onlineUsers || 0}</span>
             </div>
           </div>
-        </div>
+        </motion.div>
+      )}
+
+      {notifications && notifications.length > 0 && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52 max-h-32 overflow-hidden"
+        >
+          <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Notifications</div>
+          <div className="space-y-1 text-xs">
+            {notifications.slice(0, 3).map((n, i) => (
+              <div key={i} className="text-white/70 truncate">{n}</div>
+            ))}
+          </div>
+        </motion.div>
       )}
     </div>
   );
@@ -2034,71 +2177,193 @@ function PitchApp({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, secretsUnlocked }: { 
+function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, secretsUnlocked, theme, setTheme, savedLayouts, onSaveLayout, onLoadLayout, onDeleteLayout }: { 
   wallpaper: typeof WALLPAPERS[0]; 
   setWallpaper: (w: typeof WALLPAPERS[0]) => void;
   soundEnabled: boolean;
   setSoundEnabled: (v: boolean) => void;
   secretsUnlocked: boolean;
+  theme: ThemeSettings;
+  setTheme: (t: ThemeSettings) => void;
+  savedLayouts: DesktopLayout[];
+  onSaveLayout: (name: string) => void;
+  onLoadLayout: (layout: DesktopLayout) => void;
+  onDeleteLayout: (name: string) => void;
 }) {
+  const [layoutName, setLayoutName] = useState('');
+  const [activeTab, setActiveTab] = useState<'appearance' | 'layouts' | 'system'>('appearance');
   const visibleWallpapers = WALLPAPERS.filter(wp => !wp.secret || secretsUnlocked);
   
   return (
-    <div className="h-full p-6 bg-slate-950 overflow-auto">
-      <h2 className="text-lg font-display text-white uppercase tracking-wider mb-6">System Settings</h2>
-      
-      <div className="space-y-6">
-        <div>
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
-            Appearance {secretsUnlocked && <span className="text-yellow-400 ml-2">✨ SECRETS UNLOCKED</span>}
+    <div className="h-full bg-slate-950 flex flex-col">
+      <div className="flex border-b border-white/10">
+        {(['appearance', 'layouts', 'system'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-3 text-sm font-mono uppercase tracking-wider transition-colors ${
+              activeTab === tab ? 'text-cyan-400 border-b-2 border-cyan-400' : 'text-white/50 hover:text-white/80'
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 p-6 overflow-auto">
+        {activeTab === 'appearance' && (
+          <div className="space-y-6">
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
+                Accent Color
+              </div>
+              <div className="flex gap-2 flex-wrap">
+                {ACCENT_COLORS.map(color => (
+                  <button
+                    key={color.id}
+                    onClick={() => setTheme({ ...theme, accentColor: color.id })}
+                    className={`w-10 h-10 rounded-full transition-all ${color.bg} ${
+                      theme.accentColor === color.id ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-950 scale-110' : 'hover:scale-105'
+                    }`}
+                    title={color.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
+                Theme Mode
+              </div>
+              <div className="flex gap-2">
+                {(['dark', 'light', 'system'] as const).map(mode => (
+                  <button
+                    key={mode}
+                    onClick={() => setTheme({ ...theme, mode })}
+                    className={`px-4 py-2 rounded-lg text-sm font-mono capitalize transition-colors ${
+                      theme.mode === mode ? 'bg-cyan-500 text-white' : 'bg-white/10 text-white/70 hover:bg-white/20'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+              </div>
+              <div className="text-white/30 text-xs mt-2">Note: Light mode is preview only</div>
+            </div>
+
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
+                Wallpaper {secretsUnlocked && <span className="text-yellow-400 ml-2">✨ UNLOCKED</span>}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {visibleWallpapers.map(wp => (
+                  <button
+                    key={wp.id}
+                    onClick={() => setWallpaper(wp)}
+                    className={`p-3 rounded-lg border transition-colors ${wallpaper.id === wp.id ? 'border-cyan-500 bg-cyan-500/10' : wp.secret ? 'border-yellow-500/30 hover:border-yellow-500/50' : 'border-white/10 hover:border-white/20'}`}
+                  >
+                    <div className="w-full h-12 rounded mb-2" style={{ background: wp.bg }} />
+                    <div className="text-xs text-white/80">{wp.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">
+                Transparency
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="100"
+                value={theme.transparency}
+                onChange={e => setTheme({ ...theme, transparency: parseInt(e.target.value) })}
+                className="w-full accent-cyan-500"
+              />
+              <div className="flex justify-between text-xs text-white/40 mt-1">
+                <span>More glass</span>
+                <span>{theme.transparency}%</span>
+                <span>More solid</span>
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            {visibleWallpapers.map(wp => (
-              <button
-                key={wp.id}
-                onClick={() => setWallpaper(wp)}
-                className={`p-3 rounded-lg border transition-colors ${wallpaper.id === wp.id ? 'border-cyan-500 bg-cyan-500/10' : wp.secret ? 'border-yellow-500/30 hover:border-yellow-500/50' : 'border-white/10 hover:border-white/20'}`}
-              >
-                <div className="w-full h-12 rounded mb-2" style={{ background: wp.bg }} />
-                <div className="text-xs text-white/80">{wp.name}</div>
+        )}
+
+        {activeTab === 'layouts' && (
+          <div className="space-y-6">
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">Save Current Layout</div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={layoutName}
+                  onChange={e => setLayoutName(e.target.value)}
+                  placeholder="Layout name..."
+                  className="flex-1 bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white text-sm focus:border-cyan-500 focus:outline-none"
+                />
+                <button
+                  onClick={() => { if (layoutName.trim()) { onSaveLayout(layoutName.trim()); setLayoutName(''); }}}
+                  className="px-4 py-2 bg-cyan-500 text-white rounded-lg text-sm hover:bg-cyan-400 transition-colors"
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs text-white/50 uppercase tracking-wider mb-3">Saved Layouts</div>
+              {savedLayouts.length === 0 ? (
+                <div className="text-white/30 text-sm p-4 text-center bg-white/5 rounded-lg">
+                  No saved layouts yet. Arrange your windows and save a layout above.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {savedLayouts.map(layout => (
+                    <div key={layout.name} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/10">
+                      <div>
+                        <div className="text-white text-sm font-mono">{layout.name}</div>
+                        <div className="text-white/40 text-xs">{layout.windows.length} windows • Desktop {layout.desktop + 1}</div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => onLoadLayout(layout)} className="px-3 py-1 bg-cyan-500/20 text-cyan-400 rounded text-xs hover:bg-cyan-500/30">
+                          Load
+                        </button>
+                        <button onClick={() => onDeleteLayout(layout.name)} className="px-3 py-1 bg-red-500/20 text-red-400 rounded text-xs hover:bg-red-500/30">
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'system' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
+              <div>
+                <div className="text-white text-sm">Sound Effects</div>
+                <div className="text-white/50 text-xs">UI interaction feedback</div>
+              </div>
+              <button onClick={() => setSoundEnabled(!soundEnabled)} className={`w-10 h-6 rounded-full relative transition-colors ${soundEnabled ? 'bg-cyan-500' : 'bg-slate-600'}`}>
+                <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${soundEnabled ? 'right-1' : 'left-1'}`} />
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="text-xs text-white/50 uppercase tracking-wider">System</div>
-          
-          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-            <div>
-              <div className="text-white text-sm">Sound Effects</div>
-              <div className="text-white/50 text-xs">UI interaction feedback</div>
             </div>
-            <button onClick={() => setSoundEnabled(!soundEnabled)} className={`w-10 h-6 rounded-full relative transition-colors ${soundEnabled ? 'bg-cyan-500' : 'bg-slate-600'}`}>
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${soundEnabled ? 'right-1' : 'left-1'}`} />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-3 bg-white/5 rounded-lg">
-            <div>
-              <div className="text-white text-sm">Dark Mode</div>
-              <div className="text-white/50 text-xs">Always enabled</div>
+            
+            <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
+              <div className="text-cyan-400 text-sm font-mono">AeThex OS v3.0.0</div>
+              <div className="text-white/50 text-xs mt-1">Build 2025.12.17</div>
             </div>
-            <div className="w-10 h-6 bg-cyan-500 rounded-full relative">
-              <div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-lg">
-          <div className="text-cyan-400 text-sm font-mono">AeThex OS v3.0.0</div>
-          <div className="text-white/50 text-xs mt-1">Build 2025.12.16</div>
-        </div>
 
-        {!secretsUnlocked && (
-          <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
-            <div className="text-white/40 text-xs font-mono">🔒 Hidden features available...</div>
-            <div className="text-white/20 text-[10px] mt-1">Try the Konami Code or find secrets in Terminal</div>
+            {!secretsUnlocked && (
+              <div className="p-3 bg-white/5 border border-white/10 rounded-lg text-center">
+                <div className="text-white/40 text-xs font-mono">🔒 Hidden features available...</div>
+                <div className="text-white/20 text-[10px] mt-1">Try the Konami Code or find secrets in Terminal</div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2281,7 +2546,7 @@ function MetricsDashboardApp() {
 }
 
 function CodeEditorApp() {
-  const sampleCode = `// AeThex Smart Contract
+  const defaultCode = `// AeThex Smart Contract
 import { Aegis } from '@aethex/core';
 
 interface Architect {
@@ -2317,33 +2582,153 @@ class MetaverseRegistry {
   }
 }`;
 
+  const [code, setCode] = useState(defaultCode);
+  const [cursorPos, setCursorPos] = useState({ line: 1, col: 1 });
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [autocompleteItems, setAutocompleteItems] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const keywords = ['const', 'let', 'var', 'function', 'class', 'interface', 'type', 'async', 'await', 
+    'return', 'import', 'export', 'from', 'if', 'else', 'for', 'while', 'switch', 'case', 'break',
+    'new', 'this', 'super', 'extends', 'implements', 'private', 'public', 'protected', 'static'];
+  
+  const snippets = ['console.log()', 'Aegis.verify()', 'Aegis.initialize()', 'generateId()', 
+    'Promise<>', 'Map<>', 'Array<>', 'string', 'number', 'boolean'];
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = textareaRef.current?.selectionStart || 0;
+      const end = textareaRef.current?.selectionEnd || 0;
+      setCode(code.substring(0, start) + '  ' + code.substring(end));
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+        }
+      }, 0);
+    } else if (e.ctrlKey && e.key === ' ') {
+      e.preventDefault();
+      const cursorIndex = textareaRef.current?.selectionStart || 0;
+      const textBefore = code.substring(0, cursorIndex);
+      const lastWord = textBefore.split(/[\s\n\(\)\{\}\[\];:,]/).pop() || '';
+      const matches = [...keywords, ...snippets].filter(k => k.toLowerCase().startsWith(lastWord.toLowerCase()));
+      setAutocompleteItems(matches.slice(0, 8));
+      setShowAutocomplete(matches.length > 0);
+    } else if (e.key === 'Escape') {
+      setShowAutocomplete(false);
+    }
+  };
+
+  const insertAutocomplete = (item: string) => {
+    const cursorIndex = textareaRef.current?.selectionStart || 0;
+    const textBefore = code.substring(0, cursorIndex);
+    const lastWordMatch = textBefore.match(/[\w]+$/);
+    const lastWordStart = lastWordMatch ? cursorIndex - lastWordMatch[0].length : cursorIndex;
+    setCode(code.substring(0, lastWordStart) + item + code.substring(cursorIndex));
+    setShowAutocomplete(false);
+    textareaRef.current?.focus();
+  };
+
+  const updateCursorPos = () => {
+    if (!textareaRef.current) return;
+    const pos = textareaRef.current.selectionStart;
+    const lines = code.substring(0, pos).split('\n');
+    setCursorPos({ line: lines.length, col: (lines[lines.length - 1]?.length || 0) + 1 });
+  };
+
+  const highlightLine = (line: string) => {
+    const parts: { text: string; color: string }[] = [];
+    let remaining = line;
+    
+    const patterns = [
+      { regex: /^(\/\/.*)$/, color: 'text-green-500' },
+      { regex: /^(\s*)(import|export|from|as)(\s)/, color: 'text-purple-400', capture: 2 },
+      { regex: /(interface|class|type|enum)(\s+)(\w+)/, colors: ['text-purple-400', '', 'text-yellow-300'] },
+      { regex: /(const|let|var|function|async|await|return|if|else|for|while|new|this|private|public|static)/, color: 'text-purple-400' },
+      { regex: /('[^']*'|"[^"]*"|`[^`]*`)/, color: 'text-orange-400' },
+      { regex: /(\d+)/, color: 'text-cyan-300' },
+      { regex: /(@\w+)/, color: 'text-yellow-400' },
+    ];
+
+    if (line.trim().startsWith('//')) {
+      return [{ text: line, color: 'text-green-500' }];
+    }
+
+    let result = line;
+    result = result.replace(/(import|export|from|as|interface|class|type|const|let|var|function|async|await|return|if|else|for|while|new|this|private|public|static|extends|implements)\b/g, 
+      '<span class="text-purple-400">$1</span>');
+    result = result.replace(/('[^']*'|"[^"]*"|`[^`]*`)/g, '<span class="text-orange-400">$1</span>');
+    result = result.replace(/\b(\d+)\b/g, '<span class="text-cyan-300">$1</span>');
+    result = result.replace(/(@\w+)/g, '<span class="text-yellow-400">$1</span>');
+    result = result.replace(/\b(string|number|boolean|void|any|never|unknown|null|undefined|true|false)\b/g, 
+      '<span class="text-cyan-400">$1</span>');
+    result = result.replace(/\b([A-Z]\w*)\b(?!<span)/g, '<span class="text-yellow-300">$1</span>');
+
+    return result;
+  };
+
   return (
     <div className="h-full bg-[#1e1e1e] flex flex-col">
       <div className="flex items-center gap-2 px-4 py-2 bg-[#252526] border-b border-[#3c3c3c]">
         <div className="flex items-center gap-2 px-3 py-1 bg-[#1e1e1e] rounded-t border-t-2 border-cyan-500">
           <Code2 className="w-4 h-4 text-cyan-400" />
           <span className="text-sm text-white/80">registry.ts</span>
+          <span className="text-white/30 text-xs">~</span>
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <button className="text-xs text-white/50 hover:text-white/80 px-2 py-1 bg-white/5 rounded">Format</button>
+          <button className="text-xs text-white/50 hover:text-white/80 px-2 py-1 bg-white/5 rounded">Run</button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-4 font-mono text-sm">
-        <pre className="leading-relaxed">
-          {sampleCode.split('\n').map((line, i) => (
-            <div key={i} className="flex">
-              <span className="w-8 text-right pr-4 text-white/30 select-none">{i + 1}</span>
-              <span className={
-                line.includes('//') ? 'text-green-500' :
-                line.includes('import') || line.includes('interface') || line.includes('class') || line.includes('async') || line.includes('await') || line.includes('private') || line.includes('return') || line.includes('const') ? 'text-purple-400' :
-                line.includes("'") ? 'text-orange-400' :
-                'text-white/80'
-              }>{line || ' '}</span>
+      
+      <div className="flex-1 overflow-hidden relative">
+        <div className="absolute inset-0 flex">
+          <div className="w-12 bg-[#1e1e1e] border-r border-[#3c3c3c] pt-4 text-right pr-2 text-white/30 text-sm font-mono select-none overflow-hidden">
+            {code.split('\n').map((_, i) => (
+              <div key={i} className={`h-[1.5rem] ${cursorPos.line === i + 1 ? 'text-white/60' : ''}`}>{i + 1}</div>
+            ))}
+          </div>
+          <div className="flex-1 relative">
+            <div className="absolute inset-0 p-4 font-mono text-sm leading-6 pointer-events-none overflow-auto whitespace-pre" style={{ color: '#d4d4d4' }}>
+              {code.split('\n').map((line, i) => (
+                <div key={i} className={`h-6 ${cursorPos.line === i + 1 ? 'bg-white/5' : ''}`} 
+                  dangerouslySetInnerHTML={{ __html: highlightLine(line) || '&nbsp;' }} />
+              ))}
             </div>
-          ))}
-        </pre>
+            <textarea
+              ref={textareaRef}
+              value={code}
+              onChange={e => setCode(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onKeyUp={updateCursorPos}
+              onClick={updateCursorPos}
+              className="absolute inset-0 p-4 font-mono text-sm leading-6 bg-transparent text-transparent caret-white resize-none focus:outline-none"
+              spellCheck={false}
+            />
+            {showAutocomplete && autocompleteItems.length > 0 && (
+              <div className="absolute bg-[#252526] border border-[#3c3c3c] rounded shadow-xl z-50" style={{ top: cursorPos.line * 24 + 16, left: 60 }}>
+                {autocompleteItems.map((item, i) => (
+                  <button
+                    key={item}
+                    onClick={() => insertAutocomplete(item)}
+                    className="w-full px-3 py-1 text-left text-sm font-mono text-white/80 hover:bg-cyan-500/20 flex items-center gap-2"
+                  >
+                    <span className="text-purple-400 text-xs">fn</span>
+                    {item}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
+      
       <div className="px-4 py-2 bg-[#007acc] text-white text-xs flex items-center gap-4">
         <span>TypeScript</span>
         <span>UTF-8</span>
-        <span className="ml-auto">Ln 1, Col 1</span>
+        <span>Spaces: 2</span>
+        <span className="ml-auto">Ln {cursorPos.line}, Col {cursorPos.col}</span>
+        <span className="text-white/60">Ctrl+Space for suggestions</span>
       </div>
     </div>
   );
