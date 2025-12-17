@@ -205,9 +205,14 @@ export default function AeThexOS() {
 
   const switchClearance = useCallback(() => {
     const newMode: ClearanceMode = clearanceMode === 'foundation' ? 'corp' : 'foundation';
+    setIsSwitchingClearance(true);
     setShowStartMenu(false);
-    setClearanceMode(newMode);
-    addToast(`Switched to ${CLEARANCE_THEMES[newMode].name}`, 'success');
+    
+    setTimeout(() => {
+      setClearanceMode(newMode);
+      setIsSwitchingClearance(false);
+      addToast(`Switched to ${CLEARANCE_THEMES[newMode].name}`, 'success');
+    }, 600);
   }, [clearanceMode, addToast]);
 
   useEffect(() => {
