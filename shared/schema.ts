@@ -2,27 +2,9 @@ import { pgTable, text, varchar, boolean, integer, timestamp, json } from "drizz
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Users table (auth)
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  is_active: boolean("is_active").default(true),
-  is_admin: boolean("is_admin").default(false),
-  created_at: timestamp("created_at").defaultNow(),
-});
-
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
-export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
-
-// Profiles table (rich user data)
+// Profiles table (linked to Supabase auth.users via id)
 export const profiles = pgTable("profiles", {
-  id: varchar("id").primaryKey(),
+  id: varchar("id").primaryKey(), // References auth.users(id)
   username: text("username"),
   role: text("role").default("member"),
   onboarded: boolean("onboarded").default(false),
@@ -47,7 +29,6 @@ export const profiles = pgTable("profiles", {
 });
 
 export const insertProfileSchema = createInsertSchema(profiles).omit({
-  id: true,
   created_at: true,
   updated_at: true,
 });
@@ -82,10 +63,19 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
 
-// Login schema for validation
+// Login schema for Supabase Auth (email + password)
 export const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 export type LoginInput = z.infer<typeof loginSchema>;
+
+// Signup schema
+export const signupSchema = z.object({
+  email: z.string().email("Valid email is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  username: z.string().min(2, "Username must be at least 2 characters").optional(),
+});
+
+export type SignupInput = z.infer<typeof signupSchema>;

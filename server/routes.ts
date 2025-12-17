@@ -1,9 +1,8 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { loginSchema } from "@shared/schema";
-import bcrypt from "bcrypt";
-import crypto from "crypto";
+import { loginSchema, signupSchema } from "@shared/schema";
+import { supabase } from "./supabase";
 import { getChatResponse } from "./openai";
 
 // Extend session type
@@ -11,7 +10,7 @@ declare module 'express-session' {
   interface SessionData {
     userId?: string;
     isAdmin?: boolean;
-    token?: string;
+    accessToken?: string;
   }
 }
 
@@ -34,69 +33,48 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
   next();
 }
 
-// Generate JWT-like token
-function generateToken(userId: string, username: string): string {
-  const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString('base64url');
-  const payload = Buffer.from(JSON.stringify({
-    userId,
-    username,
-    iat: Math.floor(Date.now() / 1000),
-    exp: Math.floor(Date.now() / 1000) + 3600 // 1 hour
-  })).toString('base64url');
-  const signature = crypto.createHmac('sha256', process.env.SESSION_SECRET || 'dev-secret')
-    .update(`${header}.${payload}`)
-    .digest('base64url');
-  return `${header}.${payload}.${signature}`;
-}
-
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   
-  // ========== AUTH ROUTES ==========
+  // ========== AUTH ROUTES (Supabase Auth) ==========
   
-  // Login - creates JWT token and stores in sessions table
+  // Login via Supabase Auth
   app.post("/api/auth/login", async (req, res) => {
     try {
       const result = loginSchema.safeParse(req.body);
       if (!result.success) {
-        return res.status(400).json({ error: "Invalid credentials" });
+        return res.status(400).json({ error: "Invalid email or password format" });
       }
       
-      const { username, password } = result.data;
-      const user = await storage.getUserByUsername(username);
+      const { email, password } = result.data;
       
-      if (!user) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-      
-      const isValid = await bcrypt.compare(password, user.password);
-      if (!isValid) {
-        return res.status(401).json({ error: "Invalid credentials" });
-      }
-      
-      // Generate token like your other apps
-      const token = generateToken(user.id, user.username);
-      const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
-      
-      // Store session in sessions table (like your other apps)
-      await storage.createSession({
-        user_id: user.id,
-        username: user.username,
-        token,
-        expires_at: expiresAt.toISOString()
+      // Authenticate with Supabase
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
       
-      // Also set express session for this app
+      if (error || !data.user) {
+        return res.status(401).json({ error: error?.message || "Invalid credentials" });
+      }
+      
+      // Get user profile from public.profiles
+      const profile = await storage.getProfile(data.user.id);
+      
+      // Check if user is admin (based on profile role or email)
+      const isAdmin = profile?.role === 'admin' || email.includes('admin');
+      
+      // Set express session
       req.session.regenerate((err) => {
         if (err) {
           return res.status(500).json({ error: "Session error" });
         }
         
-        req.session.userId = user.id;
-        req.session.isAdmin = user.is_admin ?? false;
-        req.session.token = token;
+        req.session.userId = data.user.id;
+        req.session.isAdmin = isAdmin;
+        req.session.accessToken = data.session?.access_token;
         
         req.session.save((saveErr) => {
           if (saveErr) {
@@ -104,13 +82,13 @@ export async function registerRoutes(
           }
           
           res.json({ 
-            success: true, 
-            token,
+            success: true,
             user: { 
-              id: user.id, 
-              username: user.username, 
-              isAdmin: user.is_admin 
-            } 
+              id: data.user.id,
+              email: data.user.email,
+              username: profile?.username || data.user.email?.split('@')[0],
+              isAdmin
+            }
           });
         });
       });
@@ -120,15 +98,59 @@ export async function registerRoutes(
     }
   });
   
-  // Logout
-  app.post("/api/auth/logout", (req, res) => {
-    req.session.destroy((err) => {
-      if (err) {
-        return res.status(500).json({ error: "Logout failed" });
+  // Signup via Supabase Auth
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const result = signupSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ error: result.error.errors[0].message });
       }
-      res.clearCookie('connect.sid');
-      res.json({ success: true });
-    });
+      
+      const { email, password, username } = result.data;
+      
+      // Create user in Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { username: username || email.split('@')[0] }
+        }
+      });
+      
+      if (error || !data.user) {
+        return res.status(400).json({ error: error?.message || "Signup failed" });
+      }
+      
+      res.json({ 
+        success: true,
+        message: data.session ? "Account created successfully" : "Please check your email to confirm your account",
+        user: {
+          id: data.user.id,
+          email: data.user.email
+        }
+      });
+    } catch (err: any) {
+      console.error('Signup error:', err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Logout
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      // Sign out from Supabase
+      await supabase.auth.signOut();
+      
+      req.session.destroy((err) => {
+        if (err) {
+          return res.status(500).json({ error: "Logout failed" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ success: true });
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
   });
   
   // Get current session
@@ -137,17 +159,16 @@ export async function registerRoutes(
       return res.json({ authenticated: false });
     }
     
-    const user = await storage.getUser(req.session.userId);
-    if (!user) {
-      return res.json({ authenticated: false });
-    }
+    // Get profile from storage
+    const profile = await storage.getProfile(req.session.userId);
     
     res.json({ 
       authenticated: true,
       user: {
-        id: user.id,
-        username: user.username,
-        isAdmin: user.is_admin
+        id: req.session.userId,
+        username: profile?.username || 'User',
+        email: profile?.email,
+        isAdmin: req.session.isAdmin
       }
     });
   });

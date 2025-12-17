@@ -1,14 +1,7 @@
-import { type User, type Profile, type Project } from "@shared/schema";
+import { type Profile, type Project } from "@shared/schema";
 import { supabase } from "./supabase";
 
 export interface IStorage {
-  // Users
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  
-  // Sessions
-  createSession(session: { user_id: string; username: string; token: string; expires_at: string }): Promise<any>;
-  
   // Profiles
   getProfiles(): Promise<Profile[]>;
   getProfile(id: string): Promise<Profile | undefined>;
@@ -48,39 +41,6 @@ export interface IStorage {
 }
 
 export class SupabaseStorage implements IStorage {
-  
-  async getUser(id: string): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
-      .single();
-    
-    if (error || !data) return undefined;
-    return data as User;
-  }
-  
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('username', username)
-      .single();
-    
-    if (error || !data) return undefined;
-    return data as User;
-  }
-  
-  async createSession(session: { user_id: string; username: string; token: string; expires_at: string }): Promise<any> {
-    const { data, error } = await supabase
-      .from('sessions')
-      .insert(session)
-      .select()
-      .single();
-    
-    if (error) throw error;
-    return data;
-  }
   
   async getProfiles(): Promise<Profile[]> {
     const { data, error } = await supabase

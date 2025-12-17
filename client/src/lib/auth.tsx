@@ -1,8 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface User {
   id: string;
+  email?: string;
   username: string;
   isAdmin: boolean;
 }
@@ -12,7 +13,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   isAdmin: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, username?: string) => Promise<{ message: string }>;
   logout: () => Promise<void>;
 }
 
@@ -21,26 +23,26 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   
-  const { data: session, isLoading, isFetching } = useQuery({
+  const { data: session, isLoading } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
       const res = await fetch("/api/auth/session", { credentials: "include" });
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    gcTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     refetchOnReconnect: false,
   });
   
   const loginMutation = useMutation({
-    mutationFn: async ({ username, password }: { username: string; password: string }) => {
+    mutationFn: async ({ email, password }: { email: string; password: string }) => {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify({ email, password }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -53,6 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
   
+  const signupMutation = useMutation({
+    mutationFn: async ({ email, password, username }: { email: string; password: string; username?: string }) => {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password, username }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Signup failed");
+      }
+      return res.json();
+    },
+  });
+  
   const logoutMutation = useMutation({
     mutationFn: async () => {
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
@@ -62,8 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
   
-  const login = async (username: string, password: string) => {
-    await loginMutation.mutateAsync({ username, password });
+  const login = async (email: string, password: string) => {
+    await loginMutation.mutateAsync({ email, password });
+  };
+  
+  const signup = async (email: string, password: string, username?: string) => {
+    return await signupMutation.mutateAsync({ email, password, username });
   };
   
   const logout = async () => {
@@ -76,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!session?.authenticated,
     isAdmin: session?.user?.isAdmin || false,
     login,
+    signup,
     logout,
   };
   
