@@ -58,6 +58,51 @@ const ACCENT_COLORS = [
   { id: 'red', name: 'Red', color: '#ef4444', ring: 'ring-red-400/50', shadow: 'shadow-red-500/20', bg: 'bg-red-500' },
 ];
 
+type ClearanceMode = 'foundation' | 'corp';
+
+interface ClearanceTheme {
+  id: ClearanceMode;
+  name: string;
+  title: string;
+  subtitle: string;
+  primary: string;
+  secondary: string;
+  accent: string;
+  accentSecondary: string;
+  wallpaper: string;
+  borderStyle: string;
+  fontStyle: string;
+}
+
+const CLEARANCE_THEMES: Record<ClearanceMode, ClearanceTheme> = {
+  foundation: {
+    id: 'foundation',
+    name: 'The Foundation',
+    title: 'FOUNDATION',
+    subtitle: 'The Architect\'s Domain',
+    primary: '#DC2626',
+    secondary: '#D4AF37',
+    accent: '#DC2626',
+    accentSecondary: '#D4AF37',
+    wallpaper: 'radial-gradient(ellipse at 30% 20%, #4a1515 0%, #1a0505 40%, #0a0202 100%)',
+    borderStyle: 'border-yellow-600/40',
+    fontStyle: 'font-mono',
+  },
+  corp: {
+    id: 'corp',
+    name: 'The Corp',
+    title: 'CORPORATION',
+    subtitle: 'Executive Operations',
+    primary: '#0F172A',
+    secondary: '#C0C0C0',
+    accent: '#3B82F6',
+    accentSecondary: '#C0C0C0',
+    wallpaper: 'radial-gradient(ellipse at 70% 80%, #1e3a5f 0%, #0f172a 40%, #050a14 100%)',
+    borderStyle: 'border-slate-400/30',
+    fontStyle: 'font-sans',
+  },
+};
+
 interface DesktopApp {
   id: string;
   title: string;
@@ -118,6 +163,12 @@ export default function AeThexOS() {
     const saved = localStorage.getItem('aethex-layouts');
     return saved ? JSON.parse(saved) : [];
   });
+  const [clearanceMode, setClearanceMode] = useState<ClearanceMode>(() => {
+    const saved = localStorage.getItem('aethex-clearance');
+    return (saved as ClearanceMode) || 'foundation';
+  });
+  const [isSwitchingClearance, setIsSwitchingClearance] = useState(false);
+  const clearanceTheme = CLEARANCE_THEMES[clearanceMode];
   const desktopRef = useRef<HTMLDivElement>(null);
   const idleTimer = useRef<NodeJS.Timeout | null>(null);
   const spotlightRef = useRef<HTMLInputElement>(null);
@@ -147,6 +198,24 @@ export default function AeThexOS() {
   useEffect(() => {
     localStorage.setItem('aethex-layouts', JSON.stringify(savedLayouts));
   }, [savedLayouts]);
+
+  useEffect(() => {
+    localStorage.setItem('aethex-clearance', clearanceMode);
+  }, [clearanceMode]);
+
+  const switchClearance = useCallback(() => {
+    const newMode: ClearanceMode = clearanceMode === 'foundation' ? 'corp' : 'foundation';
+    setIsSwitchingClearance(true);
+    setShowStartMenu(false);
+    
+    setTimeout(() => {
+      setClearanceMode(newMode);
+      setTimeout(() => {
+        setIsSwitchingClearance(false);
+        addToast(`Switched to ${CLEARANCE_THEMES[newMode].name}`, 'success');
+      }, 800);
+    }, 600);
+  }, [clearanceMode, addToast]);
 
   useEffect(() => {
     const bootSequence = async () => {
@@ -269,27 +338,34 @@ export default function AeThexOS() {
     }
   }, [windows]);
 
-  const apps: DesktopApp[] = [
+  const foundationApps: DesktopApp[] = [
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
+    { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
+    { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
+    { id: "notes", title: "Manifesto", icon: <FileText className="w-8 h-8" />, component: "notes", defaultWidth: 400, defaultHeight: 450 },
+    { id: "achievements", title: "Bounty Board", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 600, defaultHeight: 500 },
     { id: "passport", title: "Passport", icon: <IdCard className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "files", title: "Projects", icon: <FolderOpen className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
-    { id: "network", title: "Network", icon: <Network className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
-    { id: "metrics", title: "Metrics", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
-    { id: "codeeditor", title: "Code", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
-    { id: "newsfeed", title: "News", icon: <Newspaper className="w-8 h-8" />, component: "newsfeed", defaultWidth: 450, defaultHeight: 550 },
     { id: "arcade", title: "Arcade", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
-    { id: "profiles", title: "Profiles", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
-    { id: "leaderboard", title: "Leaderboard", icon: <Trophy className="w-8 h-8" />, component: "leaderboard", defaultWidth: 500, defaultHeight: 550 },
-    { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
-    { id: "notes", title: "Notes", icon: <StickyNote className="w-8 h-8" />, component: "notes", defaultWidth: 400, defaultHeight: 450 },
-    { id: "sysmonitor", title: "System", icon: <Cpu className="w-8 h-8" />, component: "sysmonitor", defaultWidth: 450, defaultHeight: 400 },
-    { id: "webcam", title: "Aegis Cam", icon: <Camera className="w-8 h-8" />, component: "webcam", defaultWidth: 500, defaultHeight: 450 },
-    { id: "achievements", title: "Achievements", icon: <Award className="w-8 h-8" />, component: "achievements", defaultWidth: 600, defaultHeight: 500 },
-    { id: "chat", title: "Chat", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
-    { id: "music", title: "Ambient", icon: <Music className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
-    { id: "pitch", title: "Pitch Deck", icon: <Presentation className="w-8 h-8" />, component: "pitch", defaultWidth: 500, defaultHeight: 400 },
+    { id: "profiles", title: "Architects", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
+    { id: "chat", title: "Comms", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
+
+  const corpApps: DesktopApp[] = [
+    { id: "network", title: "Global Ops", icon: <Globe className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
+    { id: "metrics", title: "The Ledger", icon: <TrendingUp className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
+    { id: "files", title: "Asset Library", icon: <Database className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
+    { id: "pitch", title: "Contracts", icon: <FileText className="w-8 h-8" />, component: "pitch", defaultWidth: 500, defaultHeight: 400 },
+    { id: "profiles", title: "Personnel", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
+    { id: "sysmonitor", title: "Infrastructure", icon: <Server className="w-8 h-8" />, component: "sysmonitor", defaultWidth: 450, defaultHeight: 400 },
+    { id: "leaderboard", title: "Performance", icon: <BarChart3 className="w-8 h-8" />, component: "leaderboard", defaultWidth: 500, defaultHeight: 550 },
+    { id: "newsfeed", title: "Intel Feed", icon: <Newspaper className="w-8 h-8" />, component: "newsfeed", defaultWidth: 450, defaultHeight: 550 },
+    { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
+    { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
+  ];
+
+  const apps = clearanceMode === 'foundation' ? foundationApps : corpApps;
 
   const playSound = useCallback((type: 'open' | 'close' | 'minimize' | 'click') => {
     if (!soundEnabled) return;
@@ -561,8 +637,8 @@ export default function AeThexOS() {
 
   return (
     <div 
-      className="h-screen w-screen overflow-hidden select-none relative"
-      style={{ background: wallpaper.bg }}
+      className="h-screen w-screen overflow-hidden select-none relative transition-all duration-700"
+      style={{ background: clearanceTheme.wallpaper }}
     >
       <div 
         ref={desktopRef}
@@ -647,7 +723,56 @@ export default function AeThexOS() {
         onNavigate={setLocation}
         currentDesktop={currentDesktop}
         onDesktopChange={setCurrentDesktop}
+        clearanceTheme={clearanceTheme}
+        onSwitchClearance={switchClearance}
       />
+
+      <AnimatePresence>
+        {isSwitchingClearance && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="fixed inset-0 z-[99999] flex items-center justify-center"
+            style={{ background: clearanceMode === 'foundation' ? '#0F172A' : '#1a0505' }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 1.2, opacity: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-center"
+            >
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center"
+                style={{ 
+                  border: `3px solid ${clearanceMode === 'foundation' ? '#3B82F6' : '#D4AF37'}`,
+                  borderTopColor: 'transparent'
+                }}
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="font-display text-2xl uppercase tracking-[0.3em]"
+                style={{ color: clearanceMode === 'foundation' ? '#C0C0C0' : '#D4AF37' }}
+              >
+                {clearanceMode === 'foundation' ? 'Entering Corp' : 'Entering Foundation'}
+              </motion.div>
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: '100%' }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="h-0.5 mt-4 mx-auto max-w-[200px]"
+                style={{ background: `linear-gradient(90deg, transparent, ${clearanceMode === 'foundation' ? '#3B82F6' : '#DC2626'}, transparent)` }}
+              />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <ParticleField />
 
@@ -991,6 +1116,8 @@ interface TaskbarProps {
   onNavigate: (path: string) => void;
   currentDesktop: number;
   onDesktopChange: (d: number) => void;
+  clearanceTheme: ClearanceTheme;
+  onSwitchClearance: () => void;
 }
 
 function Skeleton({ className = "", animate = true }: { className?: string; animate?: boolean }) {
@@ -1198,7 +1325,7 @@ function OnboardingTour({ step, onNext, onClose }: { step: number; onNext: () =>
   );
 }
 
-function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange }: TaskbarProps) {
+function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange, clearanceTheme, onSwitchClearance }: TaskbarProps) {
   return (
     <>
       <AnimatePresence>
@@ -1207,18 +1334,27 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 20 }}
-            className="absolute bottom-12 left-2 w-72 bg-slate-900/95 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden shadow-2xl"
-            style={{ zIndex: 9999 }}
+            className="absolute bottom-12 left-2 w-72 backdrop-blur-xl rounded-lg overflow-hidden shadow-2xl transition-all duration-300"
+            style={{ 
+              zIndex: 9999,
+              background: clearanceTheme.id === 'foundation' ? 'rgba(26, 5, 5, 0.95)' : 'rgba(15, 23, 42, 0.95)',
+              border: `1px solid ${clearanceTheme.id === 'foundation' ? 'rgba(212, 175, 55, 0.3)' : 'rgba(192, 192, 192, 0.2)'}`
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-3 border-b border-white/10">
+            <div className="p-3" style={{ borderBottom: `1px solid ${clearanceTheme.id === 'foundation' ? 'rgba(212, 175, 55, 0.2)' : 'rgba(255,255,255,0.1)'}` }}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <div 
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: `linear-gradient(135deg, ${clearanceTheme.accent}, ${clearanceTheme.accentSecondary})` }}
+                >
                   {isAuthenticated ? <User className="w-5 h-5 text-white" /> : <span className="text-white font-bold text-lg">A</span>}
                 </div>
                 <div className="flex-1">
-                  <div className="text-white font-mono text-sm">{isAuthenticated ? user?.username : 'Guest'}</div>
-                  <div className="text-white/50 text-xs">{isAuthenticated ? (user?.isAdmin ? 'Administrator' : 'Architect') : 'Not logged in'}</div>
+                  <div className={`text-white text-sm ${clearanceTheme.fontStyle}`}>{isAuthenticated ? user?.username : 'Guest'}</div>
+                  <div className="text-xs" style={{ color: clearanceTheme.accentSecondary }}>
+                    {clearanceTheme.title}
+                  </div>
                 </div>
                 {isAuthenticated && (
                   <button onClick={onLogout} className="p-2 text-white/50 hover:text-red-400 transition-colors">
@@ -1230,9 +1366,17 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
             
             <div className="p-2 max-h-64 overflow-y-auto">
               {apps.map(app => (
-                <button key={app.id} onClick={() => onAppClick(app)} className="w-full flex items-center gap-3 px-3 py-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors" data-testid={`start-menu-${app.id}`}>
-                  <div className="text-cyan-400 w-5 h-5">{app.icon}</div>
-                  <span className="text-sm font-mono">{app.title}</span>
+                <button 
+                  key={app.id} 
+                  onClick={() => onAppClick(app)} 
+                  className={`w-full flex items-center gap-3 px-3 py-2 text-white/80 hover:text-white rounded-lg transition-colors ${clearanceTheme.fontStyle}`}
+                  style={{ '--hover-bg': `${clearanceTheme.accent}20` } as any}
+                  onMouseEnter={(e) => e.currentTarget.style.background = `${clearanceTheme.accent}20`}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  data-testid={`start-menu-${app.id}`}
+                >
+                  <div className="w-5 h-5" style={{ color: clearanceTheme.accent }}>{app.icon}</div>
+                  <span className="text-sm">{app.title}</span>
                 </button>
               ))}
             </div>
@@ -1247,16 +1391,61 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                 </button>
               </div>
             )}
+
+            <div className="p-2 border-t border-white/10">
+              <button 
+                onClick={onSwitchClearance} 
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all group"
+                style={{ 
+                  background: `linear-gradient(135deg, ${clearanceTheme.id === 'foundation' ? '#3B82F6' : '#DC2626'}20, ${clearanceTheme.id === 'foundation' ? '#C0C0C0' : '#D4AF37'}10)`,
+                  border: `1px solid ${clearanceTheme.id === 'foundation' ? '#3B82F640' : '#D4AF3740'}`
+                }}
+                data-testid="switch-clearance-btn"
+              >
+                <div className="relative">
+                  <Shield className="w-5 h-5" style={{ color: clearanceTheme.id === 'foundation' ? '#3B82F6' : '#D4AF37' }} />
+                  <div className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full animate-pulse" style={{ background: clearanceTheme.id === 'foundation' ? '#3B82F6' : '#DC2626' }} />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="text-xs uppercase tracking-wider font-bold" style={{ color: clearanceTheme.id === 'foundation' ? '#3B82F6' : '#D4AF37' }}>
+                    Switch Clearance
+                  </div>
+                  <div className="text-[10px] text-white/40">
+                    {clearanceTheme.id === 'foundation' ? 'Enter Corp Mode' : 'Enter Foundation Mode'}
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/30 group-hover:translate-x-0.5 transition-transform" />
+              </button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="h-12 bg-slate-900/80 backdrop-blur-xl border-t border-white/10 flex items-center px-2 gap-2">
-        <button onClick={onToggleStartMenu} className={`h-9 px-4 flex items-center gap-2 rounded-lg transition-colors ${showStartMenu ? 'bg-cyan-500/20 text-cyan-400' : 'hover:bg-white/10 text-white/80'}`} data-testid="start-button">
-          <div className="w-5 h-5 bg-gradient-to-br from-cyan-500 to-purple-600 rounded flex items-center justify-center">
+      <div 
+        className="h-12 backdrop-blur-xl border-t flex items-center px-2 gap-2 transition-all duration-500"
+        style={{ 
+          background: clearanceTheme.id === 'foundation' ? 'rgba(26, 5, 5, 0.9)' : 'rgba(15, 23, 42, 0.9)',
+          borderColor: clearanceTheme.id === 'foundation' ? 'rgba(212, 175, 55, 0.2)' : 'rgba(192, 192, 192, 0.2)'
+        }}
+      >
+        <button 
+          onClick={onToggleStartMenu} 
+          className={`h-9 px-4 flex items-center gap-2 rounded-lg transition-colors`}
+          style={{
+            background: showStartMenu ? `${clearanceTheme.accent}30` : 'transparent',
+            color: showStartMenu ? clearanceTheme.accent : 'rgba(255,255,255,0.8)'
+          }}
+          data-testid="start-button"
+        >
+          <div 
+            className="w-5 h-5 rounded flex items-center justify-center"
+            style={{ background: `linear-gradient(135deg, ${clearanceTheme.accent}, ${clearanceTheme.accentSecondary})` }}
+          >
             <ChevronUp className="w-3 h-3 text-white" />
           </div>
-          <span className="text-sm font-mono hidden sm:inline">AeThex</span>
+          <span className={`text-sm hidden sm:inline ${clearanceTheme.fontStyle}`}>
+            {clearanceTheme.id === 'foundation' ? 'Foundation' : 'Corp'}
+          </span>
         </button>
 
         <div className="w-px h-6 bg-white/10" />
