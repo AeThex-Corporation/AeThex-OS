@@ -850,6 +850,35 @@ interface TaskbarProps {
   onDesktopChange: (d: number) => void;
 }
 
+function Skeleton({ className = "", animate = true }: { className?: string; animate?: boolean }) {
+  return (
+    <div className={`bg-white/10 rounded ${animate ? 'animate-pulse' : ''} ${className}`} />
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="p-4 space-y-4">
+      <Skeleton className="h-8 w-3/4" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-5/6" />
+      <div className="flex gap-4 mt-6">
+        <Skeleton className="h-24 w-24 rounded-lg" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+      </div>
+      <div className="grid grid-cols-3 gap-4 mt-4">
+        <Skeleton className="h-20 rounded-lg" />
+        <Skeleton className="h-20 rounded-lg" />
+        <Skeleton className="h-20 rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
 function ParticleField() {
   const particles = Array.from({ length: 30 }, (_, i) => ({
     id: i,
@@ -1223,6 +1252,14 @@ function TerminalApp() {
           "║ matrix     - Enter the matrix             ║",
           "║ clear      - Clear terminal               ║",
           "║ tour       - AeThex guided tour           ║",
+          "╠═══════════════════════════════════════════╣",
+          "║ dice       - Roll two dice                ║",
+          "║ cowsay     - Make a cow say something     ║",
+          "║ joke       - Tell a programmer joke       ║",
+          "║ weather    - Metaverse weather report     ║",
+          "║ uptime     - System uptime                ║",
+          "║ banner     - Show AeThex banner           ║",
+          "║ coffee     - Brew some coffee             ║",
           "╚═══════════════════════════════════════════╝",
           ""
         ], setHistory);
@@ -1489,6 +1526,113 @@ function TerminalApp() {
         ], setHistory);
         break;
 
+      case 'dice':
+        const d1 = Math.floor(Math.random() * 6) + 1;
+        const d2 = Math.floor(Math.random() * 6) + 1;
+        const diceArt: Record<number, string[]> = {
+          1: ["┌───────┐", "│       │", "│   ●   │", "│       │", "└───────┘"],
+          2: ["┌───────┐", "│ ●     │", "│       │", "│     ● │", "└───────┘"],
+          3: ["┌───────┐", "│ ●     │", "│   ●   │", "│     ● │", "└───────┘"],
+          4: ["┌───────┐", "│ ●   ● │", "│       │", "│ ●   ● │", "└───────┘"],
+          5: ["┌───────┐", "│ ●   ● │", "│   ●   │", "│ ●   ● │", "└───────┘"],
+          6: ["┌───────┐", "│ ●   ● │", "│ ●   ● │", "│ ●   ● │", "└───────┘"],
+        };
+        await typeEffect(["", "🎲 Rolling dice..."], setHistory);
+        await delay(500);
+        for (let i = 0; i < 5; i++) {
+          await typeEffect([`  ${diceArt[d1][i]}  ${diceArt[d2][i]}`], setHistory);
+        }
+        await typeEffect([``, `Result: ${d1} + ${d2} = ${d1 + d2}`, ""], setHistory);
+        break;
+
+      case 'cowsay':
+        const cowMsg = args.slice(1).join(' ') || 'Hello, Architect!';
+        const border = '─'.repeat(cowMsg.length + 2);
+        await typeEffect([
+          "",
+          `┌${border}┐`,
+          `│ ${cowMsg} │`,
+          `└${border}┘`,
+          "        \\   ^__^",
+          "         \\  (oo)\\_______",
+          "            (__)\\       )\\/\\",
+          "                ||----w |",
+          "                ||     ||",
+          ""
+        ], setHistory);
+        break;
+
+      case 'joke':
+        const jokes = [
+          { q: "Why do programmers prefer dark mode?", a: "Because light attracts bugs." },
+          { q: "Why did the developer go broke?", a: "Because he used up all his cache." },
+          { q: "What's a programmer's favorite hangout place?", a: "Foo Bar." },
+          { q: "Why do Java developers wear glasses?", a: "Because they can't C#." },
+        ];
+        const joke = jokes[Math.floor(Math.random() * jokes.length)];
+        await typeEffect(["", `Q: ${joke.q}`], setHistory);
+        await delay(1500);
+        await typeEffect([`A: ${joke.a}`, ""], setHistory);
+        break;
+
+      case 'weather':
+        const conditions = ['☀️ Sunny', '🌤️ Partly Cloudy', '☁️ Cloudy', '🌧️ Rainy', '⚡ Thunderstorms', '🌈 Rainbow'];
+        const temp = Math.floor(Math.random() * 30) + 15;
+        await typeEffect([
+          "",
+          "┌────────────────────────────┐",
+          "│    METAVERSE WEATHER       │",
+          "├────────────────────────────┤",
+          `│  ${conditions[Math.floor(Math.random() * conditions.length)].padEnd(24)}│`,
+          `│  Temperature: ${temp}°C       │`,
+          "│  Humidity: Always optimal  │",
+          "│  Wind: Digital breeze      │",
+          "└────────────────────────────┘",
+          ""
+        ], setHistory);
+        break;
+
+      case 'uptime':
+        const days = Math.floor(Math.random() * 365) + 100;
+        const hours = Math.floor(Math.random() * 24);
+        await typeEffect([
+          "",
+          `System uptime: ${days} days, ${hours} hours`,
+          "The Metaverse never sleeps.",
+          ""
+        ], setHistory);
+        break;
+
+      case 'banner':
+        await typeEffect([
+          "",
+          "█████╗ ███████╗████████╗██╗  ██╗███████╗██╗  ██╗",
+          "██╔══██╗██╔════╝╚══██╔══╝██║  ██║██╔════╝╚██╗██╔╝",
+          "███████║█████╗     ██║   ███████║█████╗   ╚███╔╝ ",
+          "██╔══██║██╔══╝     ██║   ██╔══██║██╔══╝   ██╔██╗ ",
+          "██║  ██║███████╗   ██║   ██║  ██║███████╗██╔╝ ██╗",
+          "╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝",
+          "",
+          "       Operating System for the Metaverse",
+          ""
+        ], setHistory);
+        break;
+
+      case 'coffee':
+        await typeEffect([
+          "",
+          "    ( (",
+          "     ) )",
+          "  ........",
+          "  |      |]",
+          "  \\      /",
+          "   `----'",
+          "",
+          "☕ Coffee brewed! Stay caffeinated, Architect.",
+          ""
+        ], setHistory);
+        break;
+
       default:
         setHistory(prev => [...prev, `Command not found: ${cmd}`, "Type 'help' for available commands.", ""]);
     }
@@ -1514,7 +1658,7 @@ function TerminalApp() {
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      const cmds = ['help', 'status', 'architects', 'projects', 'scan', 'analyze', 'decrypt', 'hack', 'fortune', 'whoami', 'neofetch', 'matrix', 'clear', 'tour'];
+      const cmds = ['help', 'status', 'architects', 'projects', 'scan', 'analyze', 'decrypt', 'hack', 'fortune', 'whoami', 'neofetch', 'matrix', 'clear', 'tour', 'dice', 'cowsay', 'joke', 'weather', 'uptime', 'banner', 'coffee', 'sudo', 'secret'];
       const match = cmds.find(c => c.startsWith(input.toLowerCase()));
       if (match) setInput(match);
     }
@@ -2065,8 +2209,17 @@ function MetricsDashboardApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="h-full bg-slate-950 p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-cyan-400" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+          <Skeleton className="h-28 rounded-lg" />
+        </div>
       </div>
     );
   }
@@ -2341,8 +2494,28 @@ function ProfilesApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="h-full bg-slate-950 flex flex-col">
+        <div className="flex items-center gap-2 p-4 border-b border-white/10">
+          <Users className="w-5 h-5 text-cyan-400" />
+          <Skeleton className="h-6 w-40" />
+        </div>
+        <div className="flex-1 overflow-auto p-4 grid grid-cols-2 gap-4">
+          {[1,2,3,4].map(i => (
+            <div key={i} className="bg-slate-800/50 rounded-lg p-4 border border-white/10">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-12 h-12 rounded-full" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between">
+                <Skeleton className="h-3 w-12" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -2393,8 +2566,24 @@ function LeaderboardApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+      <div className="h-full bg-slate-950 flex flex-col">
+        <div className="flex items-center gap-2 p-4 border-b border-white/10">
+          <Trophy className="w-5 h-5 text-yellow-400" />
+          <Skeleton className="h-6 w-32" />
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-2">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10">
+              <Skeleton className="w-8 h-8 rounded" />
+              <Skeleton className="w-10 h-10 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+              <Skeleton className="h-6 w-12" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
