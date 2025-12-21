@@ -7,6 +7,9 @@ import { createServer } from "http";
 const app = express();
 const httpServer = createServer(app);
 
+// Trust proxy for proper cookie handling behind Vite dev server
+app.set("trust proxy", 1);
+
 declare module "http" {
   interface IncomingMessage {
     rawBody: unknown;
@@ -20,17 +23,19 @@ if (process.env.NODE_ENV === "production" && !sessionSecret) {
 }
 
 // Session configuration with security best practices
+const isProduction = process.env.NODE_ENV === "production";
 app.use(
   session({
     secret: sessionSecret || "dev-only-secret-not-for-prod",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       httpOnly: true,
-      sameSite: "lax", // Allow navigation from external links
+      sameSite: isProduction ? "lax" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
+    proxy: !isProduction, // Trust first proxy in dev for Vite
   })
 );
 
