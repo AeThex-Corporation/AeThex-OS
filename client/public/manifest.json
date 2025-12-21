@@ -1,7 +1,7 @@
 {
-  "name": "AeThex OS",
-  "short_name": "AeThex",
-  "description": "The Operating System for the Metaverse. Cross-platform identity and certification.",
+  "name": "AeThex OS - Operating System for the Metaverse",
+  "short_name": "AeThex OS",
+  "description": "Join the AeThex Network. Earn credentials as a certified Metaverse Architect. Build the future with Axiom, Codex, and Aegis.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0F172A",
@@ -10,11 +10,13 @@
   "icons": [
     {
       "src": "/favicon.png",
-      "sizes": "any",
+      "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "utilities", "developer"],
-  "prefer_related_applications": false
+  "categories": ["productivity", "utilities", "developer", "entertainment"],
+  "prefer_related_applications": false,
+  "scope": "/",
+  "lang": "en-US"
 }
