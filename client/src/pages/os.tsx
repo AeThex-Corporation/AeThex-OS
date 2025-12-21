@@ -701,24 +701,8 @@ export default function AeThexOS() {
   };
 
   const openIframeWindow = (url: string, title: string) => {
-    const windowId = `iframe-${Date.now()}`;
-    setWindows(prev => [...prev, {
-      id: windowId,
-      title,
-      icon: <Globe className="w-4 h-4" />,
-      component: 'iframe',
-      x: 100 + Math.random() * 100,
-      y: 100 + Math.random() * 100,
-      width: 900,
-      height: 600,
-      minimized: false,
-      maximized: false,
-      zIndex: maxZIndex + 1,
-      desktopId: currentDesktop,
-      iframeUrl: url
-    }]);
-    setMaxZIndex(prev => prev + 1);
-    setActiveWindowId(windowId);
+    // Most external sites block iframe embedding - open in new tab instead
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (isBooting) {
