@@ -95,11 +95,11 @@ export default function Home() {
                   Learn More <ArrowRight className="w-4 h-4" />
                 </button>
               </Link>
-              <a href="https://aethex.foundation" target="_blank" rel="noopener noreferrer">
-                <button className="border border-white/20 text-white px-8 py-4 font-bold uppercase tracking-wider hover:bg-white/5 transition-colors flex items-center gap-2">
-                  Join Foundation <ExternalLink className="w-4 h-4" />
+              <Link href="/network">
+                <button className="border border-cyan-500/30 text-cyan-500 px-8 py-4 font-bold uppercase tracking-wider hover:bg-cyan-500/10 transition-colors flex items-center gap-2" data-testid="button-view-network">
+                  View The Network <Network className="w-4 h-4" />
                 </button>
-              </a>
+              </Link>
             </div>
           </motion.div>
 

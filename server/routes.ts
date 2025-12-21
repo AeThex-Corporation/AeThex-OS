@@ -185,6 +185,87 @@ export async function registerRoutes(
     }
   });
   
+  // ========== PUBLIC DIRECTORY ROUTES ==========
+  
+  // Get public directory of verified architects
+  app.get("/api/directory/architects", async (req, res) => {
+    try {
+      const profiles = await storage.getProfiles();
+      // Filter and map to public-safe fields
+      const publicProfiles = profiles
+        .filter(p => p.is_verified || ['admin', 'oversee', 'employee'].includes(p.role || ''))
+        .map((p, index) => ({
+          id: String(index + 1).padStart(3, '0'),
+          name: p.full_name || p.username || p.email?.split('@')[0] || 'Architect',
+          role: p.role || 'member',
+          bio: p.bio,
+          level: p.level,
+          xp: p.total_xp,
+          passportId: p.aethex_passport_id,
+          skills: p.skills,
+        }));
+      res.json(publicProfiles);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get public directory of projects
+  app.get("/api/directory/projects", async (req, res) => {
+    try {
+      const projects = await storage.getProjects();
+      // Map to public-safe fields
+      const publicProjects = projects.map(p => ({
+        id: p.id,
+        name: p.title,
+        description: p.description,
+        techStack: p.technologies,
+        status: p.status,
+      }));
+      res.json(publicProjects);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
+  // Get single architect profile by username/slug
+  app.get("/api/directory/architects/:slug", async (req, res) => {
+    try {
+      const { slug } = req.params;
+      const profiles = await storage.getProfiles();
+      const profile = profiles.find(p => 
+        p.aethex_passport_id?.toLowerCase() === slug.toLowerCase() ||
+        p.full_name?.toLowerCase() === slug.toLowerCase() ||
+        p.username?.toLowerCase() === slug.toLowerCase() ||
+        p.email?.split('@')[0].toLowerCase() === slug.toLowerCase()
+      );
+      
+      if (!profile) {
+        return res.status(404).json({ error: "Architect not found" });
+      }
+      
+      // Return public-safe fields only
+      const socialLinks = profile.social_links || {};
+      res.json({
+        id: profile.id,
+        name: profile.full_name || profile.username || profile.email?.split('@')[0] || 'Architect',
+        role: profile.role,
+        bio: profile.bio,
+        level: profile.level,
+        xp: profile.total_xp,
+        passportId: profile.aethex_passport_id,
+        skills: profile.skills,
+        isVerified: profile.is_verified,
+        avatarUrl: profile.avatar_url,
+        github: socialLinks.github,
+        twitter: socialLinks.twitter,
+        website: socialLinks.website,
+      });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
   // ========== ADMIN-PROTECTED API ROUTES ==========
   
   // Get all profiles (admin only)

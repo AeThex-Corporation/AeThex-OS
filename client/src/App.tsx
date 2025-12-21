@@ -25,6 +25,8 @@ import AdminApplications from "@/pages/admin-applications";
 import AdminActivity from "@/pages/admin-activity";
 import AdminNotifications from "@/pages/admin-notifications";
 import AeThexOS from "@/pages/os";
+import Network from "@/pages/network";
+import NetworkProfile from "@/pages/network-profile";
 import { Chatbot } from "@/components/Chatbot";
 
 function Router() {
@@ -49,6 +51,8 @@ function Router() {
       <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
       <Route path="/os" component={AeThexOS} />
+      <Route path="/network" component={Network} />
+      <Route path="/network/:slug" component={NetworkProfile} />
       <Route component={NotFound} />
     </Switch>
   );
