@@ -1674,7 +1674,10 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                 }}
                 data-testid={`dock-${appId}`}
               >
-                <div className="w-4 h-4" style={{ color: isOpen ? clearanceTheme.accent : 'rgba(255,255,255,0.7)' }}>
+                <div 
+                  className="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4" 
+                  style={{ color: isOpen ? clearanceTheme.accent : 'rgba(255,255,255,0.7)' }}
+                >
                   {app.icon}
                 </div>
                 {isOpen && (

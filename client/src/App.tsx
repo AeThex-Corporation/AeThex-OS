@@ -27,7 +27,6 @@ import AdminNotifications from "@/pages/admin-notifications";
 import AeThexOS from "@/pages/os";
 import Network from "@/pages/network";
 import NetworkProfile from "@/pages/network-profile";
-import { Chatbot } from "@/components/Chatbot";
 
 function Router() {
   return (
@@ -66,7 +65,6 @@ function App() {
         <TutorialProvider>
           <Toaster />
           <Router />
-          <Chatbot />
         </TutorialProvider>
       </AuthProvider>
     </QueryClientProvider>
