@@ -2794,7 +2794,9 @@ function TerminalApp() {
 
 function PassportApp({ onLoginSuccess, isDesktopLocked }: { onLoginSuccess?: () => void; isDesktopLocked?: boolean }) {
   const { user, isAuthenticated, login, signup, logout } = useAuth();
-  const [mode, setMode] = useState<'view' | 'login' | 'signup'>('view');
+  const [mode, setMode] = useState<'view' | 'login' | 'signup'>(() => 
+    isDesktopLocked && !isAuthenticated ? 'login' : 'view'
+  );
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [username, setUsername] = useState('');
@@ -2817,10 +2819,10 @@ function PassportApp({ onLoginSuccess, isDesktopLocked }: { onLoginSuccess?: () 
   }, [isAuthenticated, isDesktopLocked, onLoginSuccess]);
 
   useEffect(() => {
-    if (!isAuthenticated && isDesktopLocked) {
-      setMode('login');
+    if (isAuthenticated) {
+      setMode('view');
     }
-  }, [isAuthenticated, isDesktopLocked]);
+  }, [isAuthenticated]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
