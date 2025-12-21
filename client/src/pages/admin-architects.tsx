@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth";
 import { 
   Users, FileCode, Shield, Activity, LogOut, 
   Home, BarChart3, Settings, User, Search,
-  CheckCircle, XCircle, Eye, Edit, ChevronRight
+  CheckCircle, XCircle, Eye, Edit, ChevronRight,
+  Download, Trash2, Square, CheckSquare
 } from "lucide-react";
 
 export default function AdminArchitects() {
@@ -14,6 +15,9 @@ export default function AdminArchitects() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<any>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [verifiedFilter, setVerifiedFilter] = useState<string>("all");
   const queryClient = useQueryClient();
 
   const { data: profiles, isLoading } = useQuery({
@@ -40,10 +44,70 @@ export default function AdminArchitects() {
     },
   });
 
-  const filteredProfiles = profiles?.filter((p: any) => 
-    p.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.email?.toLowerCase().includes(searchQuery.toLowerCase())
-  ) || [];
+  const filteredProfiles = useMemo(() => {
+    if (!profiles) return [];
+    return profiles.filter((p: any) => {
+      const matchesSearch = p.username?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.email?.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesRole = roleFilter === "all" || p.role === roleFilter;
+      const matchesVerified = verifiedFilter === "all" || 
+        (verifiedFilter === "verified" && p.is_verified) ||
+        (verifiedFilter === "unverified" && !p.is_verified);
+      return matchesSearch && matchesRole && matchesVerified;
+    });
+  }, [profiles, searchQuery, roleFilter, verifiedFilter]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredProfiles.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredProfiles.map((p: any) => p.id)));
+    }
+  };
+
+  const toggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedIds(newSet);
+  };
+
+  const exportToCSV = () => {
+    const dataToExport = selectedIds.size > 0 
+      ? filteredProfiles.filter((p: any) => selectedIds.has(p.id))
+      : filteredProfiles;
+    
+    const headers = ["Username", "Email", "Role", "Level", "XP", "Status", "Verified"];
+    const csvContent = [
+      headers.join(","),
+      ...dataToExport.map((p: any) => [
+        p.username || "",
+        p.email || "",
+        p.role || "",
+        p.level || 0,
+        p.total_xp || 0,
+        p.status || "",
+        p.is_verified ? "Yes" : "No"
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `architects_${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+  };
+
+  const bulkVerify = async (verify: boolean) => {
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      await updateProfileMutation.mutateAsync({ id, updates: { is_verified: verify } });
+    }
+    setSelectedIds(new Set());
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -100,35 +164,115 @@ export default function AdminArchitects() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
                 Architects
               </h2>
               <p className="text-muted-foreground text-sm mt-1">
-                {profiles?.length || 0} registered architects
+                {filteredProfiles.length} of {profiles?.length || 0} architects
               </p>
             </div>
             
-            {/* Search */}
-            <div className="relative">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search architects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-card border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-64"
-                data-testid="input-search"
-              />
+            <div className="flex items-center gap-4">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="bg-card border border-white/10 px-3 py-2 text-sm text-white focus:border-primary/50 focus:outline-none"
+                data-testid="filter-role"
+              >
+                <option value="all">All Roles</option>
+                <option value="admin">Admin</option>
+                <option value="oversee">Overseer</option>
+                <option value="employee">Employee</option>
+                <option value="member">Member</option>
+              </select>
+
+              <select
+                value={verifiedFilter}
+                onChange={(e) => setVerifiedFilter(e.target.value)}
+                className="bg-card border border-white/10 px-3 py-2 text-sm text-white focus:border-primary/50 focus:outline-none"
+                data-testid="filter-verified"
+              >
+                <option value="all">All Status</option>
+                <option value="verified">Verified</option>
+                <option value="unverified">Unverified</option>
+              </select>
+
+              <div className="relative">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search architects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="bg-card border border-white/10 pl-10 pr-4 py-2 text-sm text-white placeholder-muted-foreground focus:border-primary/50 focus:outline-none w-64"
+                  data-testid="input-search"
+                />
+              </div>
             </div>
           </div>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-4 mb-4 p-3 bg-primary/10 border border-primary/30 rounded">
+              <span className="text-sm text-white">{selectedIds.size} selected</span>
+              <button
+                onClick={() => bulkVerify(true)}
+                className="px-3 py-1 bg-green-500/20 text-green-400 text-sm rounded hover:bg-green-500/30 transition-colors"
+                data-testid="bulk-verify"
+              >
+                Verify Selected
+              </button>
+              <button
+                onClick={() => bulkVerify(false)}
+                className="px-3 py-1 bg-red-500/20 text-red-400 text-sm rounded hover:bg-red-500/30 transition-colors"
+                data-testid="bulk-unverify"
+              >
+                Revoke Selected
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                className="px-3 py-1 text-muted-foreground text-sm hover:text-white transition-colors"
+              >
+                Clear Selection
+              </button>
+              <div className="flex-1" />
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 px-3 py-1 bg-white/10 text-white text-sm rounded hover:bg-white/20 transition-colors"
+                data-testid="export-csv"
+              >
+                <Download className="w-4 h-4" /> Export CSV
+              </button>
+            </div>
+          )}
+
+          {selectedIds.size === 0 && (
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={exportToCSV}
+                className="flex items-center gap-2 px-3 py-1 bg-white/10 text-white text-sm rounded hover:bg-white/20 transition-colors"
+                data-testid="export-csv-all"
+              >
+                <Download className="w-4 h-4" /> Export All to CSV
+              </button>
+            </div>
+          )}
 
           {/* Table */}
           <div className="bg-card/50 border border-white/10 overflow-hidden">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-white/10 text-left">
+                  <th className="p-4 w-10">
+                    <button onClick={toggleSelectAll} className="text-muted-foreground hover:text-white transition-colors">
+                      {selectedIds.size === filteredProfiles.length && filteredProfiles.length > 0 ? (
+                        <CheckSquare className="w-5 h-5 text-primary" />
+                      ) : (
+                        <Square className="w-5 h-5" />
+                      )}
+                    </button>
+                  </th>
                   <th className="p-4 text-xs text-muted-foreground uppercase tracking-wider font-bold">User</th>
                   <th className="p-4 text-xs text-muted-foreground uppercase tracking-wider font-bold">Role</th>
                   <th className="p-4 text-xs text-muted-foreground uppercase tracking-wider font-bold">Level</th>
@@ -141,19 +285,28 @@ export default function AdminArchitects() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       Loading...
                     </td>
                   </tr>
                 ) : filteredProfiles.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                    <td colSpan={8} className="p-8 text-center text-muted-foreground">
                       No architects found
                     </td>
                   </tr>
                 ) : (
                   filteredProfiles.map((profile: any) => (
-                    <tr key={profile.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                    <tr key={profile.id} className={`border-b border-white/5 hover:bg-white/5 transition-colors ${selectedIds.has(profile.id) ? 'bg-primary/5' : ''}`}>
+                      <td className="p-4">
+                        <button onClick={() => toggleSelect(profile.id)} className="text-muted-foreground hover:text-white transition-colors">
+                          {selectedIds.has(profile.id) ? (
+                            <CheckSquare className="w-5 h-5 text-primary" />
+                          ) : (
+                            <Square className="w-5 h-5" />
+                          )}
+                        </button>
+                      </td>
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <img 

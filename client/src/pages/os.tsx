@@ -1187,6 +1187,47 @@ function DesktopWidgets({ time, weather, notifications }: {
     const saved = localStorage.getItem('aethex-widget-positions');
     return saved ? JSON.parse(saved) : getDefaultWidgetPositions();
   });
+  const [positionResetKey, setPositionResetKey] = useState(0);
+  const [widgetVisibility, setWidgetVisibility] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('aethex-widget-visibility');
+    return saved ? JSON.parse(saved) : { clock: true, weather: true, status: true, notifications: true, leaderboard: true, pipeline: true, kpi: true, heartbeat: true };
+  });
+  const [showWidgetSettings, setShowWidgetSettings] = useState(false);
+  const [mobileWidgetsOpen, setMobileWidgetsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const toggleWidgetVisibility = (id: string) => {
+    setWidgetVisibility(prev => {
+      const updated = { ...prev, [id]: !prev[id] };
+      localStorage.setItem('aethex-widget-visibility', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const resetWidgetPositions = () => {
+    const defaults = getDefaultWidgetPositions();
+    setWidgetPositions(defaults);
+    setPositionResetKey(k => k + 1);
+    localStorage.setItem('aethex-widget-positions', JSON.stringify(defaults));
+  };
+
+  const widgetOptions = [
+    { id: 'clock', label: 'Clock' },
+    { id: 'weather', label: 'Weather' },
+    { id: 'status', label: 'System Status' },
+    { id: 'notifications', label: 'Notifications' },
+    { id: 'leaderboard', label: 'Leaderboard' },
+    { id: 'pipeline', label: 'Pipeline' },
+    { id: 'kpi', label: 'KPI Dashboard' },
+    { id: 'heartbeat', label: 'Network Heartbeat' },
+  ];
 
   const { data: metrics } = useQuery({
     queryKey: ['os-metrics'],
@@ -1234,21 +1275,190 @@ function DesktopWidgets({ time, weather, notifications }: {
     return { color: 'text-cyan-400', icon: <Users className="w-3 h-3" /> };
   };
 
-  return (
-    <div className="pointer-events-none absolute inset-0">
-      <DraggableWidget id="clock" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
-        <div className="p-3">
-          <div className="text-2xl font-mono text-white font-bold">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-          <div className="text-xs text-white/50 font-mono">
-            {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-          </div>
-        </div>
-      </DraggableWidget>
+  if (isMobile) {
+    return (
+      <>
+        <button
+          onClick={() => setMobileWidgetsOpen(!mobileWidgetsOpen)}
+          className="fixed top-4 right-4 z-50 w-10 h-10 bg-slate-900/90 backdrop-blur-xl border border-white/20 rounded-lg flex items-center justify-center text-white/70 hover:text-white transition-colors pointer-events-auto"
+          data-testid="mobile-widgets-toggle"
+        >
+          <BarChart3 className="w-5 h-5" />
+        </button>
+        <AnimatePresence>
+          {mobileWidgetsOpen && (
+            <motion.div
+              initial={{ opacity: 0, x: 300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 300 }}
+              className="fixed top-0 right-0 bottom-12 w-72 bg-slate-900/95 backdrop-blur-xl border-l border-white/10 overflow-y-auto z-40 pointer-events-auto"
+            >
+              <div className="p-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-slate-900/95">
+                <span className="text-sm text-white/70 uppercase tracking-wider">Widgets</span>
+                <button onClick={() => setMobileWidgetsOpen(false)} className="text-white/50 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                {widgetVisibility.clock !== false && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="text-2xl font-mono text-white font-bold">
+                      {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                    <div className="text-xs text-white/50 font-mono">
+                      {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+                    </div>
+                  </div>
+                )}
+                {widgetVisibility.weather !== false && weather?.current_weather && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Weather</div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{getWeatherIcon(weather.current_weather.weathercode)}</span>
+                      <div>
+                        <div className="text-xl font-mono text-white">{Math.round(weather.current_weather.temperature)}°F</div>
+                        <div className="text-xs text-white/50">Wind: {weather.current_weather.windspeed} mph</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {widgetVisibility.status !== false && metrics && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="text-xs text-white/50 uppercase tracking-wider mb-2">System Status</div>
+                    <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Architects</span>
+                        <span className="text-cyan-400">{metrics.totalProfiles || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Projects</span>
+                        <span className="text-purple-400">{metrics.totalProjects || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Verified</span>
+                        <span className="text-yellow-400">{metrics.verifiedUsers || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-white/60">Online</span>
+                        <span className="text-green-400">{metrics.onlineUsers || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {widgetVisibility.notifications !== false && notifications && notifications.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Notifications</div>
+                    <div className="space-y-1.5 text-xs">
+                      {notifications.slice(0, 4).map((n, i) => {
+                        const cat = getNotificationCategory(n);
+                        return (
+                          <div key={i} className={`flex items-center gap-2 ${cat.color}`}>
+                            {cat.icon}
+                            <span className="truncate text-white/70">{n}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {widgetVisibility.leaderboard !== false && leaderboard && leaderboard.length > 0 && (
+                  <div className="bg-white/5 rounded-lg p-3">
+                    <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <Award className="w-3 h-3 text-yellow-400" />
+                      Top Architects
+                    </div>
+                    <div className="space-y-1.5 text-xs font-mono">
+                      {leaderboard.map((arch: any, i: number) => (
+                        <div key={arch.id} className="flex items-center gap-2">
+                          <span className={`w-4 text-center ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-white/40'}`}>
+                            {i + 1}
+                          </span>
+                          <span className="flex-1 truncate text-white/80">{arch.username || arch.display_name}</span>
+                          <span className="text-cyan-400">Lv{arch.level || 1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </>
+    );
+  }
 
-      {weather?.current_weather && (
-        <DraggableWidget id="weather" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+  return (
+    <div className="pointer-events-none absolute inset-0 hidden md:block">
+      <button
+        onClick={() => setShowWidgetSettings(true)}
+        className="fixed top-4 left-4 z-50 w-8 h-8 bg-slate-900/80 backdrop-blur-xl border border-white/20 rounded-lg flex items-center justify-center text-white/50 hover:text-white transition-colors pointer-events-auto"
+        data-testid="widget-settings-btn"
+      >
+        <Settings className="w-4 h-4" />
+      </button>
+
+      <AnimatePresence>
+        {showWidgetSettings && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm pointer-events-auto"
+            onClick={() => setShowWidgetSettings(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-slate-900/95 backdrop-blur-xl border border-white/20 rounded-xl p-6 w-80"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-white font-display uppercase tracking-wider">Widget Settings</h3>
+                <button onClick={() => setShowWidgetSettings(false)} className="text-white/50 hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="space-y-2 mb-4">
+                {widgetOptions.map(opt => (
+                  <label key={opt.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={widgetVisibility[opt.id] !== false}
+                      onChange={() => toggleWidgetVisibility(opt.id)}
+                      className="w-4 h-4 rounded border-white/30 bg-white/10 text-cyan-500 focus:ring-cyan-500"
+                    />
+                    <span className="text-white/80 text-sm">{opt.label}</span>
+                  </label>
+                ))}
+              </div>
+              <button
+                onClick={resetWidgetPositions}
+                className="w-full py-2 bg-white/10 hover:bg-white/20 text-white/80 rounded-lg text-sm transition-colors"
+              >
+                Reset Positions
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {widgetVisibility.clock !== false && (
+        <DraggableWidget key={`clock-${positionResetKey}`} id="clock" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+          <div className="p-3">
+            <div className="text-2xl font-mono text-white font-bold">
+              {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div className="text-xs text-white/50 font-mono">
+              {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+            </div>
+          </div>
+        </DraggableWidget>
+      )}
+
+      {widgetVisibility.weather !== false && weather?.current_weather && (
+        <DraggableWidget key={`weather-${positionResetKey}`} id="weather" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Weather</div>
             <div className="flex items-center gap-3">
@@ -1262,8 +1472,8 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
       
-      {metrics && (
-        <DraggableWidget id="status" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+      {widgetVisibility.status !== false && metrics && (
+        <DraggableWidget key={`status-${positionResetKey}`} id="status" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2">System Status</div>
             <div className="space-y-1.5 text-xs font-mono">
@@ -1294,8 +1504,8 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
 
-      {notifications && notifications.length > 0 && (
-        <DraggableWidget id="notifications" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+      {widgetVisibility.notifications !== false && notifications && notifications.length > 0 && (
+        <DraggableWidget key={`notifications-${positionResetKey}`} id="notifications" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Notifications</div>
             <div className="space-y-1.5 text-xs max-h-24 overflow-y-auto">
@@ -1313,8 +1523,8 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
 
-      {leaderboard && leaderboard.length > 0 && (
-        <DraggableWidget id="leaderboard" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+      {widgetVisibility.leaderboard !== false && leaderboard && leaderboard.length > 0 && (
+        <DraggableWidget key={`leaderboard-${positionResetKey}`} id="leaderboard" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
               <Award className="w-3 h-3 text-yellow-400" />
@@ -1335,8 +1545,8 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
 
-      {metrics && (
-        <DraggableWidget id="pipeline" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+      {widgetVisibility.pipeline !== false && metrics && (
+        <DraggableWidget key={`pipeline-${positionResetKey}`} id="pipeline" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
               <Layers className="w-3 h-3 text-purple-400" />
@@ -1375,8 +1585,8 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
 
-      {metrics && (
-        <DraggableWidget id="kpi" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+      {widgetVisibility.kpi !== false && metrics && (
+        <DraggableWidget key={`kpi-${positionResetKey}`} id="kpi" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
           <div className="p-3">
             <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
               <BarChart3 className="w-3 h-3 text-cyan-400" />
@@ -1404,30 +1614,32 @@ function DesktopWidgets({ time, weather, notifications }: {
         </DraggableWidget>
       )}
 
-      <DraggableWidget id="heartbeat" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
-        <div className="p-3">
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
-            <Activity className="w-3 h-3 text-red-400" />
-            Network Pulse
-          </div>
-          <div className="flex items-center justify-center py-2">
-            <motion.div
-              animate={{ scale: [1, 1.2, 1] }}
-              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-              className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center"
-            >
+      {widgetVisibility.heartbeat !== false && (
+        <DraggableWidget key={`heartbeat-${positionResetKey}`} id="heartbeat" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Activity className="w-3 h-3 text-red-400" />
+              Network Pulse
+            </div>
+            <div className="flex items-center justify-center py-2">
               <motion.div
-                animate={{ scale: [1, 1.1, 1] }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut", delay: 0.1 }}
-                className="w-4 h-4 rounded-full bg-red-500"
-              />
-            </motion.div>
+                animate={{ scale: [1, 1.2, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center"
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut", delay: 0.1 }}
+                  className="w-4 h-4 rounded-full bg-red-500"
+                />
+              </motion.div>
+            </div>
+            <div className="text-center text-xs text-white/60 font-mono">
+              <span className="text-green-400">●</span> All Systems Operational
+            </div>
           </div>
-          <div className="text-center text-xs text-white/60 font-mono">
-            <span className="text-green-400">●</span> All Systems Operational
-          </div>
-        </div>
-      </DraggableWidget>
+        </DraggableWidget>
+      )}
     </div>
   );
 }
