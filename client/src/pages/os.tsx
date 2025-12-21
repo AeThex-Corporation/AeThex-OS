@@ -30,6 +30,7 @@ interface WindowState {
   zIndex: number;
   accentColor?: string;
   desktopId: number;
+  iframeUrl?: string;
 }
 
 interface Toast {
@@ -250,6 +251,7 @@ export default function AeThexOS() {
   }, []);
 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [isDesktopLocked, setIsDesktopLocked] = useState(true);
 
   useEffect(() => {
     const bootSequence = async () => {
@@ -461,14 +463,18 @@ export default function AeThexOS() {
   }, [clearanceMode, addToast, playSound]);
 
   const openApp = useCallback((app: DesktopApp) => {
+    const appToOpen = (isDesktopLocked && app.id !== 'passport') 
+      ? apps.find(a => a.id === 'passport') || app 
+      : app;
+    
     playSound('open');
-    const existingWindow = windows.find(w => w.id === app.id);
+    const existingWindow = windows.find(w => w.id === appToOpen.id);
     if (existingWindow) {
       setWindows(prev => prev.map(w => 
-        w.id === app.id ? { ...w, minimized: false, zIndex: maxZIndex + 1, desktopId: currentDesktop } : w
+        w.id === appToOpen.id ? { ...w, minimized: false, zIndex: maxZIndex + 1, desktopId: currentDesktop } : w
       ));
       setMaxZIndex(prev => prev + 1);
-      setActiveWindowId(app.id);
+      setActiveWindowId(appToOpen.id);
       return;
     }
 
@@ -476,14 +482,14 @@ export default function AeThexOS() {
     const offsetY = (windows.length % 5) * 40 + 50;
 
     const newWindow: WindowState = {
-      id: app.id,
-      title: app.title,
-      icon: app.icon,
-      component: app.component,
+      id: appToOpen.id,
+      title: appToOpen.title,
+      icon: appToOpen.icon,
+      component: appToOpen.component,
       x: offsetX,
       y: offsetY,
-      width: app.defaultWidth,
-      height: app.defaultHeight,
+      width: appToOpen.defaultWidth,
+      height: appToOpen.defaultHeight,
       minimized: false,
       maximized: false,
       zIndex: maxZIndex + 1,
@@ -492,9 +498,9 @@ export default function AeThexOS() {
 
     setWindows(prev => [...prev, newWindow]);
     setMaxZIndex(prev => prev + 1);
-    setActiveWindowId(app.id);
+    setActiveWindowId(appToOpen.id);
     setShowStartMenu(false);
-  }, [windows, maxZIndex, playSound, currentDesktop]);
+  }, [windows, maxZIndex, playSound, currentDesktop, isDesktopLocked, apps]);
 
   const closeWindow = useCallback((id: string) => {
     playSound('close');
@@ -590,7 +596,7 @@ export default function AeThexOS() {
   const renderAppContent = (component: string) => {
     switch (component) {
       case 'terminal': return <TerminalApp />;
-      case 'passport': return <PassportApp />;
+      case 'passport': return <PassportApp onLoginSuccess={unlockDesktop} isDesktopLocked={isDesktopLocked} />;
       case 'files': return <FilesApp />;
       case 'network': return <NetworkMapApp />;
       case 'metrics': return <MetricsDashboardApp />;
@@ -607,12 +613,13 @@ export default function AeThexOS() {
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
-      case 'networkneighborhood': return <NetworkNeighborhoodApp />;
-      case 'foundry': return <FoundryApp />;
-      case 'devtools': return <DevToolsApp />;
+      case 'networkneighborhood': return <NetworkNeighborhoodApp openIframeWindow={openIframeWindow} />;
+      case 'foundry': return <FoundryApp openIframeWindow={openIframeWindow} />;
+      case 'devtools': return <DevToolsApp openIframeWindow={openIframeWindow} />;
       case 'mission': return <MissionApp />;
       case 'intel': return <IntelApp />;
-      case 'drives': return <DrivesApp />;
+      case 'drives': return <DrivesApp openIframeWindow={openIframeWindow} />;
+      case 'iframe': return null;
       case 'settings': return <SettingsApp 
         wallpaper={wallpaper} 
         setWallpaper={setWallpaper} 
@@ -670,6 +677,7 @@ export default function AeThexOS() {
   const handleGuestContinue = () => {
     setShowLoginPrompt(false);
     setIsBooting(false);
+    setIsDesktopLocked(false);
     const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
     setDailyTip(randomTip);
     setTimeout(() => setShowDailyTip(true), 1000);
@@ -678,6 +686,7 @@ export default function AeThexOS() {
   const handleLoginFromBoot = () => {
     setShowLoginPrompt(false);
     setIsBooting(false);
+    // Keep desktop locked until login succeeds
     const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
     setDailyTip(randomTip);
     setTimeout(() => {
@@ -685,6 +694,31 @@ export default function AeThexOS() {
       const passportApp = apps.find(a => a.id === 'passport');
       if (passportApp) openApp(passportApp);
     }, 500);
+  };
+
+  const unlockDesktop = () => {
+    setIsDesktopLocked(false);
+  };
+
+  const openIframeWindow = (url: string, title: string) => {
+    const windowId = `iframe-${Date.now()}`;
+    setWindows(prev => [...prev, {
+      id: windowId,
+      title,
+      icon: <Globe className="w-4 h-4" />,
+      component: 'iframe',
+      x: 100 + Math.random() * 100,
+      y: 100 + Math.random() * 100,
+      width: 900,
+      height: 600,
+      minimized: false,
+      maximized: false,
+      zIndex: maxZIndex + 1,
+      desktopId: currentDesktop,
+      iframeUrl: url
+    }]);
+    setMaxZIndex(prev => prev + 1);
+    setActiveWindowId(windowId);
   };
 
   if (isBooting) {
@@ -807,6 +841,32 @@ export default function AeThexOS() {
           ))}
         </div>
 
+        {isDesktopLocked && windows.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+          >
+            <div className="text-center">
+              <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center mb-4">
+                <Lock className="w-10 h-10 text-white" />
+              </div>
+              <h2 className="text-xl font-display text-white uppercase tracking-wider mb-2">Desktop Locked</h2>
+              <p className="text-white/60 text-sm font-mono mb-6">Sign in with your Passport to continue</p>
+              <button
+                onClick={() => {
+                  const passportApp = apps.find(a => a.id === 'passport');
+                  if (passportApp) openApp(passportApp);
+                }}
+                className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors"
+                data-testid="unlock-desktop-btn"
+              >
+                Open Passport
+              </button>
+            </div>
+          </motion.div>
+        )}
+
         <AnimatePresence>
           {windows.filter(w => !w.minimized && w.desktopId === currentDesktop).map((window) => (
             <Window
@@ -820,7 +880,14 @@ export default function AeThexOS() {
               onMove={(x, y) => setWindows(prev => prev.map(w => w.id === window.id ? { ...w, x, y } : w))}
               onResize={(width, height) => setWindows(prev => prev.map(w => w.id === window.id ? { ...w, width, height } : w))}
               onSnap={(x, y) => handleWindowSnap(window.id, x, y, window.width, window.height)}
-              content={renderAppContent(window.component)}
+              content={window.component === 'iframe' && window.iframeUrl ? (
+                <iframe 
+                  src={window.iframeUrl} 
+                  className="w-full h-full border-0" 
+                  title={window.title}
+                  sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                />
+              ) : renderAppContent(window.component)}
             />
           ))}
         </AnimatePresence>
@@ -883,6 +950,7 @@ export default function AeThexOS() {
         onClearNotification={(idx) => setNotifications(prev => prev.filter((_, i) => i !== idx))}
         onClearAllNotifications={() => setNotifications([])}
         desktopWindowCounts={[0, 1, 2, 3].map(d => windows.filter(w => w.desktopId === d).length)}
+        openIframeWindow={openIframeWindow}
       />
 
       <AnimatePresence>
@@ -1347,6 +1415,7 @@ interface TaskbarProps {
   onClearNotification: (index: number) => void;
   onClearAllNotifications: () => void;
   desktopWindowCounts: number[];
+  openIframeWindow?: (url: string, title: string) => void;
 }
 
 function Skeleton({ className = "", animate = true }: { className?: string; animate?: boolean }) {
@@ -1554,7 +1623,7 @@ function OnboardingTour({ step, onNext, onClose }: { step: number; onNext: () =>
   );
 }
 
-function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange, clearanceTheme, onSwitchClearance, activeTrayPanel, onTrayPanelToggle, volume, onVolumeChange, isMuted, onMuteToggle, batteryInfo, onClearNotification, onClearAllNotifications, desktopWindowCounts }: TaskbarProps) {
+function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange, clearanceTheme, onSwitchClearance, activeTrayPanel, onTrayPanelToggle, volume, onVolumeChange, isMuted, onMuteToggle, batteryInfo, onClearNotification, onClearAllNotifications, desktopWindowCounts, openIframeWindow }: TaskbarProps) {
   return (
     <>
       <AnimatePresence>
@@ -2079,14 +2148,12 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                       <Globe className="w-3 h-3 text-yellow-400" /> .aethex namespace
                     </div>
                   </div>
-                  <a
-                    href="https://aethex.studio"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
                     className="block w-full text-center px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors text-sm"
                   >
                     Upgrade Now — $500
-                  </a>
+                  </button>
                   <div className="text-center text-xs text-white/40">
                     Hint: Check the terminal for promo codes
                   </div>
@@ -2725,9 +2792,16 @@ function TerminalApp() {
   );
 }
 
-function PassportApp() {
-  const { user, isAuthenticated } = useAuth();
-  const { data: profile, isLoading } = useQuery({
+function PassportApp({ onLoginSuccess, isDesktopLocked }: { onLoginSuccess?: () => void; isDesktopLocked?: boolean }) {
+  const { user, isAuthenticated, login, signup, logout } = useAuth();
+  const [mode, setMode] = useState<'view' | 'login' | 'signup'>('view');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { data: profile } = useQuery({
     queryKey: ['os-user-profile'],
     queryFn: async () => {
       const res = await fetch('/api/metrics');
@@ -2735,6 +2809,143 @@ function PassportApp() {
     },
     enabled: true,
   });
+
+  useEffect(() => {
+    if (isAuthenticated && isDesktopLocked && onLoginSuccess) {
+      onLoginSuccess();
+    }
+  }, [isAuthenticated, isDesktopLocked, onLoginSuccess]);
+
+  useEffect(() => {
+    if (!isAuthenticated && isDesktopLocked) {
+      setMode('login');
+    }
+  }, [isAuthenticated, isDesktopLocked]);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await login(email, password);
+      setMode('view');
+      if (onLoginSuccess) onLoginSuccess();
+    } catch (err: any) {
+      setError(err.message || 'Login failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+    try {
+      await signup(email, password, username || undefined);
+      setMode('login');
+      setError('Account created! Please sign in.');
+    } catch (err: any) {
+      setError(err.message || 'Signup failed');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (mode === 'login' || mode === 'signup') {
+    return (
+      <div className="h-full p-6 bg-gradient-to-b from-slate-900 to-slate-950 overflow-auto">
+        <div className="border border-cyan-400/30 rounded-lg p-6 bg-slate-900/50 max-w-sm mx-auto">
+          <div className="text-center mb-6">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 mb-4">
+              <Key className="w-8 h-8 text-white" />
+            </div>
+            <h2 className="text-xl font-display text-white uppercase tracking-wider">
+              {mode === 'login' ? 'Sign In' : 'Create Account'}
+            </h2>
+            <p className="text-cyan-400 text-sm font-mono mt-1">AeThex Passport</p>
+          </div>
+
+          <form onSubmit={mode === 'login' ? handleLogin : handleSignup} className="space-y-4">
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-white/50 text-xs mb-1 font-mono">USERNAME</label>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="w-full bg-black/50 border border-cyan-500/30 rounded px-3 py-2 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
+                  placeholder="architect_name"
+                  data-testid="passport-username"
+                />
+              </div>
+            )}
+            <div>
+              <label className="block text-white/50 text-xs mb-1 font-mono">EMAIL</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full bg-black/50 border border-cyan-500/30 rounded px-3 py-2 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
+                placeholder="you@example.com"
+                required
+                data-testid="passport-email"
+              />
+            </div>
+            <div>
+              <label className="block text-white/50 text-xs mb-1 font-mono">PASSWORD</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-black/50 border border-cyan-500/30 rounded px-3 py-2 text-white font-mono text-sm focus:border-cyan-400 focus:outline-none"
+                placeholder="••••••••"
+                required
+                data-testid="passport-password"
+              />
+            </div>
+
+            {error && (
+              <div className={`text-sm font-mono p-2 rounded ${error.includes('created') ? 'text-green-400 bg-green-500/10' : 'text-red-400 bg-red-500/10'}`}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+              data-testid="passport-submit"
+            >
+              {isSubmitting ? 'Processing...' : mode === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          </form>
+
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
+              className="text-cyan-400 hover:text-cyan-300 text-sm font-mono"
+              data-testid="passport-toggle-mode"
+            >
+              {mode === 'login' ? 'Need an account? Sign up' : 'Already have an account? Sign in'}
+            </button>
+          </div>
+
+          {isDesktopLocked && (
+            <div className="mt-4 pt-4 border-t border-white/10 text-center">
+              <button
+                onClick={onLoginSuccess}
+                className="text-white/40 hover:text-white/60 text-xs font-mono"
+                data-testid="passport-skip-guest"
+              >
+                Continue as Guest
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full p-6 bg-gradient-to-b from-slate-900 to-slate-950 overflow-auto">
@@ -2767,6 +2978,26 @@ function PassportApp() {
                 <span className="text-cyan-400">{profile.totalProjects || 0}</span>
               </div>
             </>
+          )}
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {!isAuthenticated ? (
+            <button
+              onClick={() => setMode('login')}
+              className="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors text-sm"
+              data-testid="passport-signin-btn"
+            >
+              Sign In
+            </button>
+          ) : (
+            <button
+              onClick={() => logout()}
+              className="w-full py-2 border border-red-500/50 text-red-400 hover:bg-red-500/10 font-mono uppercase tracking-wider transition-colors text-sm"
+              data-testid="passport-logout-btn"
+            >
+              Sign Out
+            </button>
           )}
         </div>
 
@@ -3811,7 +4042,7 @@ function ProfilesApp() {
   );
 }
 
-function NetworkNeighborhoodApp() {
+function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url: string, title: string) => void }) {
   const { data: founders = [], isLoading } = useQuery({
     queryKey: ['network-neighborhood'],
     queryFn: async () => {
@@ -3880,14 +4111,12 @@ function NetworkNeighborhoodApp() {
               <span className="text-yellow-500/50 text-xs">[{String(founders.length + idx + 1).padStart(3, '0')}]</span>
               <span className="text-yellow-500/70">{slot.name}</span>
             </div>
-            <a 
-              href="https://aethex.studio" 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <button 
+              onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
               className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors uppercase tracking-wider flex items-center gap-1"
             >
               Join <ExternalLink className="w-3 h-3" />
-            </a>
+            </button>
           </div>
         ))}
       </div>
@@ -3898,7 +4127,7 @@ function NetworkNeighborhoodApp() {
   );
 }
 
-function FoundryApp() {
+function FoundryApp({ openIframeWindow }: { openIframeWindow?: (url: string, title: string) => void }) {
   const [viewMode, setViewMode] = useState<'info' | 'enroll'>('info');
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
@@ -4004,17 +4233,15 @@ function FoundryApp() {
               )}
             </div>
             
-            <a 
-              href="https://aethex.studio" 
-              target="_blank" 
-              rel="noopener noreferrer"
+            <button 
+              onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
               className="block w-full px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black text-center font-bold uppercase tracking-wider transition-colors"
             >
               Complete Enrollment
-            </a>
+            </button>
             
             <p className="text-center text-white/40 text-xs">
-              Redirects to aethex.studio for payment
+              Opens enrollment form
             </p>
           </div>
         </div>
@@ -4023,7 +4250,7 @@ function FoundryApp() {
   );
 }
 
-function DevToolsApp() {
+function DevToolsApp({ openIframeWindow }: { openIframeWindow?: (url: string, title: string) => void }) {
   const tools = [
     { name: "Documentation", desc: "API reference & guides", url: "https://aethex.dev", icon: <FileText className="w-5 h-5" /> },
     { name: "GitHub", desc: "Open source repositories", url: "https://github.com/aethex", icon: <Code2 className="w-5 h-5" /> },
@@ -4038,12 +4265,10 @@ function DevToolsApp() {
       </div>
       <div className="flex-1 overflow-auto p-4 space-y-3">
         {tools.map((tool, idx) => (
-          <a
+          <button
             key={idx}
-            href={tool.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-4 p-4 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors rounded-lg"
+            onClick={() => tool.url !== '#' && openIframeWindow?.(tool.url, tool.name)}
+            className="w-full flex items-center gap-4 p-4 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors rounded-lg text-left"
           >
             <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
               {tool.icon}
@@ -4053,7 +4278,7 @@ function DevToolsApp() {
               <div className="text-purple-400/60 text-sm">{tool.desc}</div>
             </div>
             <ExternalLink className="w-4 h-4 text-purple-400/40" />
-          </a>
+          </button>
         ))}
       </div>
     </div>
@@ -4200,7 +4425,7 @@ REVENUE MODEL
   );
 }
 
-function DrivesApp() {
+function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, title: string) => void }) {
   const [selectedDrive, setSelectedDrive] = useState<string | null>(null);
   
   const drives = [
@@ -4277,14 +4502,12 @@ function DrivesApp() {
                   <div className="text-white/50 text-xs mb-4">
                     Join The Foundry to reserve your namespace in the AeThex ecosystem.
                   </div>
-                  <a
-                    href="https://aethex.studio"
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold uppercase tracking-wider transition-colors"
                   >
                     Join The Foundry <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 </div>
               </div>
             </motion.div>
