@@ -187,13 +187,17 @@ export async function registerRoutes(
   
   // ========== PUBLIC DIRECTORY ROUTES ==========
   
-  // Get public directory of verified architects
+  // Get public directory of founding architects only
   app.get("/api/directory/architects", async (req, res) => {
     try {
       const profiles = await storage.getProfiles();
-      // Filter and map to public-safe fields
+      // Only show the founding team members with leadership roles
+      const LEADERSHIP_ROLES = ['oversee', 'admin'];
       const publicProfiles = profiles
-        .filter(p => p.is_verified || ['admin', 'oversee', 'employee'].includes(p.role || ''))
+        .filter(p => {
+          const role = (p.role || '').toLowerCase();
+          return LEADERSHIP_ROLES.includes(role);
+        })
         .map((p, index) => ({
           id: String(index + 1).padStart(3, '0'),
           name: p.full_name || p.username || p.email?.split('@')[0] || 'Architect',
@@ -203,6 +207,7 @@ export async function registerRoutes(
           xp: p.total_xp,
           passportId: p.aethex_passport_id,
           skills: p.skills,
+          username: p.username,
         }));
       res.json(publicProfiles);
     } catch (err: any) {

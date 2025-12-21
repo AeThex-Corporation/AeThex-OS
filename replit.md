@@ -100,10 +100,39 @@ Preferred communication style: Simple, everyday language.
 - Replit-specific plugins for development (cartographer, dev-banner, error overlay)
 - TypeScript with strict mode enabled
 
+## AeThex OS as Landing Experience
+
+### Root Route Architecture
+The site boots directly into AeThex OS at the root route (`/`). Users experience a browser-based desktop environment rather than a traditional landing page.
+
+**Key Desktop Apps:**
+- **Network Neighborhood** - Directory of founding architects + Foundry recruitment slots
+- **Mission.txt** - AeThex manifesto and vision
+- **The Foundry** - Links to aethex.studio bootcamp
+- **Dev Tools** - Developer documentation and resources
+- **System Status** - Live metrics and uptime monitoring
+- **My Computer** - Passport/login and profile management
+
+**Start Menu Features:**
+- Quick access to all apps
+- Clearance switch (Foundation vs Corp themes)
+- Social links (Twitter, Discord, GitHub)
+- Admin access for authenticated users
+
+**Route Structure:**
+- `/` - AeThex OS desktop (main landing)
+- `/home` - Legacy landing page content
+- `/admin/*` - Admin dashboard routes
+- `/login` - Authentication page
+- `/network/:slug` - Individual architect profiles
+
+### Directory API
+The `/api/directory/architects` endpoint returns only users with leadership roles (`oversee`, `admin`) - the founding team members.
+
 ## Multi-Platform Strategy (Q3 2025 Roadmap)
 
 ### Current State: Web-First
-The AeThex OS (`/os` route) is currently a web application. The codebase has been prepared for future multi-platform deployment with abstraction layers.
+The AeThex OS (root route `/`) is the primary web application. The codebase has been prepared for future multi-platform deployment with abstraction layers.
 
 ### Platform Abstraction Layer
 Located in `client/src/lib/`:

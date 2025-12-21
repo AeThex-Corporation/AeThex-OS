@@ -87,7 +87,7 @@ const DAILY_TIPS = [
   { title: "Notifications", tip: "Click the bell icon in the taskbar to view system notifications." },
 ];
 
-const PINNED_APPS = ['terminal', 'files', 'calculator', 'settings'];
+const PINNED_APPS = ['terminal', 'networkneighborhood', 'calculator', 'settings'];
 
 const CLEARANCE_THEMES: Record<ClearanceMode, ClearanceTheme> = {
   foundation: {
@@ -356,29 +356,33 @@ export default function AeThexOS() {
   }, [windows]);
 
   const foundationApps: DesktopApp[] = [
+    { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
+    { id: "mission", title: "Mission.txt", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "foundry", title: "The Foundry", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
+    { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
+    { id: "passport", title: "My Computer", icon: <Monitor className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
     { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
-    { id: "notes", title: "Manifesto", icon: <FileText className="w-8 h-8" />, component: "notes", defaultWidth: 400, defaultHeight: 450 },
-    { id: "achievements", title: "Bounty Board", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 600, defaultHeight: 500 },
-    { id: "passport", title: "Passport", icon: <IdCard className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
-    { id: "files", title: "Projects", icon: <FolderOpen className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
     { id: "arcade", title: "Arcade", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
-    { id: "profiles", title: "Architects", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
     { id: "chat", title: "Comms", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
 
   const corpApps: DesktopApp[] = [
+    { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
+    { id: "mission", title: "Mission.txt", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "foundry", title: "The Foundry", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
+    { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
+    { id: "passport", title: "My Computer", icon: <Monitor className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "network", title: "Global Ops", icon: <Globe className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
-    { id: "metrics", title: "The Ledger", icon: <TrendingUp className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
     { id: "files", title: "Asset Library", icon: <Database className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
     { id: "pitch", title: "Contracts", icon: <FileText className="w-8 h-8" />, component: "pitch", defaultWidth: 500, defaultHeight: 400 },
-    { id: "profiles", title: "Personnel", icon: <Users className="w-8 h-8" />, component: "profiles", defaultWidth: 650, defaultHeight: 550 },
     { id: "sysmonitor", title: "Infrastructure", icon: <Server className="w-8 h-8" />, component: "sysmonitor", defaultWidth: 450, defaultHeight: 400 },
     { id: "leaderboard", title: "Performance", icon: <BarChart3 className="w-8 h-8" />, component: "leaderboard", defaultWidth: 500, defaultHeight: 550 },
-    { id: "newsfeed", title: "Intel Feed", icon: <Newspaper className="w-8 h-8" />, component: "newsfeed", defaultWidth: 450, defaultHeight: 550 },
     { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
@@ -584,6 +588,10 @@ export default function AeThexOS() {
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
+      case 'networkneighborhood': return <NetworkNeighborhoodApp />;
+      case 'foundry': return <FoundryApp />;
+      case 'devtools': return <DevToolsApp />;
+      case 'mission': return <MissionApp />;
       case 'settings': return <SettingsApp 
         wallpaper={wallpaper} 
         setWallpaper={setWallpaper} 
@@ -1540,6 +1548,41 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                 </div>
                 <ChevronRight className="w-4 h-4 text-white/30 group-hover:translate-x-0.5 transition-transform" />
               </button>
+            </div>
+
+            <div className="p-2 border-t border-white/10">
+              <div className="flex items-center justify-center gap-4">
+                <a 
+                  href="https://twitter.com/aethex_hq" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2 text-white/50 hover:text-cyan-400 transition-colors"
+                  data-testid="social-twitter"
+                >
+                  <Globe className="w-4 h-4" />
+                </a>
+                <a 
+                  href="https://discord.gg/aethex" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2 text-white/50 hover:text-purple-400 transition-colors"
+                  data-testid="social-discord"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                </a>
+                <a 
+                  href="https://github.com/aethex" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="p-2 text-white/50 hover:text-white transition-colors"
+                  data-testid="social-github"
+                >
+                  <Code2 className="w-4 h-4" />
+                </a>
+              </div>
+              <div className="text-center text-[10px] text-white/30 mt-1">
+                AeThex OS v1.0.0
+              </div>
             </div>
           </motion.div>
         )}
@@ -3281,6 +3324,217 @@ function ProfilesApp() {
             </div>
           </motion.div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function NetworkNeighborhoodApp() {
+  const { data: founders = [], isLoading } = useQuery({
+    queryKey: ['network-neighborhood'],
+    queryFn: async () => {
+      const res = await fetch('/api/directory/architects');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const reservedSlots = Array.from({ length: Math.max(0, 7 - founders.length) }, (_, i) => ({
+    id: `reserved-${i}`,
+    name: "[RESERVED FOR FOUNDRY]",
+    role: "available",
+    isReserved: true,
+  }));
+
+  if (isLoading) {
+    return (
+      <div className="h-full bg-black flex flex-col font-mono">
+        <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+          <Network className="w-4 h-4 text-cyan-400" />
+          <span className="text-cyan-400 text-sm uppercase tracking-wider">Network Neighborhood</span>
+        </div>
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full bg-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+        <Network className="w-4 h-4 text-cyan-400" />
+        <span className="text-cyan-400 text-sm uppercase tracking-wider">Network Neighborhood</span>
+        <span className="text-cyan-500/40 text-xs ml-auto">{founders.length} nodes online</span>
+      </div>
+      <div className="flex-1 overflow-auto p-2 space-y-1">
+        {founders.map((architect: any, idx: number) => (
+          <motion.div
+            key={architect.id}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: idx * 0.05 }}
+            className="flex items-center justify-between py-2 px-3 border-l-2 border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-cyan-500/60 text-xs">[{String(idx + 1).padStart(3, '0')}]</span>
+              <div>
+                <span className="text-white font-bold">{architect.name}</span>
+                <span className="text-cyan-500/50 text-sm ml-2">— {architect.role}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-cyan-500/40">Lv.{architect.level || 1}</span>
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+            </div>
+          </motion.div>
+        ))}
+        {reservedSlots.map((slot: any, idx: number) => (
+          <div
+            key={slot.id}
+            className="flex items-center justify-between py-2 px-3 border-l-2 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-yellow-500/50 text-xs">[{String(founders.length + idx + 1).padStart(3, '0')}]</span>
+              <span className="text-yellow-500/70">{slot.name}</span>
+            </div>
+            <a 
+              href="https://aethex.studio" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors uppercase tracking-wider flex items-center gap-1"
+            >
+              Join <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        ))}
+      </div>
+      <div className="p-2 border-t border-cyan-500/20 text-center">
+        <span className="text-cyan-500/40 text-xs">AETHEX.NETWORK // PUBLIC DIRECTORY</span>
+      </div>
+    </div>
+  );
+}
+
+function FoundryApp() {
+  return (
+    <div className="h-full bg-gradient-to-br from-yellow-950 to-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-yellow-500/30 bg-yellow-500/5">
+        <Award className="w-4 h-4 text-yellow-400" />
+        <span className="text-yellow-400 text-sm uppercase tracking-wider">The Foundry</span>
+      </div>
+      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-6">
+          <Award className="w-10 h-10 text-yellow-400" />
+        </div>
+        <h2 className="text-2xl font-bold text-yellow-400 mb-2">The Foundry</h2>
+        <p className="text-white/70 text-sm mb-6 max-w-xs">
+          Train to become a certified Metaverse Architect. Learn the protocols. Join the network.
+        </p>
+        <div className="space-y-2 text-left text-sm text-white/60 mb-6">
+          <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> 8-week intensive curriculum</div>
+          <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-yellow-400" /> AeThex Passport certification</div>
+          <div className="flex items-center gap-2"><Users className="w-4 h-4 text-yellow-400" /> Join the architect network</div>
+        </div>
+        <a 
+          href="https://aethex.studio" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+        >
+          Apply Now <ExternalLink className="w-4 h-4" />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function DevToolsApp() {
+  const tools = [
+    { name: "Documentation", desc: "API reference & guides", url: "https://aethex.dev", icon: <FileText className="w-5 h-5" /> },
+    { name: "GitHub", desc: "Open source repositories", url: "https://github.com/aethex", icon: <Code2 className="w-5 h-5" /> },
+    { name: "Status Page", desc: "System uptime & health", url: "#", icon: <Activity className="w-5 h-5" /> },
+  ];
+
+  return (
+    <div className="h-full bg-slate-950 flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-purple-500/30 bg-purple-500/5">
+        <Code2 className="w-4 h-4 text-purple-400" />
+        <span className="text-purple-400 text-sm uppercase tracking-wider">Dev Tools</span>
+      </div>
+      <div className="flex-1 overflow-auto p-4 space-y-3">
+        {tools.map((tool, idx) => (
+          <a
+            key={idx}
+            href={tool.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-4 p-4 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors rounded-lg"
+          >
+            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+              {tool.icon}
+            </div>
+            <div className="flex-1">
+              <div className="text-white font-bold">{tool.name}</div>
+              <div className="text-purple-400/60 text-sm">{tool.desc}</div>
+            </div>
+            <ExternalLink className="w-4 h-4 text-purple-400/40" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MissionApp() {
+  return (
+    <div className="h-full bg-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+        <FileText className="w-4 h-4 text-cyan-400" />
+        <span className="text-cyan-400 text-sm">Mission.txt</span>
+      </div>
+      <div className="flex-1 overflow-auto p-4 text-sm leading-relaxed">
+        <pre className="text-green-400 whitespace-pre-wrap">
+{`// AETHEX MANIFESTO
+// Last Updated: 2025
+
+> "We are not building for the Metaverse.
+   We ARE the Metaverse."
+
+====================================
+THE VISION
+====================================
+
+AeThex is an Operating System for the 
+Metaverse. We are building the tools,
+protocols, and people that will power
+the next generation of digital reality.
+
+====================================
+THE TRINITY
+====================================
+
+AXIOM   - The foundational principles
+CODEX   - The certification system  
+AEGIS   - The security layer
+
+====================================
+THE MISSION
+====================================
+
+To transform talent into certified
+Metaverse Architects through rigorous
+training, real projects, and a network
+of like-minded builders.
+
+====================================
+JOIN THE FOUNDRY
+====================================
+
+Apply at: aethex.studio
+
+// END OF FILE`}
+        </pre>
       </div>
     </div>
   );

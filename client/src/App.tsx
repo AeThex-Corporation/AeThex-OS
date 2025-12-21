@@ -32,7 +32,8 @@ import { Chatbot } from "@/components/Chatbot";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={Home} />
+      <Route path="/" component={AeThexOS} />
+      <Route path="/home" component={Home} />
       <Route path="/passport" component={Passport} />
       <Route path="/terminal" component={Terminal} />
       <Route path="/dashboard" component={Dashboard} />
