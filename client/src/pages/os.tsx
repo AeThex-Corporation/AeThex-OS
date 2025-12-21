@@ -1811,20 +1811,23 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
               onClick={() => onWindowClick(window.id)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className={`h-8 px-3 flex flex-col items-center justify-center gap-0.5 rounded transition-colors min-w-0 relative ${
+              className={`h-7 w-7 flex items-center justify-center rounded-md transition-colors relative ${
                 activeWindowId === window.id && !window.minimized
-                  ? 'bg-cyan-500/20 text-cyan-400'
-                  : window.minimized ? 'bg-white/5 text-white/40 hover:bg-white/10' : 'bg-white/10 text-white/80 hover:bg-white/15'
+                  ? 'bg-cyan-500/20'
+                  : window.minimized ? 'bg-white/5 hover:bg-white/10' : 'bg-white/10 hover:bg-white/15'
               }`}
+              title={window.title}
               data-testid={`taskbar-${window.id}`}
             >
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 flex-shrink-0">{window.icon}</div>
-                <span className="text-xs font-mono truncate max-w-[100px]">{window.title}</span>
+              <div 
+                className="w-4 h-4 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4"
+                style={{ color: activeWindowId === window.id && !window.minimized ? '#06b6d4' : window.minimized ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.7)' }}
+              >
+                {window.icon}
               </div>
-              <div className={`absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-full transition-colors ${
-                !window.minimized ? 'bg-cyan-400' : 'bg-transparent'
-              }`} />
+              {!window.minimized && (
+                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-3 h-0.5 rounded-full bg-cyan-400" />
+              )}
             </motion.button>
           ))}
         </div>
