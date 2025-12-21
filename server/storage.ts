@@ -1,4 +1,4 @@
-import { type Profile, type Project } from "@shared/schema";
+import { type Profile, type Project, type ChatMessage } from "@shared/schema";
 import { supabase } from "./supabase";
 
 export interface IStorage {
@@ -7,6 +7,7 @@ export interface IStorage {
   getProfile(id: string): Promise<Profile | undefined>;
   getProfileByUsername(username: string): Promise<Profile | undefined>;
   updateProfile(id: string, data: Partial<Profile>): Promise<Profile | undefined>;
+  getLeadershipProfiles(): Promise<Profile[]>;
   
   // Projects
   getProjects(): Promise<Project[]>;
@@ -28,6 +29,11 @@ export interface IStorage {
   // Alerts
   getAlerts(): Promise<any[]>;
   updateAlert(id: string, updates: any): Promise<any>;
+  
+  // Chat Messages (AI memory)
+  getChatHistory(userId: string, limit?: number): Promise<ChatMessage[]>;
+  saveChatMessage(id: string, userId: string, role: string, content: string): Promise<void>;
+  clearChatHistory(userId: string): Promise<void>;
   
   // Metrics
   getMetrics(): Promise<{
