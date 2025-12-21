@@ -173,6 +173,21 @@ export async function registerRoutes(
     });
   });
   
+  // ========== AUTHENTICATED USER ROUTES ==========
+  
+  // Get current user's profile (for Passport app)
+  app.get("/api/me/profile", requireAuth, async (req, res) => {
+    try {
+      const profile = await storage.getProfile(req.session.userId!);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      res.json(profile);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+  
   // ========== PUBLIC API ROUTES ==========
   
   // Get ecosystem metrics (public - for dashboard)

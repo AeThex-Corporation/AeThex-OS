@@ -252,29 +252,147 @@ export default function AeThexOS() {
 
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [isDesktopLocked, setIsDesktopLocked] = useState(true);
+  const [detectedIdentity, setDetectedIdentity] = useState<{ username?: string; passportId?: string } | null>(null);
+  const [threatLevel, setThreatLevel] = useState<'scanning' | 'low' | 'medium' | 'high'>('scanning');
+  const [bootLogs, setBootLogs] = useState<string[]>([]);
 
   useEffect(() => {
     const bootSequence = async () => {
-      const steps = [
-        { text: 'BIOS CHECK... OK', progress: 5 },
-        { text: 'Initializing AeThex OS...', progress: 10 },
-        { text: 'Loading kernel modules...', progress: 20 },
-        { text: 'Mounting file systems...', progress: 30 },
-        { text: 'INITIATING AETHEX PASSPORT...', progress: 40 },
-        { text: 'DETECTING CROSS-PLATFORM IDENTITY...', progress: 55 },
-        { text: 'Starting Aegis security layer...', progress: 65 },
-        { text: 'STATUS: NEUTRAL LAYER ACTIVE.', progress: 75 },
-        { text: 'Connecting to Nexus network...', progress: 85 },
-        { text: 'IDENTITY SYSTEM READY.', progress: 100 },
+      const addLog = (text: string) => setBootLogs(prev => [...prev.slice(-8), text]);
+      
+      // Phase 1: Hardware initialization
+      const phase1 = [
+        { text: 'POST: Power-On Self Test...', progress: 3 },
+        { text: 'CPU: AMD Ryzen 9 7950X3D @ 4.2GHz... OK', progress: 5 },
+        { text: 'RAM: 64GB DDR5-6000 ECC... OK', progress: 8 },
+        { text: 'GPU: Quantum Accelerator v2.1... OK', progress: 10 },
+        { text: 'NVME: AeThex Vault 2TB... OK', progress: 12 },
       ];
       
-      for (const step of steps) {
+      for (const step of phase1) {
         setBootStep(step.text);
+        addLog(step.text);
         setBootProgress(step.progress);
-        await new Promise(r => setTimeout(r, 350));
+        await new Promise(r => setTimeout(r, 150));
       }
       
+      // Phase 2: Kernel & filesystem
+      const phase2 = [
+        { text: 'Loading AeThex Kernel v4.2.1...', progress: 18 },
+        { text: 'Initializing virtual memory manager...', progress: 22 },
+        { text: 'Mounting encrypted file systems...', progress: 26 },
+        { text: 'Loading device drivers...', progress: 30 },
+      ];
+      
+      for (const step of phase2) {
+        setBootStep(step.text);
+        addLog(step.text);
+        setBootProgress(step.progress);
+        await new Promise(r => setTimeout(r, 200));
+      }
+      
+      // Phase 3: Passport Identity Detection
+      setBootStep('INITIATING AETHEX PASSPORT SUBSYSTEM...');
+      addLog('▸ PASSPORT: Initializing identity subsystem...');
+      setBootProgress(35);
+      await new Promise(r => setTimeout(r, 300));
+      
+      // Check for existing session/identity
+      let foundIdentity = false;
+      try {
+        const sessionRes = await fetch('/api/auth/session', { credentials: 'include' });
+        const sessionData = await sessionRes.json();
+        if (sessionData?.authenticated && sessionData?.user) {
+          foundIdentity = true;
+          setDetectedIdentity({ 
+            username: sessionData.user.username, 
+            passportId: sessionData.user.id?.slice(0, 8).toUpperCase() 
+          });
+          addLog(`▸ PASSPORT: Identity token detected`);
+          setBootStep('PASSPORT: IDENTITY TOKEN DETECTED');
+          setBootProgress(40);
+          await new Promise(r => setTimeout(r, 300));
+          
+          addLog(`▸ PASSPORT: Verifying credentials for ${sessionData.user.username}...`);
+          setBootStep(`Verifying credentials for ${sessionData.user.username}...`);
+          setBootProgress(45);
+          await new Promise(r => setTimeout(r, 400));
+          
+          addLog(`▸ PASSPORT: Welcome back, ARCHITECT ${sessionData.user.username.toUpperCase()}`);
+          setBootStep(`WELCOME BACK, ARCHITECT ${sessionData.user.username.toUpperCase()}`);
+          setBootProgress(50);
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } catch {}
+      
+      if (!foundIdentity) {
+        addLog('▸ PASSPORT: No active identity token found');
+        setBootStep('PASSPORT: NO ACTIVE IDENTITY TOKEN');
+        setBootProgress(42);
+        await new Promise(r => setTimeout(r, 300));
+        
+        addLog('▸ PASSPORT: Guest access mode available');
+        setBootStep('Guest access mode available');
+        setBootProgress(48);
+        await new Promise(r => setTimeout(r, 300));
+      }
+      
+      // Phase 4: Aegis Security Layer
+      addLog('▸ AEGIS: Initializing security layer...');
+      setBootStep('AEGIS: INITIALIZING SECURITY LAYER...');
+      setBootProgress(55);
+      await new Promise(r => setTimeout(r, 300));
+      
+      addLog('▸ AEGIS: Loading threat detection modules...');
+      setBootStep('Loading threat detection modules...');
+      setBootProgress(60);
+      await new Promise(r => setTimeout(r, 250));
+      
+      addLog('▸ AEGIS: Scanning network perimeter...');
+      setBootStep('AEGIS: SCANNING NETWORK PERIMETER...');
+      setBootProgress(65);
+      setThreatLevel('scanning');
+      await new Promise(r => setTimeout(r, 600));
+      
+      // Simulate threat assessment result
+      const threatResult = Math.random();
+      if (threatResult < 0.7) {
+        setThreatLevel('low');
+        addLog('▸ AEGIS: Threat level LOW - All systems nominal');
+        setBootStep('THREAT LEVEL: LOW - ALL SYSTEMS NOMINAL');
+      } else if (threatResult < 0.95) {
+        setThreatLevel('medium');
+        addLog('▸ AEGIS: Threat level MEDIUM - Enhanced monitoring active');
+        setBootStep('THREAT LEVEL: MEDIUM - MONITORING ACTIVE');
+      } else {
+        setThreatLevel('high');
+        addLog('▸ AEGIS: Threat level ELEVATED - Defensive protocols engaged');
+        setBootStep('THREAT LEVEL: ELEVATED - PROTOCOLS ENGAGED');
+      }
+      setBootProgress(75);
       await new Promise(r => setTimeout(r, 400));
+      
+      // Phase 5: Network & Final
+      addLog('▸ NEXUS: Connecting to AeThex network...');
+      setBootStep('Connecting to Nexus network...');
+      setBootProgress(82);
+      await new Promise(r => setTimeout(r, 300));
+      
+      addLog('▸ NEXUS: Syncing with distributed nodes...');
+      setBootStep('Syncing with distributed nodes...');
+      setBootProgress(88);
+      await new Promise(r => setTimeout(r, 250));
+      
+      addLog('▸ NEXUS: Connection established - 42 peers online');
+      setBootStep('NEXUS: 42 PEERS ONLINE');
+      setBootProgress(94);
+      await new Promise(r => setTimeout(r, 200));
+      
+      addLog('▸ SYSTEM: AeThex OS ready');
+      setBootStep('AETHEX OS READY');
+      setBootProgress(100);
+      await new Promise(r => setTimeout(r, 500));
+      
       setShowLoginPrompt(true);
     };
     
@@ -706,64 +824,213 @@ export default function AeThexOS() {
   };
 
   if (isBooting) {
+    const threatColors = {
+      scanning: 'text-cyan-400',
+      low: 'text-green-400',
+      medium: 'text-yellow-400',
+      high: 'text-red-400'
+    };
+    const threatBgColors = {
+      scanning: 'bg-cyan-500/20 border-cyan-500/50',
+      low: 'bg-green-500/20 border-green-500/50',
+      medium: 'bg-yellow-500/20 border-yellow-500/50',
+      high: 'bg-red-500/20 border-red-500/50'
+    };
+    
     return (
-      <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
+      <div className="h-screen w-screen bg-black relative overflow-hidden">
+        {/* Scan lines overlay */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-50"
+          style={{
+            background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px)',
+          }}
+        />
+        
+        {/* CRT flicker effect */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
-        >
-          <div className="w-24 h-24 mx-auto mb-8 relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl animate-pulse" />
-            <div className="absolute inset-2 bg-black rounded-lg flex items-center justify-center">
-              <span className="text-4xl font-display font-bold text-white">A</span>
+          className="absolute inset-0 bg-white/[0.02] pointer-events-none z-40"
+          animate={{ opacity: [0, 0.02, 0, 0.01, 0] }}
+          transition={{ duration: 0.1, repeat: Infinity, repeatDelay: Math.random() * 3 + 1 }}
+        />
+        
+        {/* Vignette effect */}
+        <div 
+          className="absolute inset-0 pointer-events-none z-30"
+          style={{
+            background: 'radial-gradient(ellipse at center, transparent 0%, transparent 50%, rgba(0,0,0,0.4) 100%)',
+          }}
+        />
+        
+        <div className="h-full w-full flex flex-col lg:flex-row">
+          {/* Left side - Boot logs */}
+          <div className="hidden lg:flex w-80 h-full flex-col p-4 border-r border-cyan-500/20">
+            <div className="text-cyan-400 font-mono text-xs uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Terminal className="w-3 h-3" />
+              System Log
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <div className="space-y-1 font-mono text-xs">
+                {bootLogs.map((log, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: i === bootLogs.length - 1 ? 1 : 0.5, x: 0 }}
+                    className={`${i === bootLogs.length - 1 ? 'text-cyan-300' : 'text-white/40'}`}
+                  >
+                    {log}
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Threat Level Indicator */}
+            <div className={`mt-4 p-3 border rounded ${threatBgColors[threatLevel]}`}>
+              <div className="text-xs font-mono uppercase tracking-wider text-white/60 mb-1">Aegis Status</div>
+              <div className={`font-mono font-bold ${threatColors[threatLevel]} flex items-center gap-2`}>
+                <Shield className="w-4 h-4" />
+                {threatLevel === 'scanning' ? 'SCANNING...' : `THREAT: ${threatLevel.toUpperCase()}`}
+              </div>
             </div>
           </div>
           
-          <div className="text-cyan-400 font-mono text-sm mb-8 h-6">{bootStep}</div>
-          
-          <div className="w-64 h-1 bg-slate-800 rounded-full overflow-hidden">
+          {/* Center - Main boot display */}
+          <div className="flex-1 flex flex-col items-center justify-center p-4">
             <motion.div
-              className="h-full bg-gradient-to-r from-cyan-500 to-purple-600"
-              initial={{ width: 0 }}
-              animate={{ width: `${bootProgress}%` }}
-              transition={{ duration: 0.3 }}
-            />
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-center max-w-md"
+            >
+              {/* Logo with glow */}
+              <div className="w-28 h-28 mx-auto mb-8 relative">
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl blur-lg opacity-50" />
+                <div className="absolute inset-0 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-xl animate-pulse" />
+                <div className="absolute inset-2 bg-black rounded-lg flex items-center justify-center">
+                  <motion.span 
+                    className="text-5xl font-display font-bold text-white"
+                    animate={{ textShadow: ['0 0 10px rgba(0,255,255,0.5)', '0 0 20px rgba(0,255,255,0.8)', '0 0 10px rgba(0,255,255,0.5)'] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                  >
+                    A
+                  </motion.span>
+                </div>
+              </div>
+              
+              {/* Current step with typing effect */}
+              <motion.div 
+                key={bootStep}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-cyan-400 font-mono text-sm mb-6 h-6"
+              >
+                {bootStep}
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                >
+                  _
+                </motion.span>
+              </motion.div>
+              
+              {/* Progress bar */}
+              <div className="w-72 mx-auto">
+                <div className="flex justify-between text-xs font-mono text-white/40 mb-2">
+                  <span>BOOT SEQUENCE</span>
+                  <span>{bootProgress}%</span>
+                </div>
+                <div className="h-2 bg-slate-800/80 rounded-full overflow-hidden border border-white/10">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-cyan-500 via-cyan-400 to-purple-600 relative"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${bootProgress}%` }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+                  </motion.div>
+                </div>
+              </div>
+              
+              {/* Detected identity badge */}
+              {detectedIdentity && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="mt-6 inline-flex items-center gap-2 px-4 py-2 bg-green-500/20 border border-green-500/50 rounded-full"
+                >
+                  <User className="w-4 h-4 text-green-400" />
+                  <span className="text-green-400 font-mono text-sm">
+                    {detectedIdentity.username} • ID:{detectedIdentity.passportId}
+                  </span>
+                </motion.div>
+              )}
+              
+              <div className="text-white/30 text-xs mt-6 font-mono">AeThex OS v4.2.1 • Aegis Security Layer Active</div>
+
+              <AnimatePresence>
+                {showLoginPrompt && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-8 space-y-4"
+                  >
+                    <div className={`font-mono text-sm mb-6 flex items-center justify-center gap-2 ${threatColors[threatLevel]}`}>
+                      <Shield className="w-4 h-4" />
+                      {detectedIdentity 
+                        ? `IDENTITY VERIFIED • THREAT LEVEL: ${threatLevel.toUpperCase()}`
+                        : `SYSTEM READY • THREAT LEVEL: ${threatLevel.toUpperCase()}`
+                      }
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <motion.button
+                        onClick={detectedIdentity ? handleGuestContinue : handleLoginFromBoot}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-6 py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/30"
+                        data-testid="boot-login-button"
+                      >
+                        <Key className="w-4 h-4" />
+                        {detectedIdentity ? `Enter as ${detectedIdentity.username}` : 'Login with Passport'}
+                      </motion.button>
+                      {!detectedIdentity && (
+                        <motion.button
+                          onClick={handleGuestContinue}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className="px-6 py-3 border border-white/30 hover:bg-white/10 text-white/70 font-mono uppercase tracking-wider transition-colors"
+                          data-testid="boot-guest-button"
+                        >
+                          Continue as Guest
+                        </motion.button>
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
           
-          <div className="text-white/30 text-xs mt-4 font-mono">AeThex OS v1.0.0</div>
-
-          <AnimatePresence>
-            {showLoginPrompt && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-8 space-y-4"
-              >
-                <div className="text-green-400 font-mono text-sm mb-6">
-                  ✓ CROSS-PLATFORM IDENTITY READY
-                </div>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <button
-                    onClick={handleLoginFromBoot}
-                    className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
-                    data-testid="boot-login-button"
-                  >
-                    <Key className="w-4 h-4" />
-                    Login with Passport
-                  </button>
-                  <button
-                    onClick={handleGuestContinue}
-                    className="px-6 py-3 border border-white/30 hover:bg-white/10 text-white/70 font-mono uppercase tracking-wider transition-colors"
-                    data-testid="boot-guest-button"
-                  >
-                    Continue as Guest
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
+          {/* Right side - System specs (hidden on mobile) */}
+          <div className="hidden lg:flex w-64 h-full flex-col p-4 border-l border-purple-500/20 text-right">
+            <div className="text-purple-400 font-mono text-xs uppercase tracking-wider mb-3">
+              System Info
+            </div>
+            <div className="space-y-2 font-mono text-xs text-white/40">
+              <div>BUILD: 2025.12.21</div>
+              <div>KERNEL: 4.2.1-aethex</div>
+              <div>ARCH: x86_64</div>
+              <div className="pt-2 border-t border-white/10 mt-2">
+                <div className="text-purple-400">NEXUS NETWORK</div>
+                <div>Peers: 42 online</div>
+                <div>Latency: 12ms</div>
+              </div>
+              <div className="pt-2 border-t border-white/10 mt-2">
+                <div className="text-cyan-400">PASSPORT</div>
+                <div>{detectedIdentity ? 'Token: VALID' : 'Token: NONE'}</div>
+                <div>Mode: {detectedIdentity ? 'ARCHITECT' : 'GUEST'}</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -2684,25 +2951,38 @@ function TerminalApp() {
           "║ architects - List architects in network   ║",
           "║ projects   - List active projects         ║",
           "║ scan       - Scan network for nodes       ║",
-          "║ analyze    - Run security analysis        ║",
           "║ ping       - Check network status         ║",
           "║ whois      - Look up architect profile    ║",
-          "║ decrypt    - Decrypt secure message       ║",
-          "║ hack       - ??? (try it)                 ║",
-          "║ fortune    - Random architect wisdom      ║",
-          "║ whoami     - Current user info            ║",
-          "║ neofetch   - System information           ║",
-          "║ matrix     - Enter the matrix             ║",
-          "║ clear      - Clear terminal               ║",
+          "║ passport   - View passport status         ║",
           "║ tour       - AeThex guided tour           ║",
           "╠═══════════════════════════════════════════╣",
+          "║        🛡️ AEGIS SECURITY COMMANDS          ║",
+          "╠═══════════════════════════════════════════╣",
+          "║ aegis      - Aegis security dashboard     ║",
+          "║ threat     - Check current threat level   ║",
+          "║ firewall   - View firewall status         ║",
+          "║ shield     - Activate/check shield        ║",
+          "║ trace      - Trace network connection     ║",
+          "║ encrypt    - Encrypt a message            ║",
+          "║ decrypt    - Decrypt secure message       ║",
+          "║ analyze    - Run security analysis        ║",
+          "╠═══════════════════════════════════════════╣",
+          "║           🎮 FUN COMMANDS                  ║",
+          "╠═══════════════════════════════════════════╣",
+          "║ hack       - ??? (try it)                 ║",
+          "║ fortune    - Random architect wisdom      ║",
+          "║ matrix     - Enter the matrix             ║",
           "║ dice       - Roll two dice                ║",
           "║ cowsay     - Make a cow say something     ║",
           "║ joke       - Tell a programmer joke       ║",
+          "║ coffee     - Brew some coffee             ║",
+          "╠═══════════════════════════════════════════╣",
+          "║ whoami     - Current user info            ║",
+          "║ neofetch   - System information           ║",
           "║ weather    - Metaverse weather report     ║",
           "║ uptime     - System uptime                ║",
           "║ banner     - Show AeThex banner           ║",
-          "║ coffee     - Brew some coffee             ║",
+          "║ clear      - Clear terminal               ║",
           "╚═══════════════════════════════════════════╝",
           ""
         ], setHistory);
@@ -3169,6 +3449,203 @@ function TerminalApp() {
         ], setHistory);
         break;
 
+      case 'aegis':
+        await typeEffect([
+          "",
+          "╔══════════════════════════════════════════════════╗",
+          "║         🛡️ AEGIS SECURITY DASHBOARD 🛡️           ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║                                                  ║",
+          "║  Status:        ████████████ ACTIVE              ║",
+          "║  Shield Level:  ████████████ MAXIMUM             ║",
+          "║  Encryption:    AES-256-GCM                      ║",
+          "║  Protocol:      QUANTUM-RESISTANT                ║",
+          "║                                                  ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║  RECENT ACTIVITY:                                ║",
+          "║  ├─ 0 intrusion attempts blocked (24h)           ║",
+          "║  ├─ 42 secure sessions active                    ║",
+          "║  ├─ Last scan: 2 minutes ago                     ║",
+          "║  └─ Next scheduled: 5 minutes                    ║",
+          "║                                                  ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║  COMMANDS: threat, firewall, shield, trace       ║",
+          "╚══════════════════════════════════════════════════╝",
+          ""
+        ], setHistory);
+        break;
+
+      case 'threat':
+        setHistory(prev => [...prev, "Analyzing threat landscape..."]);
+        await progressBar("SCANNING", 12);
+        await delay(300);
+        const threatLevels = ['LOW', 'LOW', 'LOW', 'MINIMAL', 'MEDIUM'];
+        const currentThreat = threatLevels[Math.floor(Math.random() * threatLevels.length)];
+        const threatColor = currentThreat === 'LOW' || currentThreat === 'MINIMAL' ? '🟢' : currentThreat === 'MEDIUM' ? '🟡' : '🔴';
+        await typeEffect([
+          "",
+          "┌─────────────────────────────────────────┐",
+          "│        AEGIS THREAT ASSESSMENT          │",
+          "├─────────────────────────────────────────┤",
+          `│  Current Level: ${threatColor} ${currentThreat.padEnd(20)}│`,
+          "│                                         │",
+          "│  Perimeter:     ✓ Secure                │",
+          "│  Endpoints:     ✓ Protected             │",
+          "│  Data Layer:    ✓ Encrypted             │",
+          "│  Identity:      ✓ Verified              │",
+          "│                                         │",
+          "│  Last Incident: None recorded           │",
+          "└─────────────────────────────────────────┘",
+          ""
+        ], setHistory);
+        break;
+
+      case 'firewall':
+        await typeEffect([
+          "",
+          "╔══════════════════════════════════════════════════╗",
+          "║            AEGIS FIREWALL STATUS                 ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║                                                  ║",
+          "║  ┌─────────────────────────────────────────────┐ ║",
+          "║  │ RULE SET: PARANOID                          │ ║",
+          "║  └─────────────────────────────────────────────┘ ║",
+          "║                                                  ║",
+          "║  ACTIVE RULES:                                   ║",
+          "║  ├─ DENY    all inbound      (default)           ║",
+          "║  ├─ ALLOW   443/tcp          (HTTPS)             ║",
+          "║  ├─ ALLOW   80/tcp           (HTTP redirect)     ║",
+          "║  ├─ ALLOW   aethex.network   (trusted)           ║",
+          "║  └─ DROP    known-attackers  (blocklist)         ║",
+          "║                                                  ║",
+          "║  Packets Inspected: 1,247,892                    ║",
+          "║  Threats Blocked:   0                            ║",
+          "║                                                  ║",
+          "╚══════════════════════════════════════════════════╝",
+          ""
+        ], setHistory);
+        break;
+
+      case 'shield':
+        const shieldMode = args[1]?.toLowerCase();
+        if (shieldMode === 'activate' || shieldMode === 'on') {
+          setHistory(prev => [...prev, "Activating enhanced shield mode..."]);
+          await progressBar("DEPLOYING SHIELD", 15);
+          await delay(300);
+          await typeEffect([
+            "",
+            "        ╔════════════════════╗",
+            "       ╔╝                    ╚╗",
+            "      ╔╝    🛡️ AEGIS SHIELD    ╚╗",
+            "     ╔╝         ACTIVE          ╚╗",
+            "    ╔╝                            ╚╗",
+            "   ╔╝      ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓        ╚╗",
+            "   ║       QUANTUM BARRIER          ║",
+            "   ╚╗      ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓        ╔╝",
+            "    ╚╗                            ╔╝",
+            "     ╚╗   Protection: MAXIMUM    ╔╝",
+            "      ╚╗                        ╔╝",
+            "       ╚╗                      ╔╝",
+            "        ╚══════════════════════╝",
+            "",
+            "Shield mode activated. You are now protected.",
+            ""
+          ], setHistory);
+        } else if (shieldMode === 'status') {
+          await typeEffect([
+            "",
+            "Shield Status: ACTIVE",
+            "Protection Level: MAXIMUM",
+            "Uptime: 99.999%",
+            ""
+          ], setHistory);
+        } else {
+          setHistory(prev => [...prev, "Usage: shield <activate|status>", ""]);
+        }
+        break;
+
+      case 'trace':
+        const traceTarget = args[1] || 'aethex.network';
+        setHistory(prev => [...prev, `Initiating trace route to ${traceTarget}...`]);
+        await delay(200);
+        const hops = [
+          { ip: '192.168.1.1', name: 'local-gateway', time: '0.5ms' },
+          { ip: '10.0.0.1', name: 'isp-router', time: '12ms' },
+          { ip: '72.14.192.1', name: 'core-switch', time: '18ms' },
+          { ip: '42.42.42.1', name: 'aegis-gateway', time: '22ms' },
+          { ip: '42.42.42.42', name: 'aethex.network', time: '24ms' },
+        ];
+        await typeEffect(["", `traceroute to ${traceTarget} (42.42.42.42), 30 hops max`, ""], setHistory);
+        for (let i = 0; i < hops.length; i++) {
+          await delay(300);
+          setHistory(prev => [...prev, ` ${i + 1}  ${hops[i].ip.padEnd(15)} ${hops[i].name.padEnd(20)} ${hops[i].time}`]);
+        }
+        await typeEffect([
+          "",
+          "✓ Trace complete. Connection secure.",
+          `  End-to-end encryption: VERIFIED`,
+          `  Route integrity: VERIFIED`,
+          ""
+        ], setHistory);
+        break;
+
+      case 'encrypt':
+        const msgToEncrypt = args.slice(1).join(' ');
+        if (!msgToEncrypt) {
+          setHistory(prev => [...prev, "Usage: encrypt <message>", ""]);
+          break;
+        }
+        setHistory(prev => [...prev, "Encrypting message..."]);
+        await progressBar("ENCRYPTING", 8);
+        await delay(200);
+        // Generate fake encrypted output efficiently (fixed length)
+        const encryptedParts: string[] = [];
+        for (let i = 0; i < 24; i++) {
+          encryptedParts.push(Math.random().toString(16).substr(2, 2));
+        }
+        const encrypted = encryptedParts.join('');
+        await typeEffect([
+          "",
+          "╔════════════════════════════════════════════════╗",
+          "║         AEGIS ENCRYPTION COMPLETE              ║",
+          "╠════════════════════════════════════════════════╣",
+          "║ Algorithm: AES-256-GCM                         ║",
+          "║ Key Size:  256-bit                             ║",
+          "╠════════════════════════════════════════════════╣",
+          "║ ENCRYPTED OUTPUT:                              ║",
+          `║ ${encrypted.slice(0, 44)}... ║`,
+          "╚════════════════════════════════════════════════╝",
+          "",
+          "Message encrypted. Only authorized recipients can decrypt.",
+          ""
+        ], setHistory);
+        break;
+
+      case 'passport':
+        try {
+          const sessRes = await fetch('/api/auth/session', { credentials: 'include' });
+          const sessData = await sessRes.json();
+          if (sessData?.authenticated) {
+            await typeEffect([
+              "",
+              "╔══════════════════════════════════════════════════╗",
+              "║            AETHEX PASSPORT - VERIFIED            ║",
+              "╠══════════════════════════════════════════════════╣",
+              `║ Username:    ${(sessData.user.username || 'Unknown').padEnd(35)}║`,
+              `║ Status:      AUTHENTICATED                       ║`,
+              `║ Role:        ${(sessData.user.isAdmin ? 'ADMINISTRATOR' : 'ARCHITECT').padEnd(35)}║`,
+              "║ Session:     ACTIVE                              ║",
+              "╚══════════════════════════════════════════════════╝",
+              ""
+            ], setHistory);
+          } else {
+            setHistory(prev => [...prev, "", "PASSPORT: No active session", "Use the Passport app to authenticate.", ""]);
+          }
+        } catch {
+          setHistory(prev => [...prev, "ERROR: Could not verify passport status", ""]);
+        }
+        break;
+
       default:
         setHistory(prev => [...prev, `Command not found: ${cmd}`, "Type 'help' for available commands.", ""]);
     }
@@ -3257,13 +3734,22 @@ function PassportApp({ onLoginSuccess, isDesktopLocked }: { onLoginSuccess?: () 
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { data: profile } = useQuery({
-    queryKey: ['os-user-profile'],
+  const { data: metrics } = useQuery({
+    queryKey: ['os-metrics'],
     queryFn: async () => {
       const res = await fetch('/api/metrics');
       return res.json();
     },
-    enabled: true,
+  });
+  
+  const { data: userProfile } = useQuery({
+    queryKey: ['os-my-profile'],
+    queryFn: async () => {
+      const res = await fetch('/api/me/profile', { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: isAuthenticated,
   });
 
   useEffect(() => {
@@ -3403,63 +3889,190 @@ function PassportApp({ onLoginSuccess, isDesktopLocked }: { onLoginSuccess?: () 
     );
   }
 
+  // Calculate XP progress for current level (with safe guards)
+  const currentLevel = Math.max(1, userProfile?.level || 1);
+  const totalXp = Math.max(0, userProfile?.total_xp || 0);
+  const xpPerLevel = 1000;
+  const xpForCurrentLevel = (currentLevel - 1) * xpPerLevel;
+  const xpForNextLevel = currentLevel * xpPerLevel;
+  const xpDelta = xpForNextLevel - xpForCurrentLevel;
+  const xpProgress = xpDelta > 0 ? Math.min(100, Math.max(0, ((totalXp - xpForCurrentLevel) / xpDelta) * 100)) : 0;
+  const passportId = userProfile?.aethex_passport_id || user?.id?.slice(0, 8).toUpperCase() || 'GUEST';
+  const skills = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
+
   return (
-    <div className="h-full p-6 bg-gradient-to-b from-slate-900 to-slate-950 overflow-auto">
-      <div className="border border-cyan-400/30 rounded-lg p-6 bg-slate-900/50">
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 mb-4">
-            {isAuthenticated ? <User className="w-10 h-10 text-white" /> : <IdCard className="w-10 h-10 text-white" />}
-          </div>
-          <h2 className="text-xl font-display text-white uppercase tracking-wider">AeThex Passport</h2>
-          <p className="text-cyan-400 text-sm font-mono mt-1">{isAuthenticated ? user?.username : 'Guest Access'}</p>
-        </div>
-
-        <div className="space-y-4 font-mono text-sm">
-          <div className="flex justify-between border-b border-white/10 pb-2">
-            <span className="text-white/50">Status</span>
-            <span className={isAuthenticated ? "text-green-400" : "text-yellow-400"}>{isAuthenticated ? 'VERIFIED' : 'GUEST'}</span>
-          </div>
-          <div className="flex justify-between border-b border-white/10 pb-2">
-            <span className="text-white/50">Role</span>
-            <span className="text-purple-400">{isAuthenticated ? (user?.isAdmin ? 'ADMIN' : 'ARCHITECT') : 'VISITOR'}</span>
-          </div>
-          {profile && (
-            <>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-white/50">Network</span>
-                <span className="text-white">{profile.totalProfiles || 0} Architects</span>
+    <div className="h-full p-4 bg-gradient-to-b from-slate-900 via-slate-950 to-black overflow-auto">
+      {/* Credential Card */}
+      <div className="relative max-w-sm mx-auto">
+        {/* Holographic background effect */}
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 rounded-xl blur-xl" />
+        
+        <motion.div 
+          className="relative border-2 border-cyan-400/50 rounded-xl overflow-hidden bg-gradient-to-br from-slate-900/95 to-slate-950/95 backdrop-blur-xl"
+          initial={{ rotateY: -5 }}
+          animate={{ rotateY: 0 }}
+          style={{ transformStyle: 'preserve-3d' }}
+        >
+          {/* Holographic stripe */}
+          <div className="h-2 bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500" />
+          
+          {/* Card header */}
+          <div className="p-4 pb-0">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center">
+                  <span className="text-xl font-display font-bold text-white">A</span>
+                </div>
+                <div>
+                  <div className="text-xs text-white/50 uppercase tracking-wider">AeThex</div>
+                  <div className="text-sm font-display text-cyan-400">PASSPORT</div>
+                </div>
               </div>
-              <div className="flex justify-between border-b border-white/10 pb-2">
-                <span className="text-white/50">Projects</span>
-                <span className="text-cyan-400">{profile.totalProjects || 0}</span>
+              {isAuthenticated && (
+                <motion.div 
+                  className="flex items-center gap-1 px-2 py-1 bg-green-500/20 border border-green-500/50 rounded-full"
+                  animate={{ scale: [1, 1.05, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-xs font-mono text-green-400">VERIFIED</span>
+                </motion.div>
+              )}
+            </div>
+            
+            {/* Avatar and name section */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 p-0.5">
+                  <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center overflow-hidden">
+                    {userProfile?.avatar_url ? (
+                      <img src={userProfile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-8 h-8 text-white/70" />
+                    )}
+                  </div>
+                </div>
+                {isAuthenticated && (
+                  <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center border-2 border-slate-900">
+                    <span className="text-xs font-bold text-white">{currentLevel}</span>
+                  </div>
+                )}
               </div>
-            </>
+              <div className="flex-1">
+                <div className="text-lg font-display text-white uppercase tracking-wide">
+                  {isAuthenticated ? (userProfile?.full_name || user?.username) : 'Guest'}
+                </div>
+                <div className="text-sm text-cyan-400 font-mono">
+                  @{isAuthenticated ? user?.username : 'visitor'}
+                </div>
+                <div className="text-xs text-purple-400 font-mono mt-0.5">
+                  {isAuthenticated ? (user?.isAdmin ? 'ADMINISTRATOR' : (userProfile?.role?.toUpperCase() || 'ARCHITECT')) : 'VISITOR'}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Passport ID */}
+          <div className="px-4 pb-3">
+            <div className="flex items-center justify-between p-2 bg-black/40 rounded border border-white/10">
+              <div>
+                <div className="text-[10px] text-white/40 uppercase tracking-wider">Passport ID</div>
+                <div className="text-sm font-mono text-cyan-300 tracking-wider">{passportId}</div>
+              </div>
+              <IdCard className="w-5 h-5 text-white/30" />
+            </div>
+          </div>
+          
+          {/* XP Progress - Only for authenticated users */}
+          {isAuthenticated && (
+            <div className="px-4 pb-3">
+              <div className="flex justify-between text-xs font-mono mb-1">
+                <span className="text-white/50">Level {currentLevel}</span>
+                <span className="text-cyan-400">{totalXp.toLocaleString()} XP</span>
+              </div>
+              <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                <motion.div
+                  className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${xpProgress}%` }}
+                  transition={{ duration: 1, ease: 'easeOut' }}
+                />
+              </div>
+              <div className="text-[10px] text-white/30 text-right mt-0.5 font-mono">
+                {Math.round(xpForNextLevel - totalXp)} XP to Level {currentLevel + 1}
+              </div>
+            </div>
           )}
-        </div>
-
-        <div className="mt-6 space-y-3">
-          {!isAuthenticated ? (
-            <button
-              onClick={() => setMode('login')}
-              className="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors text-sm"
-              data-testid="passport-signin-btn"
-            >
-              Sign In
-            </button>
-          ) : (
-            <button
-              onClick={() => logout()}
-              className="w-full py-2 border border-red-500/50 text-red-400 hover:bg-red-500/10 font-mono uppercase tracking-wider transition-colors text-sm"
-              data-testid="passport-logout-btn"
-            >
-              Sign Out
-            </button>
+          
+          {/* Skills */}
+          {isAuthenticated && skills.length > 0 && (
+            <div className="px-4 pb-3">
+              <div className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Skills</div>
+              <div className="flex flex-wrap gap-1">
+                {(skills as string[]).slice(0, 6).map((skill, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-purple-500/20 border border-purple-500/30 rounded text-xs text-purple-300 font-mono">
+                    {skill}
+                  </span>
+                ))}
+                {skills.length > 6 && (
+                  <span className="px-2 py-0.5 text-xs text-white/40 font-mono">+{skills.length - 6}</span>
+                )}
+              </div>
+            </div>
           )}
-        </div>
-
-        <div className="mt-6 pt-4 border-t border-white/10 text-center text-xs text-white/30">
-          Issued by Codex Certification Authority
-        </div>
+          
+          {/* Stats row */}
+          <div className="px-4 pb-4">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="text-center p-2 bg-white/5 rounded">
+                <div className="text-lg font-bold text-cyan-400">{metrics?.totalProfiles || 0}</div>
+                <div className="text-[10px] text-white/40 uppercase">Network</div>
+              </div>
+              <div className="text-center p-2 bg-white/5 rounded">
+                <div className="text-lg font-bold text-purple-400">{metrics?.totalProjects || 0}</div>
+                <div className="text-[10px] text-white/40 uppercase">Projects</div>
+              </div>
+              <div className="text-center p-2 bg-white/5 rounded">
+                <div className="text-lg font-bold text-green-400">{userProfile?.loyalty_points || 0}</div>
+                <div className="text-[10px] text-white/40 uppercase">Points</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Actions */}
+          <div className="px-4 pb-4">
+            {!isAuthenticated ? (
+              <motion.button
+                onClick={() => setMode('login')}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full py-3 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black font-mono font-bold uppercase tracking-wider transition-all shadow-lg shadow-cyan-500/30"
+                data-testid="passport-signin-btn"
+              >
+                Authenticate
+              </motion.button>
+            ) : (
+              <button
+                onClick={() => logout()}
+                className="w-full py-2 border border-red-500/30 text-red-400/80 hover:bg-red-500/10 font-mono uppercase tracking-wider transition-colors text-sm"
+                data-testid="passport-logout-btn"
+              >
+                Sign Out
+              </button>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div className="px-4 pb-3 pt-2 border-t border-white/10 flex items-center justify-between">
+            <div className="text-[10px] text-white/30 font-mono">
+              Issued by Codex Authority
+            </div>
+            <div className="flex items-center gap-1">
+              <Shield className="w-3 h-3 text-cyan-400/50" />
+              <span className="text-[10px] text-cyan-400/50 font-mono">AEGIS</span>
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
