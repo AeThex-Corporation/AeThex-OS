@@ -13,7 +13,7 @@ import {
   Network, Activity, Code2, Radio, Newspaper, Gamepad2,
   Users, Trophy, Calculator, StickyNote, Cpu, Camera,
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
-  TrendingUp, ArrowUp, ArrowDown, Hash, Key
+  TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, AlertTriangle
 } from "lucide-react";
 
 interface WindowState {
@@ -194,7 +194,7 @@ export default function AeThexOS() {
   const spotlightRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
-  const [activeTrayPanel, setActiveTrayPanel] = useState<'wifi' | 'volume' | 'battery' | 'notifications' | null>(null);
+  const [activeTrayPanel, setActiveTrayPanel] = useState<'wifi' | 'volume' | 'battery' | 'notifications' | 'upgrade' | null>(null);
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
   const [batteryInfo, setBatteryInfo] = useState<{ level: number; charging: boolean } | null>(null);
@@ -249,30 +249,31 @@ export default function AeThexOS() {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+
   useEffect(() => {
     const bootSequence = async () => {
       const steps = [
+        { text: 'BIOS CHECK... OK', progress: 5 },
         { text: 'Initializing AeThex OS...', progress: 10 },
-        { text: 'Loading kernel modules...', progress: 25 },
-        { text: 'Mounting file systems...', progress: 40 },
-        { text: 'Starting Aegis security layer...', progress: 55 },
-        { text: 'Connecting to Nexus network...', progress: 70 },
-        { text: 'Loading user profile...', progress: 85 },
-        { text: 'Welcome, Architect.', progress: 100 },
+        { text: 'Loading kernel modules...', progress: 20 },
+        { text: 'Mounting file systems...', progress: 30 },
+        { text: 'INITIATING AETHEX PASSPORT...', progress: 40 },
+        { text: 'DETECTING CROSS-PLATFORM IDENTITY...', progress: 55 },
+        { text: 'Starting Aegis security layer...', progress: 65 },
+        { text: 'STATUS: NEUTRAL LAYER ACTIVE.', progress: 75 },
+        { text: 'Connecting to Nexus network...', progress: 85 },
+        { text: 'IDENTITY SYSTEM READY.', progress: 100 },
       ];
       
       for (const step of steps) {
         setBootStep(step.text);
         setBootProgress(step.progress);
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 350));
       }
       
-      await new Promise(r => setTimeout(r, 500));
-      setIsBooting(false);
-      
-      const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
-      setDailyTip(randomTip);
-      setTimeout(() => setShowDailyTip(true), 1000);
+      await new Promise(r => setTimeout(r, 400));
+      setShowLoginPrompt(true);
     };
     
     bootSequence();
@@ -378,6 +379,8 @@ export default function AeThexOS() {
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
+    { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "chat", title: "AeThex AI", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
@@ -394,6 +397,8 @@ export default function AeThexOS() {
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
+    { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
     { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
@@ -606,6 +611,8 @@ export default function AeThexOS() {
       case 'foundry': return <FoundryApp />;
       case 'devtools': return <DevToolsApp />;
       case 'mission': return <MissionApp />;
+      case 'intel': return <IntelApp />;
+      case 'drives': return <DrivesApp />;
       case 'settings': return <SettingsApp 
         wallpaper={wallpaper} 
         setWallpaper={setWallpaper} 
@@ -660,6 +667,26 @@ export default function AeThexOS() {
     }
   };
 
+  const handleGuestContinue = () => {
+    setShowLoginPrompt(false);
+    setIsBooting(false);
+    const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
+    setDailyTip(randomTip);
+    setTimeout(() => setShowDailyTip(true), 1000);
+  };
+
+  const handleLoginFromBoot = () => {
+    setShowLoginPrompt(false);
+    setIsBooting(false);
+    const randomTip = DAILY_TIPS[Math.floor(Math.random() * DAILY_TIPS.length)];
+    setDailyTip(randomTip);
+    setTimeout(() => {
+      setShowDailyTip(true);
+      const passportApp = apps.find(a => a.id === 'passport');
+      if (passportApp) openApp(passportApp);
+    }, 500);
+  };
+
   if (isBooting) {
     return (
       <div className="h-screen w-screen bg-black flex flex-col items-center justify-center">
@@ -687,6 +714,37 @@ export default function AeThexOS() {
           </div>
           
           <div className="text-white/30 text-xs mt-4 font-mono">AeThex OS v1.0.0</div>
+
+          <AnimatePresence>
+            {showLoginPrompt && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-8 space-y-4"
+              >
+                <div className="text-green-400 font-mono text-sm mb-6">
+                  ✓ CROSS-PLATFORM IDENTITY READY
+                </div>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={handleLoginFromBoot}
+                    className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-mono font-bold uppercase tracking-wider transition-colors flex items-center justify-center gap-2"
+                    data-testid="boot-login-button"
+                  >
+                    <Key className="w-4 h-4" />
+                    Login with Passport
+                  </button>
+                  <button
+                    onClick={handleGuestContinue}
+                    className="px-6 py-3 border border-white/30 hover:bg-white/10 text-white/70 font-mono uppercase tracking-wider transition-colors"
+                    data-testid="boot-guest-button"
+                  >
+                    Continue as Guest
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       </div>
     );
@@ -1279,8 +1337,8 @@ interface TaskbarProps {
   onDesktopChange: (d: number) => void;
   clearanceTheme: ClearanceTheme;
   onSwitchClearance: () => void;
-  activeTrayPanel: 'wifi' | 'volume' | 'battery' | 'notifications' | null;
-  onTrayPanelToggle: (panel: 'wifi' | 'volume' | 'battery' | 'notifications') => void;
+  activeTrayPanel: 'wifi' | 'volume' | 'battery' | 'notifications' | 'upgrade' | null;
+  onTrayPanelToggle: (panel: 'wifi' | 'volume' | 'battery' | 'notifications' | 'upgrade') => void;
   volume: number;
   onVolumeChange: (v: number) => void;
   isMuted: boolean;
@@ -1740,6 +1798,19 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
 
         <div className="flex items-center gap-1 text-white/60 relative">
           <button 
+            onClick={() => onTrayPanelToggle('upgrade')} 
+            className={`p-1.5 rounded transition-colors relative ${activeTrayPanel === 'upgrade' ? 'bg-yellow-500/30 text-yellow-400' : 'hover:bg-yellow-500/20 text-yellow-400'}`}
+            data-testid="tray-upgrade"
+          >
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 2 }}
+            >
+              <Zap className="w-4 h-4" />
+            </motion.div>
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-yellow-500 rounded-full animate-ping" />
+          </button>
+          <button 
             onClick={() => onTrayPanelToggle('notifications')} 
             className={`p-1.5 rounded transition-colors relative ${activeTrayPanel === 'notifications' ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
           >
@@ -1967,6 +2038,57 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                       <span>Status</span>
                       <span className="text-green-400">Optimal</span>
                     </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTrayPanel === 'upgrade' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-10 right-0 w-72 bg-slate-900/95 backdrop-blur-xl border border-yellow-500/50 rounded-lg shadow-2xl overflow-hidden"
+                style={{ zIndex: 9999 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-yellow-500/30 bg-yellow-500/10">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-400" />
+                    <span className="text-yellow-400 text-sm font-mono uppercase">System Alert</span>
+                  </div>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-3">
+                      <Zap className="w-8 h-8 text-yellow-400" />
+                    </div>
+                    <div className="text-white font-bold mb-1">Architect Access Available</div>
+                    <div className="text-white/60 text-sm">
+                      Upgrade your permissions to access the Source Code.
+                    </div>
+                  </div>
+                  <div className="border border-yellow-500/20 bg-yellow-500/5 rounded p-3 text-xs space-y-1">
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Shield className="w-3 h-3 text-yellow-400" /> Full system access
+                    </div>
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Network className="w-3 h-3 text-yellow-400" /> Network directory slot
+                    </div>
+                    <div className="flex items-center gap-2 text-white/70">
+                      <Globe className="w-3 h-3 text-yellow-400" /> .aethex namespace
+                    </div>
+                  </div>
+                  <a
+                    href="https://aethex.studio"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block w-full text-center px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors text-sm"
+                  >
+                    Upgrade Now — $500
+                  </a>
+                  <div className="text-center text-xs text-white/40">
+                    Hint: Check the terminal for promo codes
                   </div>
                 </div>
               </motion.div>
@@ -3701,8 +3823,8 @@ function NetworkNeighborhoodApp() {
 
   const reservedSlots = Array.from({ length: Math.max(0, 7 - founders.length) }, (_, i) => ({
     id: `reserved-${i}`,
-    name: "[RESERVED FOR FOUNDRY]",
-    role: "available",
+    name: "[LOCKED - REQUIRES ARCHITECT ACCESS]",
+    role: "locked",
     isReserved: true,
   }));
 
@@ -3933,6 +4055,265 @@ function DevToolsApp() {
             <ExternalLink className="w-4 h-4 text-purple-400/40" />
           </a>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function IntelApp() {
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  
+  const files = [
+    { 
+      name: "CROSS_PLATFORM_REPORT.TXT", 
+      icon: <FileText className="w-4 h-4" />,
+      content: `// INTERCEPTED REPORT //
+SOURCE: NAAVIK RESEARCH
+SUBJECT: THE FUTURE OF CROSS-PLATFORM
+
+========================================
+KEY FINDINGS
+========================================
+
+1. The "Walled Gardens" (Sony/MSFT) are failing.
+   
+   Platform holders are losing grip on exclusive
+   ecosystems. Users demand portability.
+
+2. Users demand a "Neutral Identity Layer."
+   
+   Cross-platform identity is the #1 requested
+   feature among gaming audiences globally.
+
+3. Developers need "Direct-to-Consumer" infrastructure.
+   
+   30% platform cuts are unsustainable. The next
+   generation of creators will build direct.
+
+========================================
+AETHEX ANALYSIS
+========================================
+
+This validates the AEGIS Protocol. 
+
+The industry is currently seeking the exact
+solution we have already built:
+
+  - Neutral identity layer   ✓ DEPLOYED
+  - Cross-platform passport  ✓ DEPLOYED
+  - Direct-to-consumer infra ✓ IN PROGRESS
+
+========================================
+STATUS
+========================================
+
+- Passport:  DEPLOYED
+- CloudOS:   DEPLOYED
+- Foundry:   OPEN FOR ENROLLMENT
+
+// END TRANSMISSION //`
+    },
+    {
+      name: "MARKET_THESIS.TXT",
+      icon: <TrendingUp className="w-4 h-4" />,
+      content: `// MARKET THESIS //
+CLASSIFICATION: INTERNAL
+
+========================================
+THE OPPORTUNITY
+========================================
+
+Total Addressable Market (TAM):
+$200B+ Metaverse Economy by 2030
+
+Our Position:
+Identity & Infrastructure Layer
+
+========================================
+COMPETITIVE MOAT
+========================================
+
+1. First-mover on neutral identity
+2. Architect certification network
+3. .aethex TLD namespace ownership
+4. Aegis security protocol
+
+========================================
+REVENUE MODEL
+========================================
+
+- Foundry Certifications: $500/architect
+- Enterprise Licensing: TBD
+- Namespace Reservations: TBD
+
+// END DOCUMENT //`
+    }
+  ];
+
+  return (
+    <div className="h-full bg-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-amber-500/30 bg-amber-500/5">
+        <FolderSearch className="w-4 h-4 text-amber-400" />
+        <span className="text-amber-400 text-sm uppercase tracking-wider">INTEL</span>
+        <span className="text-amber-500/40 text-xs ml-auto">CLASSIFIED</span>
+      </div>
+      
+      {!selectedFile ? (
+        <div className="flex-1 overflow-auto p-3 space-y-2">
+          <div className="text-amber-500/60 text-xs mb-3 border-b border-amber-500/20 pb-2">
+            📁 /intel/market_data/
+          </div>
+          {files.map((file, idx) => (
+            <motion.button
+              key={file.name}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: idx * 0.1 }}
+              onClick={() => setSelectedFile(file.name)}
+              className="w-full flex items-center gap-3 py-2 px-3 border-l-2 border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/15 transition-colors text-left"
+            >
+              <span className="text-amber-400">{file.icon}</span>
+              <span className="text-white">{file.name}</span>
+              <span className="text-amber-500/40 text-xs ml-auto">OPEN</span>
+            </motion.button>
+          ))}
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex items-center gap-2 p-2 border-b border-amber-500/20 bg-amber-500/5">
+            <button 
+              onClick={() => setSelectedFile(null)}
+              className="text-amber-400 hover:text-amber-300 text-xs uppercase"
+            >
+              ← Back
+            </button>
+            <span className="text-white text-sm">{selectedFile}</span>
+          </div>
+          <div className="flex-1 overflow-auto p-4">
+            <pre className="text-green-400 text-xs whitespace-pre-wrap leading-relaxed">
+              {files.find(f => f.name === selectedFile)?.content}
+            </pre>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DrivesApp() {
+  const [selectedDrive, setSelectedDrive] = useState<string | null>(null);
+  
+  const drives = [
+    { id: 'C', name: 'Local System', size: '128 GB', used: '64 GB', status: 'online', icon: <HardDrive className="w-5 h-5" /> },
+    { id: 'D', name: '.aethex TLD', size: '∞', used: '0 GB', status: 'not_mounted', icon: <Globe className="w-5 h-5" /> },
+  ];
+
+  return (
+    <div className="h-full bg-slate-950 flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+        <HardDrive className="w-4 h-4 text-cyan-400" />
+        <span className="text-cyan-400 text-sm uppercase tracking-wider">My Computer</span>
+      </div>
+      
+      <div className="flex-1 overflow-auto p-4">
+        <div className="text-white/50 text-xs mb-4 uppercase tracking-wider">Storage Devices</div>
+        <div className="space-y-3">
+          {drives.map((drive) => (
+            <motion.div
+              key={drive.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+                drive.status === 'online' 
+                  ? 'border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10' 
+                  : 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
+              }`}
+              onClick={() => setSelectedDrive(drive.id)}
+            >
+              <div className="flex items-center gap-4">
+                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+                  drive.status === 'online' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-red-500/20 text-red-400'
+                }`}>
+                  {drive.icon}
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-white font-bold">({drive.id}:)</span>
+                    <span className="text-white/70">{drive.name}</span>
+                  </div>
+                  <div className="text-xs mt-1">
+                    {drive.status === 'online' ? (
+                      <span className="text-cyan-400">{drive.used} / {drive.size} used</span>
+                    ) : (
+                      <span className="text-red-400 flex items-center gap-1">
+                        <Lock className="w-3 h-3" /> Not Mounted
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className={`w-2 h-2 rounded-full ${
+                  drive.status === 'online' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                }`} />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <AnimatePresence>
+          {selectedDrive === 'D' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-6 border border-red-500/30 bg-red-500/10 rounded-lg p-4"
+            >
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="text-red-400 font-bold mb-1">ERROR: Drive Not Mounted</div>
+                  <div className="text-white/70 text-sm mb-3">
+                    No .aethex domain detected for this identity.
+                  </div>
+                  <div className="text-white/50 text-xs mb-4">
+                    Join The Foundry to reserve your namespace in the AeThex ecosystem.
+                  </div>
+                  <a
+                    href="https://aethex.studio"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold uppercase tracking-wider transition-colors"
+                  >
+                    Join The Foundry <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {selectedDrive === 'C' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mt-6 border border-cyan-500/30 bg-cyan-500/5 rounded-lg p-4"
+            >
+              <div className="text-cyan-400 font-bold mb-2">Local System Storage</div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between text-white/70">
+                  <span>/system</span><span>32 GB</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>/apps</span><span>16 GB</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>/user</span><span>12 GB</span>
+                </div>
+                <div className="flex justify-between text-white/70">
+                  <span>/cache</span><span>4 GB</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
