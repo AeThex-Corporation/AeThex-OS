@@ -32,10 +32,10 @@ app.use(
     cookie: {
       secure: isProduction,
       httpOnly: true,
-      sameSite: isProduction ? "lax" : "lax",
+      sameSite: "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
-    proxy: !isProduction, // Trust first proxy in dev for Vite
+    proxy: true, // Always trust proxy (Replit uses reverse proxy in both dev and prod)
   })
 );
 
