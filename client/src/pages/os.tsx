@@ -29,6 +29,7 @@ interface WindowState {
   maximized: boolean;
   zIndex: number;
   accentColor?: string;
+  desktopId: number;
 }
 
 interface Toast {
@@ -193,6 +194,24 @@ export default function AeThexOS() {
   const spotlightRef = useRef<HTMLInputElement>(null);
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
+  const [activeTrayPanel, setActiveTrayPanel] = useState<'wifi' | 'volume' | 'battery' | 'notifications' | null>(null);
+  const [volume, setVolume] = useState(75);
+  const [isMuted, setIsMuted] = useState(false);
+  const [batteryInfo, setBatteryInfo] = useState<{ level: number; charging: boolean } | null>(null);
+
+  useEffect(() => {
+    if ('getBattery' in navigator) {
+      (navigator as any).getBattery().then((battery: any) => {
+        setBatteryInfo({ level: Math.round(battery.level * 100), charging: battery.charging });
+        battery.addEventListener('levelchange', () => {
+          setBatteryInfo(prev => prev ? { ...prev, level: Math.round(battery.level * 100) } : null);
+        });
+        battery.addEventListener('chargingchange', () => {
+          setBatteryInfo(prev => prev ? { ...prev, charging: battery.charging } : null);
+        });
+      });
+    }
+  }, []);
 
   const { data: weatherData, isFetching: weatherFetching } = useQuery({
     queryKey: ['weather'],
@@ -440,15 +459,9 @@ export default function AeThexOS() {
     playSound('open');
     const existingWindow = windows.find(w => w.id === app.id);
     if (existingWindow) {
-      if (existingWindow.minimized) {
-        setWindows(prev => prev.map(w => 
-          w.id === app.id ? { ...w, minimized: false, zIndex: maxZIndex + 1 } : w
-        ));
-      } else {
-        setWindows(prev => prev.map(w => 
-          w.id === app.id ? { ...w, zIndex: maxZIndex + 1 } : w
-        ));
-      }
+      setWindows(prev => prev.map(w => 
+        w.id === app.id ? { ...w, minimized: false, zIndex: maxZIndex + 1, desktopId: currentDesktop } : w
+      ));
       setMaxZIndex(prev => prev + 1);
       setActiveWindowId(app.id);
       return;
@@ -468,14 +481,15 @@ export default function AeThexOS() {
       height: app.defaultHeight,
       minimized: false,
       maximized: false,
-      zIndex: maxZIndex + 1
+      zIndex: maxZIndex + 1,
+      desktopId: currentDesktop
     };
 
     setWindows(prev => [...prev, newWindow]);
     setMaxZIndex(prev => prev + 1);
     setActiveWindowId(app.id);
     setShowStartMenu(false);
-  }, [windows, maxZIndex, playSound]);
+  }, [windows, maxZIndex, playSound, currentDesktop]);
 
   const closeWindow = useCallback((id: string) => {
     playSound('close');
@@ -616,8 +630,9 @@ export default function AeThexOS() {
             layout.windows.forEach((w, i) => {
               const app = apps.find(a => a.component === w.appId);
               if (app) {
+                const windowId = `${app.id}-${Date.now()}-${i}`;
                 setWindows(prev => [...prev, {
-                  id: `${app.id}-${Date.now()}-${i}`,
+                  id: windowId,
                   title: app.title,
                   icon: app.icon,
                   component: app.component,
@@ -628,6 +643,7 @@ export default function AeThexOS() {
                   minimized: false,
                   maximized: false,
                   zIndex: i + 1,
+                  desktopId: layout.desktop
                 }]);
               }
             });
@@ -734,7 +750,7 @@ export default function AeThexOS() {
         </div>
 
         <AnimatePresence>
-          {windows.filter(w => !w.minimized).map((window) => (
+          {windows.filter(w => !w.minimized && w.desktopId === currentDesktop).map((window) => (
             <Window
               key={window.id}
               window={window}
@@ -770,7 +786,7 @@ export default function AeThexOS() {
       </div>
 
       <Taskbar 
-        windows={windows}
+        windows={windows.filter(w => w.desktopId === currentDesktop)}
         activeWindowId={activeWindowId}
         apps={apps}
         time={time}
@@ -779,7 +795,7 @@ export default function AeThexOS() {
         isAuthenticated={isAuthenticated}
         notifications={notifications}
         showNotifications={showNotifications}
-        onToggleStartMenu={() => setShowStartMenu(!showStartMenu)}
+        onToggleStartMenu={() => { setShowStartMenu(!showStartMenu); setActiveTrayPanel(null); }}
         onToggleNotifications={() => setShowNotifications(!showNotifications)}
         onWindowClick={(id) => {
           const window = windows.find(w => w.id === id);
@@ -793,9 +809,22 @@ export default function AeThexOS() {
         onLogout={handleLogout}
         onNavigate={setLocation}
         currentDesktop={currentDesktop}
-        onDesktopChange={setCurrentDesktop}
+        onDesktopChange={(d) => {
+          setCurrentDesktop(d);
+          setActiveTrayPanel(null);
+        }}
         clearanceTheme={clearanceTheme}
         onSwitchClearance={switchClearance}
+        activeTrayPanel={activeTrayPanel}
+        onTrayPanelToggle={(panel) => setActiveTrayPanel(activeTrayPanel === panel ? null : panel)}
+        volume={volume}
+        onVolumeChange={setVolume}
+        isMuted={isMuted}
+        onMuteToggle={() => setIsMuted(!isMuted)}
+        batteryInfo={batteryInfo}
+        onClearNotification={(idx) => setNotifications(prev => prev.filter((_, i) => i !== idx))}
+        onClearAllNotifications={() => setNotifications([])}
+        desktopWindowCounts={[0, 1, 2, 3].map(d => windows.filter(w => w.desktopId === d).length)}
       />
 
       <AnimatePresence>
@@ -1250,6 +1279,16 @@ interface TaskbarProps {
   onDesktopChange: (d: number) => void;
   clearanceTheme: ClearanceTheme;
   onSwitchClearance: () => void;
+  activeTrayPanel: 'wifi' | 'volume' | 'battery' | 'notifications' | null;
+  onTrayPanelToggle: (panel: 'wifi' | 'volume' | 'battery' | 'notifications') => void;
+  volume: number;
+  onVolumeChange: (v: number) => void;
+  isMuted: boolean;
+  onMuteToggle: () => void;
+  batteryInfo: { level: number; charging: boolean } | null;
+  onClearNotification: (index: number) => void;
+  onClearAllNotifications: () => void;
+  desktopWindowCounts: number[];
 }
 
 function Skeleton({ className = "", animate = true }: { className?: string; animate?: boolean }) {
@@ -1457,7 +1496,7 @@ function OnboardingTour({ step, onNext, onClose }: { step: number; onNext: () =>
   );
 }
 
-function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange, clearanceTheme, onSwitchClearance }: TaskbarProps) {
+function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isAuthenticated, notifications, showNotifications, onToggleStartMenu, onToggleNotifications, onWindowClick, onAppClick, onLogout, onNavigate, currentDesktop, onDesktopChange, clearanceTheme, onSwitchClearance, activeTrayPanel, onTrayPanelToggle, volume, onVolumeChange, isMuted, onMuteToggle, batteryInfo, onClearNotification, onClearAllNotifications, desktopWindowCounts }: TaskbarProps) {
   return (
     <>
       <AnimatePresence>
@@ -1681,19 +1720,26 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
             <button
               key={d}
               onClick={() => onDesktopChange(d)}
-              className={`w-6 h-4 rounded text-[10px] font-mono transition-all ${
+              className={`relative w-7 h-5 rounded text-[10px] font-mono transition-all ${
                 currentDesktop === d 
                   ? 'bg-cyan-500 text-white scale-110' 
                   : 'bg-white/10 text-white/40 hover:bg-white/20'
               }`}
+              title={`Desktop ${d + 1}${(desktopWindowCounts?.[d] || 0) > 0 ? ` (${desktopWindowCounts[d]} windows)` : ''}`}
             >
               {d + 1}
+              {(desktopWindowCounts?.[d] || 0) > 0 && currentDesktop !== d && (
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-cyan-400 rounded-full" />
+              )}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-white/60">
-          <button onClick={onToggleNotifications} className="p-1.5 hover:bg-white/10 rounded transition-colors relative">
+        <div className="flex items-center gap-1 text-white/60 relative">
+          <button 
+            onClick={() => onTrayPanelToggle('notifications')} 
+            className={`p-1.5 rounded transition-colors relative ${activeTrayPanel === 'notifications' ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
+          >
             <Bell className="w-4 h-4" />
             {notifications.length > 0 && (
               <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-[8px] text-white flex items-center justify-center">
@@ -1701,12 +1747,228 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
               </div>
             )}
           </button>
-          <Wifi className="w-4 h-4" />
-          <Volume2 className="w-4 h-4" />
-          <Battery className="w-4 h-4" />
+          <button 
+            onClick={() => onTrayPanelToggle('wifi')} 
+            className={`p-1.5 rounded transition-colors ${activeTrayPanel === 'wifi' ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
+          >
+            <Wifi className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={() => onTrayPanelToggle('volume')} 
+            className={`p-1.5 rounded transition-colors ${activeTrayPanel === 'volume' ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
+          >
+            {isMuted ? <Volume2 className="w-4 h-4 text-red-400" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+          <button 
+            onClick={() => onTrayPanelToggle('battery')} 
+            className={`p-1.5 rounded transition-colors ${activeTrayPanel === 'battery' ? 'bg-white/20 text-white' : 'hover:bg-white/10'}`}
+          >
+            <Battery className={`w-4 h-4 ${batteryInfo?.charging ? 'text-green-400' : batteryInfo && batteryInfo.level < 20 ? 'text-red-400' : ''}`} />
+          </button>
           <div className="text-xs font-mono px-2">
             {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </div>
+
+          <AnimatePresence>
+            {activeTrayPanel === 'notifications' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-10 right-0 w-72 bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden"
+                style={{ zIndex: 9999 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-cyan-500/20 flex items-center justify-between">
+                  <span className="text-white text-sm font-mono">Notifications</span>
+                  {notifications.length > 0 && (
+                    <button onClick={onClearAllNotifications} className="text-xs text-cyan-400 hover:text-cyan-300">
+                      Clear all
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-64 overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-4 text-center text-white/50 text-sm">No notifications</div>
+                  ) : (
+                    notifications.map((notif, idx) => (
+                      <div key={idx} className="p-3 border-b border-white/5 hover:bg-white/5 flex items-start gap-3">
+                        <Bell className="w-4 h-4 text-cyan-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-white/80 text-sm flex-1">{notif}</p>
+                        <button onClick={() => onClearNotification(idx)} className="text-white/30 hover:text-white/60">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTrayPanel === 'wifi' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-10 right-0 w-64 bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden"
+                style={{ zIndex: 9999 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-cyan-500/20">
+                  <span className="text-white text-sm font-mono">Network Status</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/20 flex items-center justify-center">
+                      <Wifi className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <div className="text-white text-sm font-medium">AeThex Network</div>
+                      <div className="text-cyan-400 text-xs">Connected</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between text-white/60">
+                      <span>Signal Strength</span>
+                      <span className="text-cyan-400">Excellent</span>
+                    </div>
+                    <div className="flex justify-between text-white/60">
+                      <span>Protocol</span>
+                      <span className="text-white">AEGIS-256</span>
+                    </div>
+                    <div className="flex justify-between text-white/60">
+                      <span>Latency</span>
+                      <span className="text-green-400">2ms</span>
+                    </div>
+                    <div className="flex justify-between text-white/60">
+                      <span>Node</span>
+                      <span className="text-white">AXIOM-CORE-01</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-green-400 text-xs">Secure Connection Active</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTrayPanel === 'volume' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-10 right-0 w-56 bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden"
+                style={{ zIndex: 9999 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-cyan-500/20">
+                  <span className="text-white text-sm font-mono">Sound</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={onMuteToggle}
+                      className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${isMuted ? 'bg-red-500/20' : 'bg-cyan-500/20'}`}
+                    >
+                      <Volume2 className={`w-5 h-5 ${isMuted ? 'text-red-400' : 'text-cyan-400'}`} />
+                    </button>
+                    <div className="flex-1">
+                      <div className="text-white text-sm font-medium">{isMuted ? 'Muted' : 'Volume'}</div>
+                      <div className="text-white/50 text-xs">{isMuted ? 'Click to unmute' : `${volume}%`}</div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <input 
+                      type="range" 
+                      min="0" 
+                      max="100" 
+                      value={volume}
+                      onChange={(e) => onVolumeChange(parseInt(e.target.value))}
+                      className="w-full h-2 bg-white/10 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                      style={{ accentColor: '#06b6d4' }}
+                    />
+                    <div className="flex justify-between text-[10px] text-white/40">
+                      <span>0</span>
+                      <span>50</span>
+                      <span>100</span>
+                    </div>
+                  </div>
+                  <div className="pt-2 border-t border-white/10 text-xs text-white/50">
+                    <div className="flex items-center justify-between">
+                      <span>OS Sounds</span>
+                      <span className={isMuted ? 'text-red-400' : 'text-cyan-400'}>{isMuted ? 'OFF' : 'ON'}</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTrayPanel === 'battery' && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                className="absolute bottom-10 right-0 w-56 bg-slate-900/95 backdrop-blur-xl border border-cyan-500/30 rounded-lg shadow-2xl overflow-hidden"
+                style={{ zIndex: 9999 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="p-3 border-b border-cyan-500/20">
+                  <span className="text-white text-sm font-mono">Power</span>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${batteryInfo?.charging ? 'bg-green-500/20' : 'bg-cyan-500/20'}`}>
+                      <Battery className={`w-5 h-5 ${batteryInfo?.charging ? 'text-green-400' : 'text-cyan-400'}`} />
+                    </div>
+                    <div>
+                      <div className="text-white text-sm font-medium">
+                        {batteryInfo ? `${batteryInfo.level}%` : 'Unknown'}
+                      </div>
+                      <div className={`text-xs ${batteryInfo?.charging ? 'text-green-400' : 'text-white/50'}`}>
+                        {batteryInfo?.charging ? 'Charging' : 'On Battery'}
+                      </div>
+                    </div>
+                  </div>
+                  {batteryInfo && (
+                    <div className="space-y-2">
+                      <div className="h-3 bg-white/10 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            batteryInfo.level > 50 ? 'bg-green-500' : 
+                            batteryInfo.level > 20 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}
+                          style={{ width: `${batteryInfo.level}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-white/40">
+                        <span>0%</span>
+                        <span>50%</span>
+                        <span>100%</span>
+                      </div>
+                    </div>
+                  )}
+                  {!batteryInfo && (
+                    <div className="text-center text-white/50 text-sm py-2">
+                      Battery API not available
+                    </div>
+                  )}
+                  <div className="pt-2 border-t border-white/10 space-y-1 text-xs">
+                    <div className="flex items-center justify-between text-white/60">
+                      <span>Power Mode</span>
+                      <span className="text-cyan-400">Balanced</span>
+                    </div>
+                    <div className="flex items-center justify-between text-white/60">
+                      <span>Status</span>
+                      <span className="text-green-400">Optimal</span>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
     </>
