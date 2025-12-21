@@ -13,7 +13,7 @@ import {
   Network, Activity, Code2, Radio, Newspaper, Gamepad2,
   Users, Trophy, Calculator, StickyNote, Cpu, Camera,
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
-  TrendingUp, ArrowUp, ArrowDown, Hash
+  TrendingUp, ArrowUp, ArrowDown, Hash, Key
 } from "lucide-react";
 
 interface WindowState {
@@ -357,11 +357,11 @@ export default function AeThexOS() {
 
   const foundationApps: DesktopApp[] = [
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
-    { id: "mission", title: "Mission.txt", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
-    { id: "foundry", title: "The Foundry", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
-    { id: "passport", title: "My Computer", icon: <Monitor className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
+    { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
     { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
@@ -373,11 +373,11 @@ export default function AeThexOS() {
 
   const corpApps: DesktopApp[] = [
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
-    { id: "mission", title: "Mission.txt", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
-    { id: "foundry", title: "The Foundry", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
+    { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
-    { id: "passport", title: "My Computer", icon: <Monitor className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
+    { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "network", title: "Global Ops", icon: <Globe className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
     { id: "files", title: "Asset Library", icon: <Database className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
     { id: "pitch", title: "Contracts", icon: <FileText className="w-8 h-8" />, component: "pitch", defaultWidth: 500, defaultHeight: 400 },
@@ -1777,6 +1777,8 @@ function TerminalApp() {
           "║ projects   - List active projects         ║",
           "║ scan       - Scan network for nodes       ║",
           "║ analyze    - Run security analysis        ║",
+          "║ ping       - Check network status         ║",
+          "║ whois      - Look up architect profile    ║",
           "║ decrypt    - Decrypt secure message       ║",
           "║ hack       - ??? (try it)                 ║",
           "║ fortune    - Random architect wisdom      ║",
@@ -2166,6 +2168,99 @@ function TerminalApp() {
         ], setHistory);
         break;
 
+      case 'ping':
+        await typeEffect(["", "Pinging AeThex Network..."], setHistory);
+        await delay(500);
+        await typeEffect([
+          "PING aethex.network (42.42.42.42): 56 data bytes",
+          "64 bytes from 42.42.42.42: icmp_seq=0 ttl=64 time=0.042 ms",
+          "64 bytes from 42.42.42.42: icmp_seq=1 ttl=64 time=0.037 ms",
+          "64 bytes from 42.42.42.42: icmp_seq=2 ttl=64 time=0.041 ms",
+          "",
+          "--- aethex.network ping statistics ---",
+          "3 packets transmitted, 3 packets received, 0.0% packet loss",
+          "",
+          "✓ AeThex Network: ONLINE",
+          ""
+        ], setHistory);
+        break;
+
+      case 'whois':
+        const target = args[1]?.toLowerCase();
+        if (target === 'mrpiglr') {
+          await typeEffect([
+            "",
+            "╔══════════════════════════════════════════════════╗",
+            "║              ARCHITECT PROFILE                   ║",
+            "╠══════════════════════════════════════════════════╣",
+            "║ CODENAME:    mrpiglr                             ║",
+            "║ REAL NAME:   [CLASSIFIED]                        ║",
+            "║ ROLE:        Founder & Chief Architect           ║",
+            "║ CLEARANCE:   OVERSEE (Highest)                   ║",
+            "║ STATUS:      ACTIVE                              ║",
+            "╠══════════════════════════════════════════════════╣",
+            "║ SKILLS:      Metaverse Architecture, Web3,       ║",
+            "║              Game Development, System Design     ║",
+            "╠══════════════════════════════════════════════════╣",
+            "║ 'Building the operating system for               ║",
+            "║  the Metaverse, one line at a time.'             ║",
+            "╚══════════════════════════════════════════════════╝",
+            ""
+          ], setHistory);
+        } else if (target === 'trevorjoey' || target === 'dylan' || target === 'fadedlatte') {
+          await typeEffect([
+            "",
+            `╔══════════════════════════════════════════════════╗`,
+            `║              ARCHITECT PROFILE                   ║`,
+            `╠══════════════════════════════════════════════════╣`,
+            `║ CODENAME:    ${(target || '').padEnd(35)}║`,
+            `║ ROLE:        Founding Architect                  ║`,
+            `║ CLEARANCE:   ADMIN                               ║`,
+            `║ STATUS:      ACTIVE                              ║`,
+            `╚══════════════════════════════════════════════════╝`,
+            ""
+          ], setHistory);
+        } else {
+          setHistory(prev => [...prev, "Usage: whois <username>", "Try: whois mrpiglr", ""]);
+        }
+        break;
+
+      case 'foundry':
+        await typeEffect([
+          "",
+          "╔══════════════════════════════════════════════════╗",
+          "║        🔥 THE FOUNDRY - ARCHITECT BOOTCAMP       ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║                                                  ║",
+          "║  Transform yourself into a certified             ║",
+          "║  Metaverse Architect in 8 weeks.                 ║",
+          "║                                                  ║",
+          "║  Learn: Game Dev, Web3, System Design            ║",
+          "║                                                  ║",
+          "║  Price: $500 (Limited Cohort)                    ║",
+          "║                                                  ║",
+          "║  Use code TERMINAL10 for 10% off!                ║",
+          "║                                                  ║",
+          "╠══════════════════════════════════════════════════╣",
+          "║  Visit: aethex.studio                            ║",
+          "╚══════════════════════════════════════════════════╝",
+          ""
+        ], setHistory);
+        break;
+
+      case 'discount':
+        await typeEffect([
+          "",
+          "🎉 SECRET FOUND!",
+          "",
+          "Use code: TERMINAL10",
+          "For 10% off The Foundry bootcamp!",
+          "",
+          "Visit aethex.studio to enroll.",
+          ""
+        ], setHistory);
+        break;
+
       default:
         setHistory(prev => [...prev, `Command not found: ${cmd}`, "Type 'help' for available commands.", ""]);
     }
@@ -2191,7 +2286,7 @@ function TerminalApp() {
       }
     } else if (e.key === 'Tab') {
       e.preventDefault();
-      const cmds = ['help', 'status', 'architects', 'projects', 'scan', 'analyze', 'decrypt', 'hack', 'fortune', 'whoami', 'neofetch', 'matrix', 'clear', 'tour', 'dice', 'cowsay', 'joke', 'weather', 'uptime', 'banner', 'coffee', 'sudo', 'secret'];
+      const cmds = ['help', 'status', 'architects', 'projects', 'scan', 'analyze', 'decrypt', 'hack', 'fortune', 'whoami', 'neofetch', 'matrix', 'clear', 'tour', 'dice', 'cowsay', 'joke', 'weather', 'uptime', 'banner', 'coffee', 'sudo', 'secret', 'ping', 'whois', 'foundry', 'discount'];
       const match = cmds.find(c => c.startsWith(input.toLowerCase()));
       if (match) setInput(match);
     }
@@ -3417,34 +3512,126 @@ function NetworkNeighborhoodApp() {
 }
 
 function FoundryApp() {
+  const [viewMode, setViewMode] = useState<'info' | 'enroll'>('info');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  
+  const basePrice = 500;
+  const discount = promoApplied && promoCode.toUpperCase() === 'TERMINAL10' ? 0.10 : 0;
+  const finalPrice = basePrice * (1 - discount);
+  
   return (
     <div className="h-full bg-gradient-to-br from-yellow-950 to-black flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-yellow-500/30 bg-yellow-500/5">
-        <Award className="w-4 h-4 text-yellow-400" />
-        <span className="text-yellow-400 text-sm uppercase tracking-wider">The Foundry</span>
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-        <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-6">
-          <Award className="w-10 h-10 text-yellow-400" />
+      <div className="flex items-center justify-between p-3 border-b border-yellow-500/30 bg-yellow-500/5">
+        <div className="flex items-center gap-2">
+          <Award className="w-4 h-4 text-yellow-400" />
+          <span className="text-yellow-400 text-sm uppercase tracking-wider">FOUNDRY.EXE</span>
         </div>
-        <h2 className="text-2xl font-bold text-yellow-400 mb-2">The Foundry</h2>
-        <p className="text-white/70 text-sm mb-6 max-w-xs">
-          Train to become a certified Metaverse Architect. Learn the protocols. Join the network.
-        </p>
-        <div className="space-y-2 text-left text-sm text-white/60 mb-6">
-          <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> 8-week intensive curriculum</div>
-          <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-yellow-400" /> AeThex Passport certification</div>
-          <div className="flex items-center gap-2"><Users className="w-4 h-4 text-yellow-400" /> Join the architect network</div>
+        <div className="flex items-center gap-2">
+          <button 
+            onClick={() => setViewMode('info')}
+            className={`px-2 py-1 text-xs uppercase ${viewMode === 'info' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
+          >
+            Info
+          </button>
+          <button 
+            onClick={() => setViewMode('enroll')}
+            className={`px-2 py-1 text-xs uppercase ${viewMode === 'enroll' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
+          >
+            Enroll
+          </button>
         </div>
-        <a 
-          href="https://aethex.studio" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
-        >
-          Apply Now <ExternalLink className="w-4 h-4" />
-        </a>
       </div>
+      
+      {viewMode === 'info' ? (
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
+          <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-6">
+            <Award className="w-10 h-10 text-yellow-400" />
+          </div>
+          <h2 className="text-2xl font-bold text-yellow-400 mb-2">The Foundry</h2>
+          <p className="text-white/70 text-sm mb-6 max-w-xs">
+            Train to become a certified Metaverse Architect. Learn the protocols. Join the network.
+          </p>
+          <div className="space-y-2 text-left text-sm text-white/60 mb-6">
+            <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> 8-week intensive curriculum</div>
+            <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-yellow-400" /> AeThex Passport certification</div>
+            <div className="flex items-center gap-2"><Users className="w-4 h-4 text-yellow-400" /> Join the architect network</div>
+          </div>
+          <button 
+            onClick={() => setViewMode('enroll')}
+            className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+          >
+            Enroll Now <ChevronRight className="w-4 h-4" />
+          </button>
+          <div className="mt-4 text-xs text-yellow-500/50">
+            Hint: Check the terminal for secret codes
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col p-6 overflow-auto">
+          <div className="max-w-sm mx-auto w-full space-y-6">
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-yellow-400 mb-1">Architect Bootcamp</h3>
+              <p className="text-white/50 text-sm">Cohort Starting Soon</p>
+            </div>
+            
+            <div className="border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-white/70">Bootcamp Access</span>
+                <span className="text-white">${basePrice}</span>
+              </div>
+              {promoApplied && discount > 0 && (
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>Discount (TERMINAL10)</span>
+                  <span>-${(basePrice * discount).toFixed(0)}</span>
+                </div>
+              )}
+              <div className="border-t border-yellow-500/20 pt-2 flex justify-between font-bold">
+                <span className="text-white">Total</span>
+                <span className="text-yellow-400">${finalPrice.toFixed(0)}</span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-white/70 text-xs uppercase tracking-wider">Promo Code</label>
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  placeholder="Enter code"
+                  className="flex-1 bg-black/50 border border-yellow-500/30 px-3 py-2 text-white text-sm focus:outline-none focus:border-yellow-500"
+                />
+                <button 
+                  onClick={() => setPromoApplied(true)}
+                  className="px-4 py-2 bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30 transition-colors"
+                >
+                  Apply
+                </button>
+              </div>
+              {promoApplied && promoCode.toUpperCase() === 'TERMINAL10' && (
+                <p className="text-green-400 text-xs">Code applied! 10% discount.</p>
+              )}
+              {promoApplied && promoCode && promoCode.toUpperCase() !== 'TERMINAL10' && (
+                <p className="text-red-400 text-xs">Invalid code. Try the terminal.</p>
+              )}
+            </div>
+            
+            <a 
+              href="https://aethex.studio" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block w-full px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black text-center font-bold uppercase tracking-wider transition-colors"
+            >
+              Complete Enrollment
+            </a>
+            
+            <p className="text-center text-white/40 text-xs">
+              Redirects to aethex.studio for payment
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
