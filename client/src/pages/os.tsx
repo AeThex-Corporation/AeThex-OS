@@ -8,7 +8,7 @@ import {
   Terminal, FileText, IdCard, Music, Settings, Globe,
   X, Minus, Square, Maximize2, Volume2, Wifi, Battery,
   ChevronUp, FolderOpen, Award, MessageCircle, Send,
-  ExternalLink, User, LogOut, BarChart3, Loader2,
+  ExternalLink, User, LogOut, BarChart3, Loader2, Layers,
   Presentation, Bell, Image, Monitor, Play, Pause, ChevronRight,
   Network, Activity, Code2, Radio, Newspaper, Gamepad2,
   Users, Trophy, Calculator, StickyNote, Cpu, Camera,
@@ -1075,11 +1075,119 @@ export default function AeThexOS() {
   );
 }
 
+interface WidgetPosition {
+  x: number;
+  y: number;
+}
+
+interface WidgetPositions {
+  [key: string]: WidgetPosition;
+}
+
+function getDefaultWidgetPositions(): WidgetPositions {
+  const w = typeof window !== 'undefined' ? window.innerWidth : 1200;
+  const h = typeof window !== 'undefined' ? window.innerHeight : 800;
+  return {
+    clock: { x: w - 220, y: 16 },
+    weather: { x: w - 220, y: 100 },
+    status: { x: w - 220, y: 200 },
+    notifications: { x: w - 220, y: 320 },
+    leaderboard: { x: w - 440, y: 16 },
+    pipeline: { x: w - 440, y: 180 },
+    kpi: { x: w - 440, y: 340 },
+    heartbeat: { x: 16, y: h - 180 },
+  };
+}
+
+function DraggableWidget({ 
+  id, 
+  children, 
+  positions, 
+  onPositionChange,
+  className = ""
+}: { 
+  id: string; 
+  children: React.ReactNode; 
+  positions: WidgetPositions;
+  onPositionChange: (id: string, pos: WidgetPosition) => void;
+  className?: string;
+}) {
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const widgetRef = useRef<HTMLDivElement>(null);
+
+  const defaultPositions = getDefaultWidgetPositions();
+  const position = positions[id] || defaultPositions[id] || { x: 100, y: 100 };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('.widget-drag-handle')) {
+      e.preventDefault();
+      setIsDragging(true);
+      setDragOffset({
+        x: e.clientX - position.x,
+        y: e.clientY - position.y
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = Math.max(0, Math.min(window.innerWidth - 50, e.clientX - dragOffset.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 60, e.clientY - dragOffset.y));
+      onPositionChange(id, { x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging, dragOffset, id, onPositionChange]);
+
+  return (
+    <motion.div
+      ref={widgetRef}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className={`fixed bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg overflow-hidden ${isDragging ? 'cursor-grabbing shadow-lg shadow-cyan-500/20' : ''} ${className}`}
+      style={{ 
+        left: position.x, 
+        top: position.y, 
+        zIndex: isDragging ? 50 : 5,
+        pointerEvents: 'auto'
+      }}
+      onMouseDown={handleMouseDown}
+      data-testid={`widget-${id}`}
+    >
+      <div className="widget-drag-handle h-5 bg-white/5 flex items-center justify-center cursor-grab hover:bg-white/10 transition-colors">
+        <div className="flex gap-0.5">
+          <div className="w-1 h-1 rounded-full bg-white/30" />
+          <div className="w-1 h-1 rounded-full bg-white/30" />
+          <div className="w-1 h-1 rounded-full bg-white/30" />
+        </div>
+      </div>
+      {children}
+    </motion.div>
+  );
+}
+
 function DesktopWidgets({ time, weather, notifications }: { 
   time: Date; 
   weather?: { current_weather?: { temperature: number; windspeed: number; weathercode: number } };
   notifications?: string[];
 }) {
+  const [widgetPositions, setWidgetPositions] = useState<WidgetPositions>(() => {
+    const saved = localStorage.getItem('aethex-widget-positions');
+    return saved ? JSON.parse(saved) : getDefaultWidgetPositions();
+  });
+
   const { data: metrics } = useQuery({
     queryKey: ['os-metrics'],
     queryFn: async () => {
@@ -1088,6 +1196,24 @@ function DesktopWidgets({ time, weather, notifications }: {
     },
     refetchInterval: 30000,
   });
+
+  const { data: leaderboard } = useQuery({
+    queryKey: ['os-leaderboard'],
+    queryFn: async () => {
+      const res = await fetch('/api/directory/architects');
+      const data = await res.json();
+      return data.slice(0, 5);
+    },
+    refetchInterval: 60000,
+  });
+
+  const handlePositionChange = useCallback((id: string, pos: WidgetPosition) => {
+    setWidgetPositions(prev => {
+      const updated = { ...prev, [id]: pos };
+      localStorage.setItem('aethex-widget-positions', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   const getWeatherIcon = (code: number) => {
     if (code === 0) return '☀️';
@@ -1100,79 +1226,208 @@ function DesktopWidgets({ time, weather, notifications }: {
     return '⛈️';
   };
 
+  const getNotificationCategory = (text: string) => {
+    if (text.toLowerCase().includes('security') || text.toLowerCase().includes('aegis')) 
+      return { color: 'text-green-400', icon: <Shield className="w-3 h-3" /> };
+    if (text.toLowerCase().includes('project')) 
+      return { color: 'text-purple-400', icon: <FolderOpen className="w-3 h-3" /> };
+    return { color: 'text-cyan-400', icon: <Users className="w-3 h-3" /> };
+  };
+
   return (
-    <div className="absolute top-4 right-4 space-y-3 z-10">
-      <motion.div 
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
-      >
-        <div className="text-3xl font-mono text-white font-bold">
-          {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    <div className="pointer-events-none absolute inset-0">
+      <DraggableWidget id="clock" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+        <div className="p-3">
+          <div className="text-2xl font-mono text-white font-bold">
+            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+          <div className="text-xs text-white/50 font-mono">
+            {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
+          </div>
         </div>
-        <div className="text-xs text-white/50 font-mono">
-          {time.toLocaleDateString([], { weekday: 'long', month: 'short', day: 'numeric' })}
-        </div>
-      </motion.div>
+      </DraggableWidget>
 
       {weather?.current_weather && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
-        >
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Weather</div>
-          <div className="flex items-center gap-3">
-            <span className="text-3xl">{getWeatherIcon(weather.current_weather.weathercode)}</span>
-            <div>
-              <div className="text-2xl font-mono text-white">{Math.round(weather.current_weather.temperature)}°F</div>
-              <div className="text-xs text-white/50">Wind: {weather.current_weather.windspeed} mph</div>
+        <DraggableWidget id="weather" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Weather</div>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{getWeatherIcon(weather.current_weather.weathercode)}</span>
+              <div>
+                <div className="text-xl font-mono text-white">{Math.round(weather.current_weather.temperature)}°F</div>
+                <div className="text-xs text-white/50">Wind: {weather.current_weather.windspeed} mph</div>
+              </div>
             </div>
           </div>
-        </motion.div>
+        </DraggableWidget>
       )}
       
       {metrics && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52"
-        >
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-2">System Status</div>
-          <div className="space-y-1 text-xs font-mono">
-            <div className="flex justify-between">
-              <span className="text-white/60">Architects</span>
-              <span className="text-cyan-400">{metrics.totalProfiles || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/60">Projects</span>
-              <span className="text-purple-400">{metrics.totalProjects || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-white/60">Online</span>
-              <span className="text-green-400">{metrics.onlineUsers || 0}</span>
+        <DraggableWidget id="status" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2">System Status</div>
+            <div className="space-y-1.5 text-xs font-mono">
+              <div className="flex justify-between items-center">
+                <span className="text-white/60">Architects</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-cyan-400">{metrics.totalProfiles || 0}</span>
+                  <TrendingUp className="w-3 h-3 text-green-400" />
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-white/60">Projects</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-purple-400">{metrics.totalProjects || 0}</span>
+                  <TrendingUp className="w-3 h-3 text-green-400" />
+                </div>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-white/60">Online</span>
+                <span className="text-green-400">{metrics.onlineUsers || 0}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-white/60">Verified</span>
+                <span className="text-yellow-400">{metrics.verifiedUsers || 0}</span>
+              </div>
             </div>
           </div>
-        </motion.div>
+        </DraggableWidget>
       )}
 
       {notifications && notifications.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-lg p-4 w-52 max-h-32 overflow-hidden"
-        >
-          <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Notifications</div>
-          <div className="space-y-1 text-xs">
-            {notifications.slice(0, 3).map((n, i) => (
-              <div key={i} className="text-white/70 truncate">{n}</div>
-            ))}
+        <DraggableWidget id="notifications" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2">Notifications</div>
+            <div className="space-y-1.5 text-xs max-h-24 overflow-y-auto">
+              {notifications.slice(0, 4).map((n, i) => {
+                const cat = getNotificationCategory(n);
+                return (
+                  <div key={i} className={`flex items-center gap-2 ${cat.color}`}>
+                    {cat.icon}
+                    <span className="truncate text-white/70">{n}</span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </motion.div>
+        </DraggableWidget>
       )}
+
+      {leaderboard && leaderboard.length > 0 && (
+        <DraggableWidget id="leaderboard" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Award className="w-3 h-3 text-yellow-400" />
+              Top Architects
+            </div>
+            <div className="space-y-1.5 text-xs font-mono">
+              {leaderboard.map((arch: any, i: number) => (
+                <div key={arch.id} className="flex items-center gap-2">
+                  <span className={`w-4 text-center ${i === 0 ? 'text-yellow-400' : i === 1 ? 'text-gray-300' : i === 2 ? 'text-amber-600' : 'text-white/40'}`}>
+                    {i + 1}
+                  </span>
+                  <span className="flex-1 truncate text-white/80">{arch.username || arch.display_name}</span>
+                  <span className="text-cyan-400">Lv{arch.level || 1}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </DraggableWidget>
+      )}
+
+      {metrics && (
+        <DraggableWidget id="pipeline" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+              <Layers className="w-3 h-3 text-purple-400" />
+              Project Pipeline
+            </div>
+            <div className="space-y-2">
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-white/60">Active</span>
+                  <span className="text-green-400">{metrics.totalProjects || 0}</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-green-500 rounded-full" style={{ width: '75%' }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-white/60">In Review</span>
+                  <span className="text-yellow-400">2</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-yellow-500 rounded-full" style={{ width: '40%' }} />
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="text-white/60">Completed</span>
+                  <span className="text-cyan-400">12</span>
+                </div>
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-500 rounded-full" style={{ width: '100%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </DraggableWidget>
+      )}
+
+      {metrics && (
+        <DraggableWidget id="kpi" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-52">
+          <div className="p-3">
+            <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+              <BarChart3 className="w-3 h-3 text-cyan-400" />
+              Key Metrics
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/5 rounded p-2 text-center">
+                <div className="text-lg font-mono text-cyan-400">{metrics.totalXP || 0}</div>
+                <div className="text-[10px] text-white/50">Total XP</div>
+              </div>
+              <div className="bg-white/5 rounded p-2 text-center">
+                <div className="text-lg font-mono text-purple-400">{metrics.avgLevel || 1}</div>
+                <div className="text-[10px] text-white/50">Avg Level</div>
+              </div>
+              <div className="bg-white/5 rounded p-2 text-center">
+                <div className="text-lg font-mono text-green-400">{metrics.verifiedUsers || 0}</div>
+                <div className="text-[10px] text-white/50">Verified</div>
+              </div>
+              <div className="bg-white/5 rounded p-2 text-center">
+                <div className="text-lg font-mono text-yellow-400">98%</div>
+                <div className="text-[10px] text-white/50">Uptime</div>
+              </div>
+            </div>
+          </div>
+        </DraggableWidget>
+      )}
+
+      <DraggableWidget id="heartbeat" positions={widgetPositions} onPositionChange={handlePositionChange} className="w-48">
+        <div className="p-3">
+          <div className="text-xs text-white/50 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <Activity className="w-3 h-3 text-red-400" />
+            Network Pulse
+          </div>
+          <div className="flex items-center justify-center py-2">
+            <motion.div
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+              className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center"
+            >
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut", delay: 0.1 }}
+                className="w-4 h-4 rounded-full bg-red-500"
+              />
+            </motion.div>
+          </div>
+          <div className="text-center text-xs text-white/60 font-mono">
+            <span className="text-green-400">●</span> All Systems Operational
+          </div>
+        </div>
+      </DraggableWidget>
     </div>
   );
 }
