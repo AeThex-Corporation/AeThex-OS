@@ -378,14 +378,14 @@ export default function AeThexOS() {
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
-    { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
+    { id: "chat", title: "AeThex AI", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
+    { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
     { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
-    { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
-    { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
+    { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
+    { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
     { id: "arcade", title: "Arcade", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
-    { id: "chat", title: "Comms", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
@@ -1667,14 +1667,14 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                 onClick={() => onAppClick(app)}
                 whileHover={{ scale: 1.1, y: -2 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-9 h-9 rounded-lg flex items-center justify-center relative transition-colors"
+                className="w-7 h-7 rounded-md flex items-center justify-center relative transition-colors"
                 style={{ 
                   background: isOpen ? `${clearanceTheme.accent}20` : 'rgba(255,255,255,0.05)',
                   border: isOpen ? `1px solid ${clearanceTheme.accent}40` : '1px solid transparent'
                 }}
                 data-testid={`dock-${appId}`}
               >
-                <div className="w-5 h-5" style={{ color: isOpen ? clearanceTheme.accent : 'rgba(255,255,255,0.7)' }}>
+                <div className="w-4 h-4" style={{ color: isOpen ? clearanceTheme.accent : 'rgba(255,255,255,0.7)' }}>
                   {app.icon}
                 </div>
                 {isOpen && (
