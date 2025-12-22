@@ -30,6 +30,9 @@ export interface IStorage {
   getAlerts(): Promise<any[]>;
   updateAlert(id: string, updates: any): Promise<any>;
   
+  // Notifications (for WebSocket)
+  getNotifications(): Promise<any[]>;
+  
   // Chat Messages (AI memory)
   getChatHistory(userId: string, limit?: number): Promise<ChatMessage[]>;
   saveChatMessage(id: string, userId: string, role: string, content: string): Promise<void>;
@@ -47,6 +50,38 @@ export interface IStorage {
 }
 
 export class SupabaseStorage implements IStorage {
+    // Create a new site
+    async createSite(site: any): Promise<any> {
+      const { data, error } = await supabase
+        .from('aethex_sites')
+        .insert(site)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    // Update a site
+    async updateSite(id: string, updates: any): Promise<any> {
+      const { data, error } = await supabase
+        .from('aethex_sites')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw new Error(error.message);
+      return data;
+    }
+
+    // Delete a site
+    async deleteSite(id: string): Promise<boolean> {
+      const { error, count } = await supabase
+        .from('aethex_sites')
+        .delete({ count: 'exact' })
+        .eq('id', id);
+      if (error) throw new Error(error.message);
+      return (count ?? 0) > 0;
+    }
   
   async getProfiles(): Promise<Profile[]> {
     const { data, error } = await supabase
@@ -246,6 +281,38 @@ export class SupabaseStorage implements IStorage {
     }
   }
   
+  async getNotifications(): Promise<any[]> {
+    // Get recent activity - applications, alerts, etc.
+    const [applications, alerts] = await Promise.all([
+      this.getApplications(),
+      this.getAlerts()
+    ]);
+    
+    // Transform into notification format
+    const notifications = [
+      ...applications.slice(0, 5).map(app => ({
+        id: app.id,
+        type: 'application',
+        message: `New application from ${app.full_name}`,
+        timestamp: app.submitted_at,
+        unread: true
+      })),
+      ...alerts.filter(a => !a.is_resolved).slice(0, 5).map(alert => ({
+        id: alert.id,
+        type: 'alert',
+        message: alert.message,
+        severity: alert.severity,
+        timestamp: alert.created_at,
+        unread: true
+      }))
+    ];
+    
+    // Sort by timestamp desc
+    return notifications.sort((a, b) => 
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }
+  
   async getMetrics(): Promise<{
     totalProfiles: number;
     totalProjects: number;
@@ -276,3 +343,7 @@ export class SupabaseStorage implements IStorage {
 }
 
 export const storage = new SupabaseStorage();
+
+// Export helper functions for WebSocket
+export const getAlerts = () => storage.getAlerts();
+export const getNotifications = () => storage.getNotifications();

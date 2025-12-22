@@ -350,10 +350,47 @@ export async function registerRoutes(
   // ========== NEW ADMIN ROUTES ==========
   
   // Get all aethex sites (admin only)
+  // List all sites
   app.get("/api/sites", requireAdmin, async (req, res) => {
     try {
       const sites = await storage.getSites();
       res.json(sites);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create a new site
+  app.post("/api/sites", requireAdmin, async (req, res) => {
+    try {
+      const site = await storage.createSite(req.body);
+      res.status(201).json(site);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Update a site
+  app.patch("/api/sites/:id", requireAdmin, async (req, res) => {
+    try {
+      const site = await storage.updateSite(req.params.id, req.body);
+      if (!site) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+      res.json(site);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete a site
+  app.delete("/api/sites/:id", requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteSite(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Site not found" });
+      }
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }

@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
@@ -11,7 +12,13 @@ export default function AdminSites() {
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
 
-  const { data: sites, isLoading } = useQuery({
+  const [editingSite, setEditingSite] = useState<any | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [formSuccess, setFormSuccess] = useState<string | null>(null);
+
+  const { data: sites, isLoading, refetch } = useQuery({
     queryKey: ["sites"],
     queryFn: async () => {
       const res = await fetch("/api/sites");
@@ -19,6 +26,58 @@ export default function AdminSites() {
       return res.json();
     },
   });
+  // Add or update site
+  const handleFormSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setFormLoading(true);
+    setFormError(null);
+    setFormSuccess(null);
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    const payload: any = Object.fromEntries(formData.entries());
+    try {
+      let res;
+      if (editingSite) {
+        res = await fetch(`/api/sites/${editingSite.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("/api/sites", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+      if (!res.ok) throw new Error("Failed to save site");
+      setFormSuccess(editingSite ? "Site updated!" : "Site created!");
+      setShowForm(false);
+      setEditingSite(null);
+      form.reset();
+      await refetch();
+    } catch (err: any) {
+      setFormError(err.message || "Error");
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  // Delete site
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Delete this site?")) return;
+    setFormLoading(true);
+    setFormError(null);
+    try {
+      const res = await fetch(`/api/sites/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to delete site");
+      await refetch();
+    } catch (err: any) {
+      setFormError(err.message || "Error");
+    } finally {
+      setFormLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -49,14 +108,46 @@ export default function AdminSites() {
 
       <div className="flex-1 overflow-auto">
         <div className="p-8">
-          <div className="mb-8">
-            <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
-              AeThex Sites
-            </h2>
-            <p className="text-muted-foreground text-sm mt-1">
-              {sites?.length || 0} monitored sites
-            </p>
+          <div className="mb-8 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">
+                AeThex Sites
+              </h2>
+              <p className="text-muted-foreground text-sm mt-1">
+                {sites?.length || 0} monitored sites
+              </p>
+            </div>
+            <button
+              className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary/80 transition"
+              onClick={() => { setShowForm(true); setEditingSite(null); }}
+            >
+              + Add Site
+            </button>
           </div>
+
+          {formError && <div className="mb-4 text-red-500">{formError}</div>}
+          {formSuccess && <div className="mb-4 text-green-500">{formSuccess}</div>}
+
+          {showForm && (
+            <form className="mb-8 bg-card/50 border border-white/10 p-6 rounded" onSubmit={handleFormSubmit}>
+              <h3 className="font-bold text-white mb-2">{editingSite ? "Edit Site" : "Add Site"}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input name="name" defaultValue={editingSite?.name || ""} placeholder="Name" required className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="url" defaultValue={editingSite?.url || ""} placeholder="URL" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="status" defaultValue={editingSite?.status || "online"} placeholder="Status" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="uptime" defaultValue={editingSite?.uptime || ""} placeholder="Uptime (%)" type="number" step="0.01" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="response_time" defaultValue={editingSite?.response_time || ""} placeholder="Response Time (ms)" type="number" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="users" defaultValue={editingSite?.users || ""} placeholder="Users" type="number" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+                <input name="requests" defaultValue={editingSite?.requests || ""} placeholder="Requests" type="number" className="p-2 rounded bg-background/50 border border-white/10 text-white" />
+              </div>
+              <div className="mt-4 flex gap-2">
+                <button type="submit" className="bg-primary text-white px-4 py-2 rounded font-bold hover:bg-primary/80 transition" disabled={formLoading}>
+                  {formLoading ? "Saving..." : (editingSite ? "Update" : "Create")}
+                </button>
+                <button type="button" className="px-4 py-2 rounded border border-white/10 text-white" onClick={() => { setShowForm(false); setEditingSite(null); }}>Cancel</button>
+              </div>
+            </form>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {isLoading ? (
@@ -85,12 +176,24 @@ export default function AdminSites() {
                       <Globe className="w-5 h-5 text-primary" />
                       <h3 className="font-display text-white uppercase text-sm">{site.name}</h3>
                     </div>
-                    <div className={`flex items-center gap-1 text-xs ${getStatusColor(site.status)}`}>
-                      {getStatusIcon(site.status)}
-                      {site.status || 'unknown'}
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="text-xs text-blue-400 hover:underline"
+                        onClick={() => { setEditingSite(site); setShowForm(true); }}
+                        title="Edit"
+                      >Edit</button>
+                      <button
+                        className="text-xs text-red-400 hover:underline"
+                        onClick={() => handleDelete(site.id)}
+                        title="Delete"
+                        disabled={formLoading}
+                      >Delete</button>
                     </div>
                   </div>
-                  
+                  <div className={`flex items-center gap-1 text-xs ${getStatusColor(site.status)}`}>
+                    {getStatusIcon(site.status)}
+                    {site.status || 'unknown'}
+                  </div>
                   {site.url && (
                     <a 
                       href={site.url} 
@@ -101,7 +204,6 @@ export default function AdminSites() {
                       {site.url} <ExternalLink className="w-3 h-3" />
                     </a>
                   )}
-                  
                   <div className="grid grid-cols-2 gap-4 text-xs">
                     <div>
                       <div className="text-muted-foreground">Uptime</div>
@@ -120,7 +222,6 @@ export default function AdminSites() {
                       <div className="text-white font-bold">{site.requests || 0}</div>
                     </div>
                   </div>
-                  
                   {site.last_check && (
                     <div className="mt-4 pt-4 border-t border-white/5 text-xs text-muted-foreground">
                       Last check: {new Date(site.last_check).toLocaleString()}
