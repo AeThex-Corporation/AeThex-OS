@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 
 // This is using Replit's AI Integrations service, which provides OpenAI-compatible API access without requiring your own OpenAI API key.
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user

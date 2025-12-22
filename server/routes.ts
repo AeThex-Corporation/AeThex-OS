@@ -1,9 +1,9 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { loginSchema, signupSchema } from "@shared/schema";
-import { supabase } from "./supabase";
-import { getChatResponse } from "./openai";
+import { supabase } from "./supabase.js";
+import { getChatResponse } from "./openai.js";
 
 // Extend session type
 declare module 'express-session' {

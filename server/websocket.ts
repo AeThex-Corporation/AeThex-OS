@@ -1,6 +1,6 @@
 import { Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import { getAlerts, getNotifications } from "./storage";
+import { getAlerts, getNotifications } from "./storage.js";
 
 export function setupWebSocket(httpServer: Server) {
   const io = new SocketIOServer(httpServer, {
