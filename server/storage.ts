@@ -1,4 +1,4 @@
-import { type Profile, type Project, type ChatMessage } from "@shared/schema";
+import { type Profile, type Project, type ChatMessage } from "../shared/schema.js";
 import { supabase } from "./supabase.js";
 
 export interface IStorage {

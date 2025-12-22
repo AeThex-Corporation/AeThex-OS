@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage.js";
-import { loginSchema, signupSchema } from "@shared/schema";
+import { loginSchema, signupSchema } from "../shared/schema.js";
 import { supabase } from "./supabase.js";
 import { getChatResponse } from "./openai.js";
 
