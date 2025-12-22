@@ -489,6 +489,18 @@ export async function registerRoutes(
   
   const chatRateLimits = new Map<string, { count: number; resetTime: number }>();
   
+  // Get chat history
+  app.get("/api/chat/history", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId!;
+      const history = await storage.getChatHistory(userId, 20);
+      res.json({ history });
+    } catch (err: any) {
+      console.error("Get chat history error:", err);
+      res.status(500).json({ error: "Failed to get chat history" });
+    }
+  });
+  
   app.post("/api/chat", async (req, res) => {
     try {
       const userId = req.session?.userId;
@@ -517,7 +529,27 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Message is required" });
       }
       
-      const response = await getChatResponse(message, history);
+      // Save user message if user is authenticated
+      if (userId) {
+        const messageId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await storage.saveChatMessage(messageId, userId, 'user', message);
+      }
+      
+      // Get full chat history for context if user is authenticated
+      let fullHistory = history || [];
+      if (userId) {
+        const savedHistory = await storage.getChatHistory(userId, 20);
+        fullHistory = savedHistory.map(msg => ({ role: msg.role, content: msg.content }));
+      }
+      
+      const response = await getChatResponse(message, fullHistory, userId);
+      
+      // Save assistant response if user is authenticated
+      if (userId) {
+        const responseId = `assistant_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await storage.saveChatMessage(responseId, userId, 'assistant', response);
+      }
+      
       res.json({ response });
     } catch (err: any) {
       console.error("Chat error:", err);

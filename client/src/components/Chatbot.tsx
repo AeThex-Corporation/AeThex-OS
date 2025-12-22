@@ -17,7 +17,7 @@ export function Chatbot() {
     {
       id: "welcome",
       role: "assistant",
-      content: "Hi! I'm the AeThex assistant. I can help you navigate the platform, explain our certification system, or answer questions about the ecosystem. How can I help you today?",
+      content: "AEGIS ONLINE. Security protocols initialized. Neural link established. How can I assist with your security operations today?",
       timestamp: new Date(),
     },
   ]);
@@ -28,6 +28,39 @@ export function Chatbot() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Load chat history when opening the chatbot
+  useEffect(() => {
+    if (isOpen) {
+      loadChatHistory();
+    }
+  }, [isOpen]);
+
+  const loadChatHistory = async () => {
+    try {
+      const response = await fetch("/api/chat/history", {
+        method: "GET",
+        credentials: "include",
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.history && data.history.length > 0) {
+          const historyMessages: Message[] = data.history.map((msg: any) => ({
+            id: msg.id,
+            role: msg.role,
+            content: msg.content,
+            timestamp: new Date(msg.created_at),
+          }));
+          
+          // Replace welcome message with loaded history
+          setMessages(prev => [...historyMessages, ...prev.slice(1)]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load chat history:", error);
+    }
+  };
 
   // Don't render chatbot on the OS page - it has its own environment
   if (location === "/os") {
@@ -126,13 +159,13 @@ export function Chatbot() {
             {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-secondary/20 rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-secondary" />
+                <div className="w-8 h-8 bg-red-500/20 rounded-full flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-red-500" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-white">AeThex Assistant</div>
-                  <div className="text-xs text-green-500 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Online
+                  <div className="text-sm font-bold text-white">AEGIS</div>
+                  <div className="text-xs text-red-500 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" /> Security Active
                   </div>
                 </div>
               </div>

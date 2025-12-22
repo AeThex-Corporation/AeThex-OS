@@ -205,6 +205,47 @@ export class SupabaseStorage implements IStorage {
     return data;
   }
   
+  // Chat Messages (AI memory)
+  async getChatHistory(userId: string, limit: number = 50): Promise<ChatMessage[]> {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    
+    if (error) return [];
+    return (data || []).reverse() as ChatMessage[]; // Reverse to get chronological order
+  }
+  
+  async saveChatMessage(id: string, userId: string, role: string, content: string): Promise<void> {
+    const { error } = await supabase
+      .from('chat_messages')
+      .insert({
+        id,
+        user_id: userId,
+        role,
+        content,
+      });
+    
+    if (error) {
+      console.error('Save chat message error:', error);
+      throw new Error('Failed to save chat message');
+    }
+  }
+  
+  async clearChatHistory(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from('chat_messages')
+      .delete()
+      .eq('user_id', userId);
+    
+    if (error) {
+      console.error('Clear chat history error:', error);
+      throw new Error('Failed to clear chat history');
+    }
+  }
+  
   async getMetrics(): Promise<{
     totalProfiles: number;
     totalProjects: number;
