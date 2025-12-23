@@ -1,4 +1,12 @@
-import { type Profile, type Project, type ChatMessage } from "../shared/schema.js";
+import {
+  type Profile,
+  type Project,
+  type ChatMessage,
+  type AethexSite,
+  type Application,
+  type Achievement,
+  type AethexAlert,
+} from "../shared/schema.js";
 import { supabase } from "./supabase.js";
 
 export interface IStorage {
@@ -8,27 +16,30 @@ export interface IStorage {
   getProfileByUsername(username: string): Promise<Profile | undefined>;
   updateProfile(id: string, data: Partial<Profile>): Promise<Profile | undefined>;
   getLeadershipProfiles(): Promise<Profile[]>;
-  
+
   // Projects
   getProjects(): Promise<Project[]>;
   getProject(id: string): Promise<Project | undefined>;
-  
+
   // Sites
-  getSites(): Promise<any[]>;
-  
+  getSites(): Promise<AethexSite[]>;
+  createSite(site: Partial<AethexSite>): Promise<AethexSite>;
+  updateSite(id: string, updates: Partial<AethexSite>): Promise<AethexSite>;
+  deleteSite(id: string): Promise<boolean>;
+
   // Auth Logs
   getAuthLogs(): Promise<any[]>;
-  
+
   // Achievements
-  getAchievements(): Promise<any[]>;
-  
+  getAchievements(): Promise<Achievement[]>;
+
   // Applications
-  getApplications(): Promise<any[]>;
-  updateApplication(id: string, updates: any): Promise<any>;
-  
+  getApplications(): Promise<Application[]>;
+  updateApplication(id: string, updates: Partial<Application>): Promise<Application>;
+
   // Alerts
-  getAlerts(): Promise<any[]>;
-  updateAlert(id: string, updates: any): Promise<any>;
+  getAlerts(): Promise<AethexAlert[]>;
+  updateAlert(id: string, updates: Partial<AethexAlert>): Promise<AethexAlert>;
   
   // Notifications (for WebSocket)
   getNotifications(): Promise<any[]>;
@@ -50,38 +61,54 @@ export interface IStorage {
 }
 
 export class SupabaseStorage implements IStorage {
-    // Create a new site
-    async createSite(site: any): Promise<any> {
-      const { data, error } = await supabase
-        .from('aethex_sites')
-        .insert(site)
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
-    }
+  private filterDefined<T extends Record<string, any>>(updates: Partial<T>): Partial<T> {
+    return Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    ) as Partial<T>;
+  }
 
-    // Update a site
-    async updateSite(id: string, updates: any): Promise<any> {
-      const { data, error } = await supabase
-        .from('aethex_sites')
-        .update({ ...updates, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single();
-      if (error) throw new Error(error.message);
-      return data;
+  private ensureUpdates<T extends Record<string, any>>(updates: Partial<T>, entity: string): asserts updates is Partial<T> & Record<string, any> {
+    if (Object.keys(updates).length === 0) {
+      throw new Error(`No ${entity} fields provided for update`);
     }
+  }
 
-    // Delete a site
-    async deleteSite(id: string): Promise<boolean> {
-      const { error, count } = await supabase
-        .from('aethex_sites')
-        .delete({ count: 'exact' })
-        .eq('id', id);
-      if (error) throw new Error(error.message);
-      return (count ?? 0) > 0;
-    }
+  // Create a new site
+  async createSite(site: Partial<AethexSite>): Promise<AethexSite> {
+    const cleanSite = this.filterDefined<AethexSite>(site);
+    const { data, error } = await supabase
+      .from('aethex_sites')
+      .insert(cleanSite)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as AethexSite;
+  }
+
+  // Update a site
+  async updateSite(id: string, updates: Partial<AethexSite>): Promise<AethexSite> {
+    const cleanUpdates = this.filterDefined<AethexSite>(updates);
+    this.ensureUpdates(cleanUpdates, 'site');
+    const { data, error } = await supabase
+      .from('aethex_sites')
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as AethexSite;
+  }
+
+  // Delete a site
+  async deleteSite(id: string): Promise<boolean> {
+    const { error, data } = await supabase
+      .from('aethex_sites')
+      .delete()
+      .eq('id', id)
+      .select('id');
+    if (error) throw new Error(error.message);
+    return (data?.length ?? 0) > 0;
+  }
   
   async getProfiles(): Promise<Profile[]> {
     const { data, error } = await supabase
@@ -116,15 +143,27 @@ export class SupabaseStorage implements IStorage {
   }
   
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | undefined> {
+    const cleanUpdates = this.filterDefined<Profile>(updates);
+    this.ensureUpdates(cleanUpdates, 'profile');
     const { data, error } = await supabase
       .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error || !data) return undefined;
     return data as Profile;
+  }
+
+  async getLeadershipProfiles(): Promise<Profile[]> {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('role', ['oversee', 'admin']);
+
+    if (error || !data) return [];
+    return data as Profile[];
   }
   
   async getProjects(): Promise<Project[]> {
@@ -148,16 +187,16 @@ export class SupabaseStorage implements IStorage {
     return data as Project;
   }
   
-  async getSites(): Promise<any[]> {
+  async getSites(): Promise<AethexSite[]> {
     const { data, error } = await supabase
       .from('aethex_sites')
       .select('*')
       .order('last_check', { ascending: false });
-    
-    if (error) return [];
-    return data || [];
+
+    if (error || !data) return [];
+    return data as AethexSite[];
   }
-  
+
   async getAuthLogs(): Promise<any[]> {
     const { data, error } = await supabase
       .from('auth_logs')
@@ -169,43 +208,46 @@ export class SupabaseStorage implements IStorage {
     return data || [];
   }
   
-  async getAchievements(): Promise<any[]> {
+  async getAchievements(): Promise<Achievement[]> {
     const { data, error } = await supabase
       .from('achievements')
       .select('*')
       .order('name', { ascending: true });
-    
-    if (error) return [];
-    return data || [];
+
+    if (error || !data) return [];
+    return data as Achievement[];
   }
-  
-  async getApplications(): Promise<any[]> {
+
+  async getApplications(): Promise<Application[]> {
     const { data, error } = await supabase
       .from('applications')
       .select('*')
       .order('submitted_at', { ascending: false });
-    
-    if (error) return [];
-    return data || [];
+
+    if (error || !data) return [];
+    return data as Application[];
   }
-  
-  async getAlerts(): Promise<any[]> {
+
+  async getAlerts(): Promise<AethexAlert[]> {
     const { data, error } = await supabase
       .from('aethex_alerts')
       .select('*')
       .order('created_at', { ascending: false })
       .limit(50);
-    
-    if (error) return [];
-    return data || [];
+
+    if (error || !data) return [];
+    return data as AethexAlert[];
   }
   
-  async updateAlert(id: string, updates: any): Promise<any> {
-    const updateData: any = {};
-    if ('is_resolved' in updates) {
-      updateData.is_resolved = updates.is_resolved;
-    }
-    
+  async updateAlert(id: string, updates: Partial<AethexAlert>): Promise<AethexAlert> {
+    const updateData = this.filterDefined<AethexAlert>({
+      message: updates.message,
+      severity: updates.severity,
+      is_resolved: updates.is_resolved,
+      resolved_at: updates.resolved_at,
+    });
+    this.ensureUpdates(updateData, 'alert');
+
     const { data, error } = await supabase
       .from('aethex_alerts')
       .update(updateData)
@@ -217,15 +259,16 @@ export class SupabaseStorage implements IStorage {
       console.error('Update alert error:', error);
       throw new Error(error.message);
     }
-    return data;
+    return data as AethexAlert;
   }
-  
-  async updateApplication(id: string, updates: any): Promise<any> {
-    const updateData: any = {};
-    if ('status' in updates) {
-      updateData.status = updates.status;
-    }
-    
+
+  async updateApplication(id: string, updates: Partial<Application>): Promise<Application> {
+    const updateData = this.filterDefined<Application>({
+      status: updates.status,
+      response_message: updates.response_message,
+    });
+    this.ensureUpdates(updateData, 'application');
+
     const { data, error } = await supabase
       .from('applications')
       .update(updateData)
@@ -237,7 +280,7 @@ export class SupabaseStorage implements IStorage {
       console.error('Update application error:', error);
       throw new Error(error.message);
     }
-    return data;
+    return data as Application;
   }
   
   // Chat Messages (AI memory)
