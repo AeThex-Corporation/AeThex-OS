@@ -91,7 +91,15 @@ async function fetchRecentAlerts(): Promise<string> {
     if (recentAlerts.length === 0) return "No recent security alerts.";
     
     return `RECENT ALERTS:
-${recentAlerts.map(alert => `- ${alert.type}: ${alert.message} (${new Date(alert.created_at).toLocaleString()})`).join('\n')}`;
+${recentAlerts.map(alert => {
+  let dateStr = 'unknown';
+  if (alert.created_at) {
+    try {
+      dateStr = new Date(alert.created_at).toLocaleString();
+    } catch {}
+  }
+  return `- ${alert.type}: ${alert.message} (${dateStr})`;
+}).join('\n')}`;
   } catch (error) {
     return "Alert system offline - potential network intrusion.";
   }

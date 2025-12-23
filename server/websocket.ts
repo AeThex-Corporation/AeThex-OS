@@ -159,7 +159,7 @@ function startPeriodicUpdates(io: SocketIOServer) {
       const alerts = await storage.getAlerts();
       const newAlerts = alerts.filter(a => 
         !a.is_resolved && 
-        new Date(a.created_at) > lastAlertCheck
+        a.created_at && !isNaN(new Date(a.created_at).getTime()) && new Date(a.created_at) > lastAlertCheck
       );
 
       if (newAlerts.length > 0) {
