@@ -8,7 +8,7 @@ import session from "express-session";
 import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
-import { setupWebSocket } from "./websocket.js";
+import { setupWebSocket, websocket } from "./websocket.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -97,7 +97,9 @@ app.use((req, res, next) => {
   await registerRoutes(httpServer, app);
 
   // Setup WebSocket server for real-time notifications and Aegis alerts
-  setupWebSocket(httpServer);
+  const io = setupWebSocket(httpServer);
+  websocket.setIO(io);
+  log("WebSocket server initialized", "websocket");
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -129,6 +131,7 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      log(`WebSocket available at ws://localhost:${port}/socket.io`, "websocket");
     },
   );
 })();

@@ -187,6 +187,39 @@ export async function registerRoutes(
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Get current user's achievements
+  app.get("/api/me/achievements", requireAuth, async (req, res) => {
+    try {
+      const userAchievements = await storage.getUserAchievements(req.session.userId!);
+      res.json(userAchievements);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get current user's passport
+  app.get("/api/me/passport", requireAuth, async (req, res) => {
+    try {
+      const passport = await storage.getUserPassport(req.session.userId!);
+      if (!passport) {
+        return res.status(404).json({ error: "Passport not found" });
+      }
+      res.json(passport);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create passport for current user
+  app.post("/api/me/passport", requireAuth, async (req, res) => {
+    try {
+      const passport = await storage.createUserPassport(req.session.userId!);
+      res.json(passport);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   
   // ========== PUBLIC API ROUTES ==========
   
@@ -406,8 +439,8 @@ export async function registerRoutes(
     }
   });
   
-  // Get achievements (admin only)
-  app.get("/api/achievements", requireAdmin, async (req, res) => {
+  // Get all achievements (public - shows what achievements exist)
+  app.get("/api/achievements", async (req, res) => {
     try {
       const achievements = await storage.getAchievements();
       res.json(achievements);
@@ -591,6 +624,128 @@ export async function registerRoutes(
     } catch (err: any) {
       console.error("Chat error:", err);
       res.status(500).json({ error: "Failed to get response" });
+    }
+  });
+
+  // ========== AXIOM OPPORTUNITIES ROUTES ==========
+  
+  // Get all opportunities (public)
+  app.get("/api/opportunities", async (req, res) => {
+    try {
+      const opportunities = await storage.getOpportunities();
+      res.json(opportunities);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get single opportunity
+  app.get("/api/opportunities/:id", async (req, res) => {
+    try {
+      const opportunity = await storage.getOpportunity(req.params.id);
+      if (!opportunity) {
+        return res.status(404).json({ error: "Opportunity not found" });
+      }
+      res.json(opportunity);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create opportunity (admin only)
+  app.post("/api/opportunities", requireAdmin, async (req, res) => {
+    try {
+      const opportunity = await storage.createOpportunity(req.body);
+      res.status(201).json(opportunity);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Update opportunity (admin only)
+  app.patch("/api/opportunities/:id", requireAdmin, async (req, res) => {
+    try {
+      const opportunity = await storage.updateOpportunity(req.params.id, req.body);
+      if (!opportunity) {
+        return res.status(404).json({ error: "Opportunity not found" });
+      }
+      res.json(opportunity);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete opportunity (admin only)
+  app.delete("/api/opportunities/:id", requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteOpportunity(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Opportunity not found" });
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ========== AXIOM EVENTS ROUTES ==========
+  
+  // Get all events (public)
+  app.get("/api/events", async (req, res) => {
+    try {
+      const events = await storage.getEvents();
+      res.json(events);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get single event
+  app.get("/api/events/:id", async (req, res) => {
+    try {
+      const event = await storage.getEvent(req.params.id);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json(event);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Create event (admin only)
+  app.post("/api/events", requireAdmin, async (req, res) => {
+    try {
+      const event = await storage.createEvent(req.body);
+      res.status(201).json(event);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Update event (admin only)
+  app.patch("/api/events/:id", requireAdmin, async (req, res) => {
+    try {
+      const event = await storage.updateEvent(req.params.id, req.body);
+      if (!event) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json(event);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Delete event (admin only)
+  app.delete("/api/events/:id", requireAdmin, async (req, res) => {
+    try {
+      const deleted = await storage.deleteEvent(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ error: "Event not found" });
+      }
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
   });
 

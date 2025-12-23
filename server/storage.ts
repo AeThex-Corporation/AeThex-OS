@@ -32,7 +32,12 @@ export interface IStorage {
 
   // Achievements
   getAchievements(): Promise<Achievement[]>;
-
+  getUserAchievements(userId: string): Promise<any[]>;
+  
+  // Passports
+  getUserPassport(userId: string): Promise<any | undefined>;
+  createUserPassport(userId: string): Promise<any>;
+  
   // Applications
   getApplications(): Promise<Application[]>;
   updateApplication(id: string, updates: Partial<Application>): Promise<Application>;
@@ -43,6 +48,20 @@ export interface IStorage {
   
   // Notifications (for WebSocket)
   getNotifications(): Promise<any[]>;
+  
+  // Opportunities
+  getOpportunities(): Promise<any[]>;
+  getOpportunity(id: string): Promise<any | undefined>;
+  createOpportunity(data: any): Promise<any>;
+  updateOpportunity(id: string, updates: any): Promise<any>;
+  deleteOpportunity(id: string): Promise<boolean>;
+  
+  // Events
+  getEvents(): Promise<any[]>;
+  getEvent(id: string): Promise<any | undefined>;
+  createEvent(data: any): Promise<any>;
+  updateEvent(id: string, updates: any): Promise<any>;
+  deleteEvent(id: string): Promise<boolean>;
   
   // Chat Messages (AI memory)
   getChatHistory(userId: string, limit?: number): Promise<ChatMessage[]>;
@@ -160,9 +179,10 @@ export class SupabaseStorage implements IStorage {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
-      .in('role', ['oversee', 'admin']);
-
-    if (error || !data) return [];
+      .in('role', ['admin', 'architect', 'oversee'])
+      .order('total_xp', { ascending: false });
+    
+    if (error) return [];
     return data as Profile[];
   }
   
@@ -218,6 +238,52 @@ export class SupabaseStorage implements IStorage {
     return data as Achievement[];
   }
 
+  async getUserAchievements(userId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('user_achievements')
+      .select(`
+        *,
+        achievement:achievements(*)
+      `)
+      .eq('user_id', userId)
+      .order('earned_at', { ascending: false });
+    
+    if (error) {
+      console.error('Get user achievements error:', error);
+      return [];
+    }
+    return data || [];
+  }
+
+  async getUserPassport(userId: string): Promise<any | undefined> {
+    const { data, error } = await supabase
+      .from('aethex_passports')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') return undefined; // No rows returned
+      console.error('Get user passport error:', error);
+      return undefined;
+    }
+    return data;
+  }
+
+  async createUserPassport(userId: string): Promise<any> {
+    const { data, error } = await supabase
+      .from('aethex_passports')
+      .insert({ user_id: userId })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Create user passport error:', error);
+      throw new Error(error.message);
+    }
+    return data;
+  }
+  
   async getApplications(): Promise<Application[]> {
     const { data, error } = await supabase
       .from('applications')
@@ -382,6 +448,118 @@ export class SupabaseStorage implements IStorage {
       totalXP,
       avgLevel: Math.round(avgLevel * 10) / 10,
     };
+  }
+
+  // ========== OPPORTUNITIES METHODS ==========
+  
+  async getOpportunities(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('aethex_opportunities')
+      .select('*')
+      .order('created_at', { ascending: false });
+    
+    if (error) return [];
+    return data || [];
+  }
+
+  async getOpportunity(id: string): Promise<any | undefined> {
+    const { data, error } = await supabase
+      .from('aethex_opportunities')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return undefined;
+    return data;
+  }
+
+  async createOpportunity(opportunityData: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('aethex_opportunities')
+      .insert(opportunityData)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async updateOpportunity(id: string, updates: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('aethex_opportunities')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async deleteOpportunity(id: string): Promise<boolean> {
+    const { error, count } = await supabase
+      .from('aethex_opportunities')
+      .delete({ count: 'exact' })
+      .eq('id', id);
+    
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0;
+  }
+
+  // ========== EVENTS METHODS ==========
+  
+  async getEvents(): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('aethex_events')
+      .select('*')
+      .order('date', { ascending: true });
+    
+    if (error) return [];
+    return data || [];
+  }
+
+  async getEvent(id: string): Promise<any | undefined> {
+    const { data, error } = await supabase
+      .from('aethex_events')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) return undefined;
+    return data;
+  }
+
+  async createEvent(eventData: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('aethex_events')
+      .insert(eventData)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async updateEvent(id: string, updates: any): Promise<any> {
+    const { data, error } = await supabase
+      .from('aethex_events')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
+    
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  async deleteEvent(id: string): Promise<boolean> {
+    const { error, count } = await supabase
+      .from('aethex_events')
+      .delete({ count: 'exact' })
+      .eq('id', id);
+    
+    if (error) throw new Error(error.message);
+    return (count ?? 0) > 0;
   }
 }
 

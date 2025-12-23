@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
+import { useWebSocket } from "@/hooks/use-websocket";
 import { getIcon } from "@/lib/iconMap";
 import { 
   Terminal, FileText, IdCard, Music, Settings, Globe,
@@ -13,7 +14,8 @@ import {
   Network, Activity, Code2, Radio, Newspaper, Gamepad2,
   Users, Trophy, Calculator, StickyNote, Cpu, Camera,
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
-  TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, AlertTriangle
+  TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
+  AlertTriangle, Briefcase, CalendarDays
 } from "lucide-react";
 
 interface WindowState {
@@ -198,6 +200,15 @@ export default function AeThexOS() {
   const [activeTrayPanel, setActiveTrayPanel] = useState<'wifi' | 'volume' | 'battery' | 'notifications' | 'upgrade' | null>(null);
   const [volume, setVolume] = useState(75);
   const [isMuted, setIsMuted] = useState(false);
+
+  // WebSocket connection for real-time updates
+  const { 
+    connected: wsConnected, 
+    metrics: wsMetrics, 
+    alerts: wsAlerts, 
+    achievements: wsAchievements, 
+    notifications: wsNotifications 
+  } = useWebSocket();
   const [batteryInfo, setBatteryInfo] = useState<{ level: number; charging: boolean } | null>(null);
 
   useEffect(() => {
@@ -498,13 +509,16 @@ export default function AeThexOS() {
   const foundationApps: DesktopApp[] = [
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "passport", title: "Passport", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 650, defaultHeight: 500 },
+    { id: "achievements", title: "Achievements", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 800, defaultHeight: 600 },
+    { id: "opportunities", title: "Opportunities", icon: <Briefcase className="w-8 h-8" />, component: "opportunities", defaultWidth: 850, defaultHeight: 650 },
+    { id: "events", title: "Events", icon: <CalendarDays className="w-8 h-8" />, component: "events", defaultWidth: 900, defaultHeight: 650 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
     { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "chat", title: "AeThex AI", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
-    { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
     { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
@@ -516,12 +530,15 @@ export default function AeThexOS() {
   const corpApps: DesktopApp[] = [
     { id: "networkneighborhood", title: "Network Neighborhood", icon: <Network className="w-8 h-8" />, component: "networkneighborhood", defaultWidth: 500, defaultHeight: 450 },
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
+    { id: "passport", title: "Passport", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 650, defaultHeight: 500 },
+    { id: "achievements", title: "Achievements", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 800, defaultHeight: 600 },
+    { id: "opportunities", title: "Opportunities", icon: <Briefcase className="w-8 h-8" />, component: "opportunities", defaultWidth: 850, defaultHeight: 650 },
+    { id: "events", title: "Events", icon: <CalendarDays className="w-8 h-8" />, component: "events", defaultWidth: 900, defaultHeight: 650 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
     { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
-    { id: "passport", title: "LOGIN", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 500, defaultHeight: 600 },
     { id: "network", title: "Global Ops", icon: <Globe className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
     { id: "files", title: "Asset Library", icon: <Database className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
     { id: "pitch", title: "Contracts", icon: <FileText className="w-8 h-8" />, component: "pitch", defaultWidth: 500, defaultHeight: 400 },
@@ -532,6 +549,34 @@ export default function AeThexOS() {
   ];
 
   const apps = clearanceMode === 'foundation' ? foundationApps : corpApps;
+
+  // Handle WebSocket notifications
+  useEffect(() => {
+    if (wsNotifications && wsNotifications.length > 0) {
+      wsNotifications.forEach((notification: any) => {
+        if (notification.message) {
+          addToast(notification.message, notification.type || 'info');
+        }
+      });
+    }
+  }, [wsNotifications]);
+
+  // Handle WebSocket alerts for admins
+  useEffect(() => {
+    if (user?.isAdmin && wsAlerts && wsAlerts.length > 0) {
+      const newAlertMessages = wsAlerts.map((alert: any) => 
+        `[AEGIS] ${alert.severity?.toUpperCase()}: ${alert.message}`
+      );
+      setNotifications(prev => [...new Set([...newAlertMessages, ...prev])].slice(0, 10));
+    }
+  }, [wsAlerts, user?.isAdmin]);
+
+  // Show WebSocket connection status
+  useEffect(() => {
+    if (wsConnected && !isBooting) {
+      addToast('Real-time connection established', 'success');
+    }
+  }, [wsConnected, isBooting]);
 
   const playSound = useCallback((type: 'open' | 'close' | 'minimize' | 'click' | 'notification' | 'switch') => {
     if (!soundEnabled) return;
@@ -728,6 +773,8 @@ export default function AeThexOS() {
       case 'sysmonitor': return <SystemMonitorApp />;
       case 'webcam': return <WebcamApp />;
       case 'achievements': return <AchievementsApp />;
+      case 'opportunities': return <OpportunitiesApp />;
+      case 'events': return <EventsApp />;
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
@@ -4149,47 +4196,199 @@ function FilesApp() {
 }
 
 function AchievementsApp() {
-  const { data: achievements, isLoading } = useQuery({
-    queryKey: ['os-achievements-real'],
-    queryFn: async () => {
-      try {
-        const res = await fetch('/api/os/achievements');
-        const data = await res.json();
-        if (data.length > 0) return data;
-      } catch {}
-      return [
-        { id: 1, name: 'First Steps', description: 'Complete your profile', icon: 'footprints' },
-        { id: 2, name: 'Code Warrior', description: 'Submit your first project', icon: 'code' },
-        { id: 3, name: 'Community Builder', description: 'Connect with 10 architects', icon: 'users' },
-        { id: 4, name: 'Rising Star', description: 'Reach level 10', icon: 'star' },
-        { id: 5, name: 'Certified Pro', description: 'Earn your first certification', icon: 'award' },
-      ];
-    },
+  const { user } = useAuth();
+  
+  const { data: userAchievements, isLoading: achievementsLoading } = useQuery({
+    queryKey: ['/api/me/achievements'],
+    enabled: !!user,
   });
+
+  const { data: allAchievements, isLoading: allLoading } = useQuery({
+    queryKey: ['/api/achievements'],
+    enabled: !!user,
+  });
+
+  const isLoading = achievementsLoading || allLoading;
+
+  // Create a set of unlocked achievement IDs
+  const unlockedIds = new Set((userAchievements || []).map((a: any) => a.achievement_id || a.id));
+  
+  // Combine unlocked and locked achievements
+  const achievements = [
+    ...(userAchievements || []).map((a: any) => ({ ...a, unlocked: true })),
+    ...(allAchievements || []).filter((a: any) => !unlockedIds.has(a.id)).map((a: any) => ({ ...a, unlocked: false }))
+  ];
 
   return (
     <div className="h-full bg-slate-950 p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
-        <Award className="w-6 h-6 text-yellow-400" />
+        <Trophy className="w-6 h-6 text-yellow-400" />
         <h2 className="text-lg font-display text-white uppercase tracking-wider">Achievements</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono">
+          {(userAchievements || []).length} / {(allAchievements || []).length} Unlocked
+        </span>
       </div>
       
       {isLoading ? (
         <div className="flex items-center justify-center h-40">
           <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
         </div>
+      ) : !user ? (
+        <div className="text-center text-white/40 py-8">
+          <Lock className="w-12 h-12 mx-auto mb-2 opacity-50" />
+          <p>Please log in to view achievements</p>
+        </div>
+      ) : achievements.length === 0 ? (
+        <div className="text-center text-white/40 py-8">
+          <Trophy className="w-12 h-12 mx-auto mb-2 opacity-30" />
+          <p>No achievements available yet</p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {achievements?.map((achievement: any) => (
-            <div key={achievement.id} className={`flex items-center gap-4 p-3 rounded-lg border ${achievement.unlocked ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/5 border-white/10 opacity-50'}`}>
+          {achievements.map((achievement: any, index: number) => (
+            <div key={achievement.id || index} className={`flex items-center gap-4 p-3 rounded-lg border ${achievement.unlocked ? 'bg-cyan-500/10 border-cyan-500/30' : 'bg-white/5 border-white/10 opacity-50'}`}>
               <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${achievement.unlocked ? 'bg-cyan-500/20' : 'bg-white/10'}`}>
-                {getIcon(achievement.icon)}
+                {achievement.unlocked ? <Trophy className="w-6 h-6 text-yellow-400" /> : <Lock className="w-6 h-6 text-white/30" />}
               </div>
               <div className="flex-1">
-                <div className={`font-mono text-sm ${achievement.unlocked ? 'text-white' : 'text-white/50'}`}>{achievement.name}</div>
+                <div className={`font-mono text-sm ${achievement.unlocked ? 'text-white' : 'text-white/50'}`}>
+                  {achievement.title || achievement.name}
+                </div>
                 <div className="text-xs text-white/40">{achievement.description}</div>
+                {achievement.xp_reward && (
+                  <div className="text-xs text-cyan-400 mt-1">+{achievement.xp_reward} XP</div>
+                )}
               </div>
-              {achievement.unlocked && <div className="text-green-400 text-xs font-mono">UNLOCKED</div>}
+              {achievement.unlocked && (
+                <div className="text-green-400 text-xs font-mono uppercase tracking-wider">Unlocked</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function OpportunitiesApp() {
+  const { data: opportunities, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/opportunities'],
+  });
+
+  const formatSalary = (min?: number, max?: number) => {
+    if (!min && !max) return "Competitive";
+    if (min && max) return `$${(min / 1000).toFixed(0)}k-${(max / 1000).toFixed(0)}k`;
+    if (min) return `$${(min / 1000).toFixed(0)}k+`;
+    return `$${(max! / 1000).toFixed(0)}k`;
+  };
+
+  return (
+    <div className="h-full bg-slate-950 p-4 overflow-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <Briefcase className="w-6 h-6 text-cyan-400" />
+        <h2 className="text-lg font-display text-white uppercase tracking-wider">Opportunities</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono">
+          {opportunities?.length || 0} Open Positions
+        </span>
+      </div>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center h-40">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+        </div>
+      ) : !opportunities || opportunities.length === 0 ? (
+        <div className="text-center text-white/40 py-8">
+          <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-30" />
+          <p>No opportunities available</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {opportunities.map((opp: any) => (
+            <div key={opp.id} className="bg-white/5 border border-white/10 p-4 hover:border-cyan-400/30 transition-all">
+              <div className="flex items-start justify-between gap-3 mb-2">
+                <h3 className="font-mono text-sm text-white font-semibold">{opp.title}</h3>
+                <span className="text-cyan-400 font-mono text-xs whitespace-nowrap">
+                  {formatSalary(opp.salary_min, opp.salary_max)}
+                </span>
+              </div>
+              <p className="text-xs text-white/60 mb-3 line-clamp-2">{opp.description}</p>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 uppercase font-mono">
+                  {opp.arm_affiliation}
+                </span>
+                <span className="text-white/40">{opp.job_type || 'Full-time'}</span>
+                {opp.status === 'open' && (
+                  <span className="ml-auto text-green-400 font-mono">● Open</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventsApp() {
+  const { data: events, isLoading } = useQuery<any[]>({
+    queryKey: ['/api/events'],
+  });
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  return (
+    <div className="h-full bg-slate-950 p-4 overflow-auto">
+      <div className="flex items-center gap-2 mb-4">
+        <CalendarDays className="w-6 h-6 text-cyan-400" />
+        <h2 className="text-lg font-display text-white uppercase tracking-wider">Events</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono">
+          {events?.length || 0} Upcoming
+        </span>
+      </div>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center h-40">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+        </div>
+      ) : !events || events.length === 0 ? (
+        <div className="text-center text-white/40 py-8">
+          <CalendarDays className="w-12 h-12 mx-auto mb-2 opacity-30" />
+          <p>No events scheduled</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {events.map((event: any) => (
+            <div key={event.id} className="bg-white/5 border border-white/10 p-4 hover:border-cyan-400/30 transition-all">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 border border-cyan-400/50 flex flex-col items-center justify-center text-cyan-400">
+                  <div className="text-xs font-mono">{formatDate(event.date).split(' ')[0]}</div>
+                  <div className="text-lg font-bold font-mono leading-none">{formatDate(event.date).split(' ')[1]}</div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 mb-1">
+                    <h3 className="font-mono text-sm text-white font-semibold">{event.title}</h3>
+                    {event.featured && <Star className="w-4 h-4 text-yellow-400 fill-current flex-shrink-0" />}
+                  </div>
+                  {event.description && (
+                    <p className="text-xs text-white/60 mb-2 line-clamp-2">{event.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 text-xs text-white/40">
+                    {event.time && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {event.time}
+                      </span>
+                    )}
+                    {event.location && (
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="w-3 h-3 flex-shrink-0" /> {event.location}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
