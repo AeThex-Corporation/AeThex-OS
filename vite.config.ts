@@ -41,8 +41,11 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    cors: true,
     host: "0.0.0.0",
     hmr: {
+      host: "orange-journey-wvwxgw4r6vrf577-5000.app.github.dev",
+      protocol: "wss",
       clientPort: 443,
     },
     allowedHosts: true,
