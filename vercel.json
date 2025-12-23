@@ -1,5 +1,9 @@
 {
   "version": 2,
+  "version": 2,
+  "env": {
+    "NODE_ENV": "production"
+  }
   // All backend logic should be placed in api/ as serverless functions.
   // Static assets are served from client/public (set in vite.config.ts).
   "env": {
