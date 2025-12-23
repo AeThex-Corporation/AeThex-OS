@@ -1,6 +1,6 @@
 import { Server } from "http";
 import { Server as SocketIOServer, Socket } from "socket.io";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 
 interface SocketData {
   userId?: string;

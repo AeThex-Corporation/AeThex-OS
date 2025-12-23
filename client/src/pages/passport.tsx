@@ -162,7 +162,7 @@ export default function Passport() {
                  <Fingerprint className="w-8 h-8 text-primary/50" />
                  <div className="text-[10px] text-muted-foreground font-tech">
                    <div className="uppercase">Immutable Ledger Hash</div>
-                   <div className="truncate w-32">0x7f23b9c02a9</div>
+                   <div className="truncate w-32">{'0x7f23b9c02a9'}</div>
                  </div>
                </div>
                <div className="mt-2 text-[10px] italic text-muted-foreground/60 text-right">
@@ -170,17 +170,17 @@ export default function Passport() {
                </div>
              </div>
           </div>
-
         </div>
 
         {/* Footer Bar */}
         <div className="bg-primary/5 p-2 text-center border-t border-primary/20">
           <div className="text-[10px] text-primary/60 tracking-[0.3em] uppercase">
-             Official Certification Document // Do Not Copy
+             Official Certification Document - Do Not Copy
           </div>
         </div>
 
       </motion.div>
+      )}
     </div>
   );
 }
