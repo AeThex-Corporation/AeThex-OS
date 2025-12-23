@@ -1,24 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["shared/**", "server/**"]
-      }
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/index.ts"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "server/index.ts"
-    }
-  ],
+  // All backend logic should be placed in api/ as serverless functions.
+  // Static assets are served from client/public (set in vite.config.ts).
   "env": {
     "NODE_ENV": "production"
   }
