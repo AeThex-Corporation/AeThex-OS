@@ -69,8 +69,6 @@ export default function FileManager() {
       console.error('Error deleting file:', err);
     }
   };
-    if (selectedFile?.id === id) setSelectedFile(null);
-  };
 
   return (
     <div className="h-screen flex flex-col bg-slate-900">

@@ -47,9 +47,6 @@ export default function Notifications() {
       setLoading(false);
     }
   };
-      timestamp: new Date(Date.now() - 259200000)
-    }
-  ]);
 
   const [filterType, setFilterType] = useState<string | null>(null);
 

@@ -106,52 +106,6 @@ export default function Analytics() {
     }
   };
 
-  // Mock analytics data for charts
-  const stats: StatCard[] = [
-    {
-      label: "Total Projects",
-      value: 12,
-      change: 25,
-      icon: <Code className="w-6 h-6" />,
-      color: "text-blue-400"
-    },
-    {
-      label: "Active Messages",
-      value: 48,
-      change: 12,
-      icon: <MessageSquare className="w-6 h-6" />,
-      color: "text-purple-400"
-    },
-    {
-      label: "LP Earned",
-      value: "2,450",
-      change: 34,
-      icon: <Zap className="w-6 h-6" />,
-      color: "text-yellow-400"
-    },
-    {
-      label: "Achievements",
-      value: 23,
-      change: 8,
-      icon: <Award className="w-6 h-6" />,
-      color: "text-green-400"
-    },
-    {
-      label: "Network Connections",
-      value: 156,
-      change: 18,
-      icon: <Users className="w-6 h-6" />,
-      color: "text-cyan-400"
-    },
-    {
-      label: "Code Views",
-      value: "3.2K",
-      change: 42,
-      icon: <BarChart3 className="w-6 h-6" />,
-      color: "text-pink-400"
-    }
-  ];
-
   const activityData: ActivityData[] = [
     { date: "Mon", projects: 2, messages: 8, earnings: 120, achievements: 1 },
     { date: "Tue", projects: 1, messages: 12, earnings: 180, achievements: 0 },

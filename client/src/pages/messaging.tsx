@@ -80,10 +80,14 @@ export default function Messaging() {
             hour: "2-digit",
             minute: "2-digit",
           }),
-      isOwn: true,
-    };
-    setMessages([...messages, newMessage]);
-    setMessageInput("");
+          isOwn: true,
+        };
+        setMessages([...messages, newMessage]);
+        setMessageInput("");
+      }
+    } catch (err) {
+      console.error('Error sending message:', err);
+    }
   };
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
