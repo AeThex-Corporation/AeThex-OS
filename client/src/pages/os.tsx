@@ -6236,7 +6236,7 @@ function WebcamApp() {
 function ProjectsAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/projects" className="w-full h-full border-0" title="Projects" />
+      <iframe src="/hub/projects" className="w-full h-full border-0" title="Projects" />
     </div>
   );
 }
@@ -6244,7 +6244,7 @@ function ProjectsAppWrapper() {
 function MessagingAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/messaging" className="w-full h-full border-0" title="Messages" />
+      <iframe src="/hub/messaging" className="w-full h-full border-0" title="Messages" />
     </div>
   );
 }
@@ -6252,7 +6252,7 @@ function MessagingAppWrapper() {
 function MarketplaceAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/marketplace" className="w-full h-full border-0" title="Marketplace" />
+      <iframe src="/hub/marketplace" className="w-full h-full border-0" title="Marketplace" />
     </div>
   );
 }
@@ -6260,7 +6260,7 @@ function MarketplaceAppWrapper() {
 function FileManagerAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/file-manager" className="w-full h-full border-0" title="File Manager" />
+      <iframe src="/hub/file-manager" className="w-full h-full border-0" title="File Manager" />
     </div>
   );
 }
@@ -6268,7 +6268,7 @@ function FileManagerAppWrapper() {
 function CodeGalleryAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/code-gallery" className="w-full h-full border-0" title="Code Gallery" />
+      <iframe src="/hub/code-gallery" className="w-full h-full border-0" title="Code Gallery" />
     </div>
   );
 }
@@ -6276,7 +6276,7 @@ function CodeGalleryAppWrapper() {
 function NotificationsAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/notifications" className="w-full h-full border-0" title="Notifications" />
+      <iframe src="/hub/notifications" className="w-full h-full border-0" title="Notifications" />
     </div>
   );
 }
@@ -6284,7 +6284,7 @@ function NotificationsAppWrapper() {
 function AnalyticsAppWrapper() {
   return (
     <div className="h-full w-full overflow-auto">
-      <iframe src="/analytics" className="w-full h-full border-0" title="Analytics" />
+      <iframe src="/hub/analytics" className="w-full h-full border-0" title="Analytics" />
     </div>
   );
 }
