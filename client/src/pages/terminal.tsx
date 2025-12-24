@@ -1,242 +1,261 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "wouter";
-import { ArrowLeft, AlertTriangle, Shield, Activity, Lock, Terminal as TerminalIcon, FileCode, Zap, AlertOctagon, Skull } from "lucide-react";
+import { useLabTerminal } from "@/hooks/use-lab-terminal";
+import { ArrowLeft, Terminal as TerminalIcon, Copy, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+interface TerminalLine {
+  type: 'input' | 'output' | 'error' | 'system';
+  content: string;
+  timestamp: number;
+}
 
 export default function Terminal() {
-  const [logs, setLogs] = useState<string[]>([
-    "> SYSTEM DIAGNOSTICS...",
-    "> CHECKING DEPENDENCIES...",
-    "> AEGIS CORE: ........................... [ ACTIVE ]",
-    "> PII SCRUBBER: ......................... [ ENGAGED ]",
-    "> SHADOW LOGGING: ....................... [ RECORDING ]"
+  const [lines, setLines] = useState<TerminalLine[]>([
+    {
+      type: 'system',
+      content: '▸ AeThex Terminal v4.2 - Type "help" for commands',
+      timestamp: Date.now(),
+    },
   ]);
 
-  const [mode, setMode] = useState<"normal" | "attack" | "quarantined">("normal");
-  const logsEndRef = useRef<HTMLDivElement>(null);
+  const [input, setInput] = useState("");
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const { executionHistory, executeCode, isExecuting } = useLabTerminal();
 
   const scrollToBottom = () => {
-    logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    terminalEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [logs]);
+  }, [lines]);
 
-  const triggerAttack = () => {
-    setMode("attack");
-    setLogs(prev => [...prev, "", "!!! UNKNOWN SIGNAL DETECTED !!!", "> ANALYZING PACKET...", "> SOURCE: EXTERNAL IP"]);
-    
-    // Simulate rapid attack logs
-    let count = 0;
-    const interval = setInterval(() => {
-        count++;
-        if (count < 8) {
-            const threats = [
-                "! MALICIOUS PAYLOAD: SQL INJECTION ATTEMPT",
-                "! UNAUTHORIZED PORT ACCESS: 8080",
-                "! PII EXFILTRATION DETECTED",
-                "! MEMORY OVERFLOW IMMINENT"
-            ];
-            setLogs(prev => [...prev, threats[Math.floor(Math.random() * threats.length)]]);
+  // Show last execution in terminal
+  useEffect(() => {
+    if (executionHistory.length > 0) {
+      const latest = executionHistory[0];
+      setLines((prev) => [
+        ...prev,
+        {
+          type: 'input',
+          content: `> run "${latest.code.split('\n')[0]}..."`,
+          timestamp: latest.timestamp,
+        },
+        {
+          type: latest.status === 'error' ? 'error' : 'output',
+          content: latest.output,
+          timestamp: latest.timestamp,
+        },
+      ]);
+    }
+  }, [executionHistory]);
+
+  const processCommand = (cmd: string) => {
+    const trimmed = cmd.trim();
+    if (!trimmed) return;
+
+    setLines((prev) => [
+      ...prev,
+      { type: 'input', content: `> ${trimmed}`, timestamp: Date.now() },
+    ]);
+
+    const parts = trimmed.split(' ');
+    const command = parts[0].toLowerCase();
+
+    switch (command) {
+      case 'help':
+        setLines((prev) => [
+          ...prev,
+          {
+            type: 'system',
+            content: `Available commands:
+  help              - Show this help message
+  clear             - Clear terminal
+  execute <code>    - Execute JavaScript code
+  run <file>        - Run code from Lab
+  history           - Show command history
+  exit              - Exit terminal`,
+            timestamp: Date.now(),
+          },
+        ]);
+        break;
+
+      case 'clear':
+        setLines([]);
+        break;
+
+      case 'history':
+        setLines((prev) => [
+          ...prev,
+          {
+            type: 'output',
+            content: commandHistory.join('\n') || '(empty)',
+            timestamp: Date.now(),
+          },
+        ]);
+        break;
+
+      case 'execute':
+        const code = parts.slice(1).join(' ');
+        if (code) {
+          executeCode(code, 'javascript');
         } else {
-            clearInterval(interval);
-            setTimeout(() => {
-                setMode("quarantined");
-                setLogs(prev => [
-                    ...prev, 
-                    "", 
-                    "> AEGIS INTERVENTION: PROTOCOL OMEGA", 
-                    "> THREAT ISOLATED.", 
-                    "> CONNECTION SEVERED.",
-                    "> SYSTEM RESTORED TO SAFE STATE."
-                ]);
-            }, 1000);
+          setLines((prev) => [
+            ...prev,
+            {
+              type: 'error',
+              content: 'Usage: execute <code>',
+              timestamp: Date.now(),
+            },
+          ]);
         }
-    }, 300);
+        break;
+
+      case 'run':
+        setLines((prev) => [
+          ...prev,
+          {
+            type: 'output',
+            content: '▸ Open Lab to run files',
+            timestamp: Date.now(),
+          },
+        ]);
+        break;
+
+      case 'exit':
+        setLines((prev) => [
+          ...prev,
+          {
+            type: 'system',
+            content: '▸ Type "help" to see available commands',
+            timestamp: Date.now(),
+          },
+        ]);
+        break;
+
+      default:
+        setLines((prev) => [
+          ...prev,
+          {
+            type: 'error',
+            content: `Command not found: ${command}. Type "help" for available commands.`,
+            timestamp: Date.now(),
+          },
+        ]);
+    }
+
+    setCommandHistory((prev) => [...prev, trimmed]);
+    setInput("");
+    setHistoryIndex(-1);
   };
 
-  const resetSystem = () => {
-      setMode("normal");
-      setLogs([
-        "> SYSTEM REBOOT...",
-        "> AEGIS CORE: ........................... [ ACTIVE ]",
-        "> READY."
-      ]);
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      processCommand(input);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const newIndex = historyIndex + 1;
+      if (newIndex < commandHistory.length) {
+        setHistoryIndex(newIndex);
+        setInput(commandHistory[commandHistory.length - 1 - newIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setInput(commandHistory[commandHistory.length - 1 - newIndex]);
+      } else if (historyIndex === 0) {
+        setHistoryIndex(-1);
+        setInput("");
+      }
+    }
   };
 
   return (
-    <div className={`min-h-screen font-mono flex flex-col overflow-hidden transition-colors duration-1000 ${
-        mode === "attack" ? "bg-red-950/20 text-red-500" : 
-        mode === "quarantined" ? "bg-orange-950/20 text-orange-400" : 
-        "bg-[#0a0a0c] text-[#a9b7c6]"
-    }`}>
-      
-      {/* Top Bar (IDE Style) */}
-      <div className={`h-12 border-b flex items-center px-4 justify-between select-none transition-colors duration-500 ${
-          mode === "attack" ? "bg-red-900/20 border-red-500/30" : 
-          "bg-[#1e1f22] border-[#2b2d30]"
-      }`}>
+    <div className="h-screen w-full bg-[#0a0a0c] text-[#a9b7c6] flex flex-col font-mono">
+      {/* Header */}
+      <div className="h-12 border-b border-[#2b2d30] bg-[#1e1f22] flex items-center px-4 justify-between">
         <div className="flex items-center gap-4">
           <Link href="/">
-             <button className="text-muted-foreground hover:text-white transition-colors">
-               <ArrowLeft className="w-4 h-4" />
-             </button>
+            <button className="text-[#a9b7c6] hover:text-white transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </button>
           </Link>
           <div className="flex items-center gap-2 text-sm">
-             <TerminalIcon className={`w-4 h-4 ${mode === 'attack' ? 'text-red-500 animate-pulse' : 'text-primary'}`} />
-             <span className={`font-bold ${mode === 'attack' ? 'text-red-500' : 'text-white'}`}>
-                {mode === "attack" ? "AEGIS ALERT // UNDER ATTACK" : "AeThex Terminal v4.2"}
-             </span>
-             {mode === "normal" && <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded ml-2">[ STATUS: ONLINE ]</span>}
-             {mode === "attack" && <span className="text-xs text-red-500 bg-red-500/10 px-2 py-0.5 rounded ml-2 animate-pulse">[ STATUS: CRITICAL ]</span>}
-             {mode === "quarantined" && <span className="text-xs text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded ml-2">[ STATUS: SECURE ]</span>}
+            <TerminalIcon className="w-4 h-4 text-cyan-400" />
+            <span className="font-bold text-white">AeThex Terminal v4.2</span>
+            <span className="text-xs text-green-500 bg-green-500/10 px-2 py-0.5 rounded ml-2">
+              [ ONLINE ]
+            </span>
           </div>
         </div>
-        
-        {/* Simulation Controls */}
         <div className="flex items-center gap-2">
-            {mode === "normal" && (
-                <button 
-                    onClick={triggerAttack}
-                    className="flex items-center gap-2 bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/30 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded transition-all"
-                >
-                    <Skull className="w-3 h-3" /> Simulate Threat
-                </button>
-            )}
-            {mode === "quarantined" && (
-                <button 
-                    onClick={resetSystem}
-                    className="flex items-center gap-2 bg-green-500/10 hover:bg-green-500/20 text-green-500 border border-green-500/30 px-3 py-1 text-xs font-bold uppercase tracking-wider rounded transition-all"
-                >
-                    <Shield className="w-3 h-3" /> Reset System
-                </button>
-            )}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigator.clipboard.writeText(lines.map((l) => l.content).join('\n'))}
+            className="text-[#a9b7c6] hover:bg-[#2b2d30]"
+          >
+            <Copy className="w-4 h-4" />
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setLines([])}
+            className="text-[#a9b7c6] hover:bg-[#2b2d30]"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Red Alert Overlay */}
-        <AnimatePresence>
-            {mode === "attack" && (
-                <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="absolute inset-0 z-50 pointer-events-none bg-red-500/10 flex items-center justify-center"
-                >
-                    <div className="w-full h-[1px] bg-red-500/50 absolute top-1/2 animate-ping" />
-                    <div className="h-full w-[1px] bg-red-500/50 absolute left-1/2 animate-ping" />
-                    <div className="border-2 border-red-500 text-red-500 px-10 py-4 text-4xl font-display font-bold uppercase tracking-widest bg-black/80 backdrop-blur-sm animate-pulse">
-                        Threat Detected
-                    </div>
-                </motion.div>
-            )}
-        </AnimatePresence>
+      {/* Terminal Output */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-1 bg-[#0a0a0c]">
+        {lines.map((line, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`text-xs leading-relaxed ${
+              line.type === 'error'
+                ? 'text-red-500'
+                : line.type === 'input'
+                  ? 'text-cyan-400'
+                  : line.type === 'system'
+                    ? 'text-yellow-600'
+                    : 'text-[#a9b7c6]'
+            }`}
+          >
+            {line.content.split('\n').map((part, idx) => (
+              <div key={idx}>{part}</div>
+            ))}
+          </motion.div>
+        ))}
+        <div ref={terminalEndRef} />
+      </div>
 
-        {/* Sidebar */}
-        <div className={`w-64 border-r hidden md:flex flex-col transition-colors duration-500 ${
-            mode === "attack" ? "bg-red-950/10 border-red-500/30" : 
-            "bg-[#1e1f22] border-[#2b2d30]"
-        }`}>
-           <div className="p-4 text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Explorer</div>
-           <div className="px-2 space-y-1">
-              <div className="px-2 py-1 bg-[#2b2d30] text-white text-sm rounded cursor-pointer opacity-50">Project_Titan</div>
-              <div className="px-4 py-1 text-muted-foreground text-sm opacity-50">src</div>
-              <div className="px-6 py-1 text-primary text-sm opacity-50 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full"></span> main.verse
-              </div>
-           </div>
-           
-           <div className={`mt-auto p-4 border-t ${mode === 'attack' ? 'border-red-500/30' : 'border-[#2b2d30]'}`}>
-             <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Security Layer</div>
-             <div className="space-y-3">
-               <div className="flex items-center justify-between text-xs">
-                 <span className="text-muted-foreground">Aegis Core</span>
-                 <span className={`font-bold flex items-center gap-1 ${mode === 'attack' ? 'text-red-500 animate-pulse' : 'text-green-500'}`}>
-                    {mode === 'attack' ? <AlertOctagon className="w-3 h-3" /> : <Shield className="w-3 h-3" />} 
-                    {mode === 'attack' ? 'INTERVENING' : 'ACTIVE'}
-                 </span>
-               </div>
-             </div>
-           </div>
-        </div>
-
-        {/* Main Editor Area */}
-        <div className={`flex-1 flex flex-col transition-colors duration-500 ${
-             mode === "attack" ? "bg-red-950/10" : "bg-[#1e1f22]"
-        }`}>
-           
-           {/* Code Editor Mockup */}
-           <div className={`flex-1 p-6 font-mono text-sm relative overflow-y-auto transition-colors duration-500 ${
-               mode === "attack" ? "bg-red-950/20" : "bg-[#0a0a0c]"
-           }`}>
-             <div className={`absolute left-0 top-0 bottom-0 w-12 border-r flex flex-col items-end pr-3 pt-6 text-muted-foreground/50 select-none ${
-                 mode === "attack" ? "bg-red-950/30 border-red-500/20" : "bg-[#1e1f22] border-[#2b2d30]"
-             }`}>
-               {Array.from({length: 20}).map((_, i) => (
-                 <div key={i} className="leading-6">{i + 30}</div>
-               ))}
-             </div>
-             
-             {/* Code Content */}
-             <div className={`pl-12 pt-0 space-y-1 ${mode === "attack" ? "blur-[2px] opacity-50 transition-all duration-300" : ""}`}>
-                <div className="text-gray-500"># User Input Handler</div>
-                <div><span className="text-purple-400">class</span> <span className="text-yellow-200">InputHandler</span>:</div>
-                <div className="pl-4"><span className="text-purple-400">def</span> <span className="text-blue-400">HandleUserInput</span>(Input: <span className="text-orange-400">string</span>): <span className="text-orange-400">void</span> = </div>
-                <div className="pl-8 text-gray-500"># Validate input length</div>
-                <div className="pl-8"><span className="text-purple-400">if</span> (Input.Length &gt; 100):</div>
-                <div className="pl-12"><span className="text-purple-400">return</span></div>
-                <div className="pl-8"></div>
-                <div className="pl-8 text-gray-500"># Process user data</div>
-                <div className="pl-8"><span className="text-white">LogUserActivity(Input)</span></div>
-             </div>
-
-             {mode === "quarantined" && (
-                 <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="absolute inset-0 flex items-center justify-center pointer-events-none"
-                 >
-                     <div className="bg-[#0a0a0c] border border-orange-500/50 p-6 rounded-lg shadow-2xl shadow-orange-500/20 max-w-md text-center">
-                         <Shield className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-                         <h3 className="text-orange-500 font-bold text-xl mb-2">THREAT NEUTRALIZED</h3>
-                         <p className="text-muted-foreground text-sm">
-                             Malicious code injection prevented by Aegis Core. 
-                             The session has been sanitized.
-                         </p>
-                     </div>
-                 </motion.div>
-             )}
-           </div>
-
-           {/* Terminal Output */}
-           <div className={`h-48 border-t p-4 font-mono text-xs overflow-y-auto transition-colors duration-500 ${
-               mode === "attack" ? "bg-black border-red-500/50" : "bg-[#0f1011] border-[#2b2d30]"
-           }`}>
-             <div className="flex items-center gap-4 mb-2 border-b border-white/10 pb-2">
-               <span className={`font-bold border-b-2 pb-2 px-1 ${mode === 'attack' ? 'text-red-500 border-red-500' : 'text-white border-primary'}`}>TERMINAL</span>
-             </div>
-             
-             <div className="space-y-1">
-               {logs.map((log, i) => (
-                 <motion.div 
-                    key={i} 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className={`${
-                        log.includes("!!!") || log.includes("MALICIOUS") ? "text-red-500 font-bold bg-red-500/10 p-1" : 
-                        log.includes("AEGIS") ? "text-orange-400 font-bold" :
-                        "text-muted-foreground"
-                    }`}
-                 >
-                   {log}
-                 </motion.div>
-               ))}
-               <div ref={logsEndRef} />
-             </div>
-           </div>
-
+      {/* Input Bar */}
+      <div className="border-t border-[#2b2d30] bg-[#1e1f22] p-3">
+        <div className="flex items-center gap-2">
+          <span className="text-cyan-400">▸</span>
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Type command... (help for list)"
+            className="flex-1 bg-[#0a0a0c] border-0 text-[#a9b7c6] placeholder-[#555] focus:ring-0 focus:outline-none font-mono text-xs"
+            disabled={isExecuting}
+            autoFocus
+          />
+          {isExecuting && (
+            <span className="text-yellow-500 text-xs animate-pulse">executing...</span>
+          )}
         </div>
       </div>
     </div>

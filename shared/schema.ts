@@ -397,3 +397,226 @@ export const insertAethexEventSchema = createInsertSchema(aethex_events).omit({
 
 export type InsertAethexEvent = z.infer<typeof insertAethexEventSchema>;
 export type AethexEvent = typeof aethex_events.$inferSelect;
+
+// ============ NEW FEATURE TABLES ============
+
+// Messages table for Messaging app
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  sender_id: varchar("sender_id").notNull(),
+  recipient_id: varchar("recipient_id").notNull(),
+  content: text("content").notNull(),
+  read: boolean("read").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
+
+// Marketplace Listings table
+export const marketplace_listings = pgTable("marketplace_listings", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  seller_id: varchar("seller_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // 'achievement', 'code', 'service', 'credential'
+  price: integer("price").notNull(), // in loyalty points
+  image_url: text("image_url"),
+  status: text("status").default("active"), // 'active', 'sold', 'removed'
+  tags: json("tags").$type<string[]>().default([]),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+  purchase_count: integer("purchase_count").default(0),
+});
+
+export const insertMarketplaceListingSchema = createInsertSchema(marketplace_listings).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertMarketplaceListing = z.infer<typeof insertMarketplaceListingSchema>;
+export type MarketplaceListing = typeof marketplace_listings.$inferSelect;
+
+// Marketplace Transactions table
+export const marketplace_transactions = pgTable("marketplace_transactions", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  buyer_id: varchar("buyer_id").notNull(),
+  seller_id: varchar("seller_id").notNull(),
+  listing_id: varchar("listing_id").notNull(),
+  amount: integer("amount").notNull(),
+  status: text("status").default("completed"), // 'pending', 'completed', 'refunded'
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertMarketplaceTransactionSchema = createInsertSchema(marketplace_transactions).omit({
+  created_at: true,
+});
+
+export type InsertMarketplaceTransaction = z.infer<typeof insertMarketplaceTransactionSchema>;
+export type MarketplaceTransaction = typeof marketplace_transactions.$inferSelect;
+
+// Workspace Settings table
+export const workspace_settings = pgTable("workspace_settings", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull().unique(),
+  theme: text("theme").default("dark"), // 'dark', 'light', 'auto'
+  font_size: text("font_size").default("medium"), // 'small', 'medium', 'large'
+  editor_font: text("editor_font").default("Monaco"),
+  sidebar_collapsed: boolean("sidebar_collapsed").default(false),
+  notifications_enabled: boolean("notifications_enabled").default(true),
+  email_notifications: boolean("email_notifications").default(true),
+  sound_enabled: boolean("sound_enabled").default(true),
+  auto_save: boolean("auto_save").default(true),
+  privacy_level: text("privacy_level").default("private"), // 'private', 'friends', 'public'
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkspaceSettingsSchema = createInsertSchema(workspace_settings).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertWorkspaceSettings = z.infer<typeof insertWorkspaceSettingsSchema>;
+export type WorkspaceSettings = typeof workspace_settings.$inferSelect;
+
+// Files table for File Manager
+export const files = pgTable("files", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull(),
+  name: text("name").notNull(),
+  type: text("type").notNull(), // 'file', 'folder'
+  path: text("path").notNull(),
+  size: integer("size"), // in bytes
+  mime_type: text("mime_type"),
+  parent_id: varchar("parent_id"), // for folders
+  content: text("content"), // for code files
+  language: text("language"), // 'typescript', 'javascript', etc
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertFileSchema = createInsertSchema(files).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertFile = z.infer<typeof insertFileSchema>;
+export type File = typeof files.$inferSelect;
+
+// Notifications table
+export const notifications = pgTable("notifications", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull(),
+  type: text("type").notNull(), // 'message', 'achievement', 'purchase', 'event', 'mention'
+  title: text("title").notNull(),
+  content: text("content"),
+  related_id: varchar("related_id"), // link to source (message_id, achievement_id, etc)
+  read: boolean("read").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  created_at: true,
+});
+
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type Notification = typeof notifications.$inferSelect;
+
+// User Analytics table
+export const user_analytics = pgTable("user_analytics", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull(),
+  total_xp_earned: integer("total_xp_earned").default(0),
+  total_projects: integer("total_projects").default(0),
+  total_achievements: integer("total_achievements").default(0),
+  messages_sent: integer("messages_sent").default(0),
+  marketplace_purchases: integer("marketplace_purchases").default(0),
+  marketplace_sales: integer("marketplace_sales").default(0),
+  events_attended: integer("events_attended").default(0),
+  last_active: timestamp("last_active"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserAnalyticsSchema = createInsertSchema(user_analytics).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertUserAnalytics = z.infer<typeof insertUserAnalyticsSchema>;
+export type UserAnalytics = typeof user_analytics.$inferSelect;
+
+// Code Gallery table
+export const code_gallery = pgTable("code_gallery", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  creator_id: varchar("creator_id").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  code: text("code").notNull(),
+  language: text("language").notNull(),
+  tags: json("tags").$type<string[]>().default([]),
+  likes: integer("likes").default(0),
+  views: integer("views").default(0),
+  is_public: boolean("is_public").default(true),
+  category: text("category"), // 'snippet', 'algorithm', 'component', 'utility'
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCodeGallerySchema = createInsertSchema(code_gallery).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertCodeGallery = z.infer<typeof insertCodeGallerySchema>;
+export type CodeGallery = typeof code_gallery.$inferSelect;
+
+// Documentation pages table
+export const documentation = pgTable("documentation", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  category: text("category").notNull(), // 'getting-started', 'api', 'features', 'tutorials'
+  order: integer("order").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertDocumentationSchema = createInsertSchema(documentation).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertDocumentation = z.infer<typeof insertDocumentationSchema>;
+export type Documentation = typeof documentation.$inferSelect;
+
+// App Builder table
+export const custom_apps = pgTable("custom_apps", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  creator_id: varchar("creator_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"),
+  icon: text("icon"),
+  config: json("config"), // JSON config for builder
+  status: text("status").default("draft"), // 'draft', 'published'
+  is_public: boolean("is_public").default(false),
+  installations: integer("installations").default(0),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertCustomAppSchema = createInsertSchema(custom_apps).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertCustomApp = z.infer<typeof insertCustomAppSchema>;
+export type CustomApp = typeof custom_apps.$inferSelect;

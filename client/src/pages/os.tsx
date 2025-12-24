@@ -15,7 +15,8 @@ import {
   Users, Trophy, Calculator, StickyNote, Cpu, Camera,
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
   TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
-  AlertTriangle, Briefcase, CalendarDays
+  AlertTriangle, Briefcase, CalendarDays, FolderGit2, MessageSquare,
+  ShoppingCart, Folder, Code
 } from "lucide-react";
 
 interface WindowState {
@@ -511,13 +512,20 @@ export default function AeThexOS() {
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
     { id: "passport", title: "Passport", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 650, defaultHeight: 500 },
     { id: "achievements", title: "Achievements", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 800, defaultHeight: 600 },
+    { id: "projects", title: "Projects", icon: <FolderGit2 className="w-8 h-8" />, component: "projects", defaultWidth: 900, defaultHeight: 650 },
     { id: "opportunities", title: "Opportunities", icon: <Briefcase className="w-8 h-8" />, component: "opportunities", defaultWidth: 850, defaultHeight: 650 },
     { id: "events", title: "Events", icon: <CalendarDays className="w-8 h-8" />, component: "events", defaultWidth: 900, defaultHeight: 650 },
+    { id: "messaging", title: "Messages", icon: <MessageSquare className="w-8 h-8" />, component: "messaging", defaultWidth: 850, defaultHeight: 600 },
+    { id: "marketplace", title: "Marketplace", icon: <ShoppingCart className="w-8 h-8" />, component: "marketplace", defaultWidth: 900, defaultHeight: 650 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
+    { id: "filemanager", title: "File Manager", icon: <Folder className="w-8 h-8" />, component: "filemanager", defaultWidth: 800, defaultHeight: 600 },
+    { id: "codegallery", title: "Code Gallery", icon: <Code className="w-8 h-8" />, component: "codegallery", defaultWidth: 900, defaultHeight: 650 },
     { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "chat", title: "AeThex AI", icon: <MessageCircle className="w-8 h-8" />, component: "chat", defaultWidth: 400, defaultHeight: 500 },
     { id: "terminal", title: "Terminal", icon: <Terminal className="w-8 h-8" />, component: "terminal", defaultWidth: 750, defaultHeight: 500 },
+    { id: "notifications", title: "Notifications", icon: <Bell className="w-8 h-8" />, component: "notifications", defaultWidth: 700, defaultHeight: 600 },
+    { id: "analytics", title: "Analytics", icon: <BarChart3 className="w-8 h-8" />, component: "analytics", defaultWidth: 1000, defaultHeight: 700 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
@@ -532,12 +540,19 @@ export default function AeThexOS() {
     { id: "mission", title: "README.TXT", icon: <FileText className="w-8 h-8" />, component: "mission", defaultWidth: 500, defaultHeight: 500 },
     { id: "passport", title: "Passport", icon: <Key className="w-8 h-8" />, component: "passport", defaultWidth: 650, defaultHeight: 500 },
     { id: "achievements", title: "Achievements", icon: <Trophy className="w-8 h-8" />, component: "achievements", defaultWidth: 800, defaultHeight: 600 },
+    { id: "projects", title: "Projects", icon: <FolderGit2 className="w-8 h-8" />, component: "projects", defaultWidth: 900, defaultHeight: 650 },
     { id: "opportunities", title: "Opportunities", icon: <Briefcase className="w-8 h-8" />, component: "opportunities", defaultWidth: 850, defaultHeight: 650 },
     { id: "events", title: "Events", icon: <CalendarDays className="w-8 h-8" />, component: "events", defaultWidth: 900, defaultHeight: 650 },
+    { id: "messaging", title: "Messages", icon: <MessageSquare className="w-8 h-8" />, component: "messaging", defaultWidth: 850, defaultHeight: 600 },
+    { id: "marketplace", title: "Marketplace", icon: <ShoppingCart className="w-8 h-8" />, component: "marketplace", defaultWidth: 900, defaultHeight: 650 },
     { id: "foundry", title: "FOUNDRY.EXE", icon: <Award className="w-8 h-8" />, component: "foundry", defaultWidth: 450, defaultHeight: 500 },
     { id: "intel", title: "INTEL", icon: <FolderSearch className="w-8 h-8" />, component: "intel", defaultWidth: 550, defaultHeight: 450 },
+    { id: "filemanager", title: "File Manager", icon: <Folder className="w-8 h-8" />, component: "filemanager", defaultWidth: 800, defaultHeight: 600 },
+    { id: "codegallery", title: "Code Gallery", icon: <Code className="w-8 h-8" />, component: "codegallery", defaultWidth: 900, defaultHeight: 650 },
     { id: "drives", title: "My Computer", icon: <HardDrive className="w-8 h-8" />, component: "drives", defaultWidth: 450, defaultHeight: 400 },
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
+    { id: "notifications", title: "Notifications", icon: <Bell className="w-8 h-8" />, component: "notifications", defaultWidth: 700, defaultHeight: 600 },
+    { id: "analytics", title: "Analytics", icon: <BarChart3 className="w-8 h-8" />, component: "analytics", defaultWidth: 1000, defaultHeight: 700 },
     { id: "metrics", title: "System Status", icon: <Activity className="w-8 h-8" />, component: "metrics", defaultWidth: 750, defaultHeight: 550 },
     { id: "network", title: "Global Ops", icon: <Globe className="w-8 h-8" />, component: "network", defaultWidth: 700, defaultHeight: 550 },
     { id: "files", title: "Asset Library", icon: <Database className="w-8 h-8" />, component: "files", defaultWidth: 700, defaultHeight: 500 },
@@ -773,8 +788,11 @@ export default function AeThexOS() {
       case 'sysmonitor': return <SystemMonitorApp />;
       case 'webcam': return <WebcamApp />;
       case 'achievements': return <AchievementsApp />;
+      case 'projects': return <ProjectsAppWrapper />;
       case 'opportunities': return <OpportunitiesApp />;
       case 'events': return <EventsApp />;
+      case 'messaging': return <MessagingAppWrapper />;
+      case 'marketplace': return <MarketplaceAppWrapper />;
       case 'chat': return <ChatApp />;
       case 'music': return <MusicApp />;
       case 'pitch': return <PitchApp onNavigate={() => setLocation('/pitch')} />;
@@ -783,6 +801,10 @@ export default function AeThexOS() {
       case 'devtools': return <DevToolsApp openIframeWindow={openIframeWindow} />;
       case 'mission': return <MissionApp />;
       case 'intel': return <IntelApp />;
+      case 'filemanager': return <FileManagerAppWrapper />;
+      case 'codegallery': return <CodeGalleryAppWrapper />;
+      case 'notifications': return <NotificationsAppWrapper />;
+      case 'analytics': return <AnalyticsAppWrapper />;
       case 'drives': return <DrivesApp openIframeWindow={openIframeWindow} />;
       case 'iframe': return null;
       case 'settings': return <SettingsApp 
@@ -6206,6 +6228,63 @@ function WebcamApp() {
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+// Wrapper components for new apps
+function ProjectsAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/projects" className="w-full h-full border-0" title="Projects" />
+    </div>
+  );
+}
+
+function MessagingAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/messaging" className="w-full h-full border-0" title="Messages" />
+    </div>
+  );
+}
+
+function MarketplaceAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/marketplace" className="w-full h-full border-0" title="Marketplace" />
+    </div>
+  );
+}
+
+function FileManagerAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/file-manager" className="w-full h-full border-0" title="File Manager" />
+    </div>
+  );
+}
+
+function CodeGalleryAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/code-gallery" className="w-full h-full border-0" title="Code Gallery" />
+    </div>
+  );
+}
+
+function NotificationsAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/notifications" className="w-full h-full border-0" title="Notifications" />
+    </div>
+  );
+}
+
+function AnalyticsAppWrapper() {
+  return (
+    <div className="h-full w-full overflow-auto">
+      <iframe src="/analytics" className="w-full h-full border-0" title="Analytics" />
     </div>
   );
 }

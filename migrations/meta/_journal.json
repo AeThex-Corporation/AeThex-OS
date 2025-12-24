@@ -8,6 +8,13 @@
       "when": 1766373949237,
       "tag": "0000_worried_mastermind",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1735020000000,
+      "tag": "0001_new_apps_expansion",
+      "breakpoints": true
     }
   ]
 }

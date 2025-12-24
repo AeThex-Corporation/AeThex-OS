@@ -30,6 +30,16 @@ import AdminNotifications from "@/pages/admin-notifications";
 import AeThexOS from "@/pages/os";
 import Network from "@/pages/network";
 import NetworkProfile from "@/pages/network-profile";
+import Lab from "@/pages/lab";
+import Projects from "@/pages/projects";
+import Messaging from "@/pages/messaging";
+import Marketplace from "@/pages/marketplace";
+import Settings from "@/pages/settings";
+import FileManager from "@/pages/file-manager";
+import CodeGallery from "@/pages/code-gallery";
+import Notifications from "@/pages/notifications";
+import Analytics from "@/pages/analytics";
+import { LabTerminalProvider } from "@/hooks/use-lab-terminal";
 
 function Router() {
   return (
@@ -59,6 +69,15 @@ function Router() {
       <Route path="/os" component={AeThexOS} />
       <Route path="/network" component={Network} />
       <Route path="/network/:slug" component={NetworkProfile} />
+      <Route path="/lab" component={Lab} />
+      <Route path="/projects">{() => <ProtectedRoute><Projects /></ProtectedRoute>}</Route>
+      <Route path="/messaging">{() => <ProtectedRoute><Messaging /></ProtectedRoute>}</Route>
+      <Route path="/marketplace">{() => <ProtectedRoute><Marketplace /></ProtectedRoute>}</Route>
+      <Route path="/settings">{() => <ProtectedRoute><Settings /></ProtectedRoute>}</Route>
+      <Route path="/file-manager">{() => <ProtectedRoute><FileManager /></ProtectedRoute>}</Route>
+      <Route path="/code-gallery">{() => <ProtectedRoute><CodeGallery /></ProtectedRoute>}</Route>
+      <Route path="/notifications">{() => <ProtectedRoute><Notifications /></ProtectedRoute>}</Route>
+      <Route path="/analytics">{() => <ProtectedRoute><Analytics /></ProtectedRoute>}</Route>
       <Route component={NotFound} />
     </Switch>
   );
@@ -68,10 +87,12 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TutorialProvider>
-          <Toaster />
-          <Router />
-        </TutorialProvider>
+        <LabTerminalProvider>
+          <TutorialProvider>
+            <Toaster />
+            <Router />
+          </TutorialProvider>
+        </LabTerminalProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
