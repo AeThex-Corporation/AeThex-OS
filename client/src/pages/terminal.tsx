@@ -6,6 +6,7 @@ import { ArrowLeft, Terminal as TerminalIcon, Copy, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
 
 interface TerminalLine {
   type: 'input' | 'output' | 'error' | 'system';
@@ -27,6 +28,7 @@ export default function Terminal() {
   const [cliLabel, setCliLabel] = useState<string>("");
   const eventSourceRef = useRef<EventSource | null>(null);
   const currentRunId = useRef<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     return () => {
@@ -188,6 +190,7 @@ export default function Terminal() {
     if (cliStatus === "running") return;
     setCliStatus("running");
     appendCliLine('system', `▸ Running ${cliCommand}...`);
+    toast({ title: "CLI", description: `Started ${cliCommand}`, variant: "default" });
 
     try {
       const res = await fetch('/api/admin/cli/start', {
@@ -201,6 +204,7 @@ export default function Terminal() {
         const text = await res.text();
         appendCliLine('error', `Start failed: ${text || res.status}`);
         setCliStatus("error");
+        toast({ title: "CLI Error", description: `Failed to start ${cliCommand}`, variant: "destructive" });
         return;
       }
 
@@ -218,6 +222,7 @@ export default function Terminal() {
       es.addEventListener('error', (evt) => {
         appendCliLine('error', 'Stream error');
         setCliStatus("error");
+        toast({ title: "CLI Error", description: `Stream error for ${cliCommand}`, variant: "destructive" });
         es.close();
       });
 
@@ -225,6 +230,7 @@ export default function Terminal() {
         const status = evt.data === 'success' ? 'done' : 'error';
         setCliStatus(status as any);
         appendCliLine(status === 'done' ? 'system' : 'error', `▸ ${cliLabel || cliCommand} ${status}`);
+        toast({ title: status === 'done' ? "CLI Success" : "CLI Failed", description: `${cliLabel || cliCommand} ${status}` });
         es.close();
         currentRunId.current = null;
       });
@@ -232,6 +238,7 @@ export default function Terminal() {
     } catch (err) {
       appendCliLine('error', 'Failed to start CLI command');
       setCliStatus("error");
+      toast({ title: "CLI Error", description: `Failed to start ${cliCommand}`, variant: "destructive" });
     }
   };
 

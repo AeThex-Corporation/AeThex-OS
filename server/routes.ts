@@ -47,6 +47,7 @@ export async function registerRoutes(
     build: { cmd: "npm", args: ["run", "build"], label: "npm run build" },
     "migrate-status": { cmd: "npx", args: ["drizzle-kit", "status"], label: "drizzle status" },
     migrate: { cmd: "npx", args: ["drizzle-kit", "migrate:push"], label: "drizzle migrate" },
+    "migrate-os": { cmd: "npx", args: ["ts-node", "script/run-os-migration.ts"], label: "os kernel migrate" },
     seed: { cmd: "npx", args: ["ts-node", "script/seed.ts"], label: "seed" },
     test: { cmd: "bash", args: ["./test-implementation.sh"], label: "test-implementation" },
   };
