@@ -4,6 +4,7 @@ import { storage } from "./storage.js";
 import { loginSchema, signupSchema } from "../shared/schema.js";
 import { supabase } from "./supabase.js";
 import { getChatResponse } from "./openai.js";
+import { capabilityGuard } from "./capability-guard.js";
 
 // Extend session type
 declare module 'express-session' {
@@ -37,6 +38,82 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  
+  // Apply capability guard to Hub and OS routes
+  app.use("/api/hub/*", capabilityGuard);
+  app.use("/api/os/entitlements/*", capabilityGuard);
+  app.use("/api/os/link/*", capabilityGuard);
+  
+  // ========== MODE MANAGEMENT ROUTES ==========
+  
+  // Get user mode preference
+  app.get("/api/user/mode-preference", requireAuth, async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from("aethex_user_mode_preference")
+        .select("mode")
+        .eq("user_id", req.session.userId)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      res.json({ mode: data?.mode || "foundation" });
+    } catch (error) {
+      console.error("Mode fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch mode preference" });
+    }
+  });
+
+  // Update user mode preference
+  app.put("/api/user/mode-preference", requireAuth, async (req, res) => {
+    try {
+      const { mode } = req.body;
+
+      if (!mode || !["foundation", "corporation"].includes(mode)) {
+        return res.status(400).json({ error: "Invalid mode" });
+      }
+
+      const { error } = await supabase
+        .from("aethex_user_mode_preference")
+        .upsert({
+          user_id: req.session.userId,
+          mode,
+          updated_at: new Date().toISOString(),
+        });
+
+      if (error) throw error;
+
+      res.json({ success: true, mode });
+    } catch (error) {
+      console.error("Mode update error:", error);
+      res.status(500).json({ error: "Failed to update mode preference" });
+    }
+  });
+
+  // Get workspace policy
+  app.get("/api/workspace/policy", requireAuth, async (req, res) => {
+    try {
+      // For now, use a default workspace
+      const workspaceId = "default";
+
+      const { data, error } = await supabase
+        .from("aethex_workspace_policy")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      res.json(data || {});
+    } catch (error) {
+      console.error("Policy fetch error:", error);
+      res.status(500).json({ error: "Failed to fetch workspace policy" });
+    }
+  });
   
   // ========== AUTH ROUTES (Supabase Auth) ==========
   

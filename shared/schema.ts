@@ -716,3 +716,25 @@ export const aethex_audit_log = pgTable("aethex_audit_log", {
   error_message: text("error_message"),
   created_at: timestamp("created_at").defaultNow(),
 });
+
+// User Mode Preference: UI preference for Foundation vs Corporation
+export const aethex_user_mode_preference = pgTable("aethex_user_mode_preference", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull().unique(),
+  mode: varchar("mode").notNull().default("foundation"), // "foundation" | "corporation"
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Workspace Policy: Enforcement layer for realm and capabilities
+export const aethex_workspace_policy = pgTable("aethex_workspace_policy", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspace_id: varchar("workspace_id").notNull().unique(),
+  enforced_realm: varchar("enforced_realm"), // If set, users cannot switch realms
+  allowed_modes: json("allowed_modes").$type<string[]>().default(sql`'["foundation","corporation"]'::json`),
+  commerce_enabled: boolean("commerce_enabled").default(false),
+  social_enabled: boolean("social_enabled").default(false),
+  messaging_enabled: boolean("messaging_enabled").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
