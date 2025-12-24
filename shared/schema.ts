@@ -1,4 +1,5 @@
 import { pgTable, text, varchar, boolean, integer, timestamp, json, decimal } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -620,3 +621,98 @@ export const insertCustomAppSchema = createInsertSchema(custom_apps).omit({
 
 export type InsertCustomApp = z.infer<typeof insertCustomAppSchema>;
 export type CustomApp = typeof custom_apps.$inferSelect;
+
+// ============================================
+// OS KERNEL SCHEMA (Portable Proof System)
+// ============================================
+
+// Subjects: Internal coordination IDs
+export const aethex_subjects = pgTable("aethex_subjects", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Subject Identities: External ID bindings (Roblox, Discord, GitHub, Epic)
+export const aethex_subject_identities = pgTable("aethex_subject_identities", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  subject_id: varchar("subject_id").notNull(),
+  provider: varchar("provider").notNull(), // "roblox" | "discord" | "github" | "epic"
+  external_id: varchar("external_id").notNull(),
+  external_username: varchar("external_username"),
+  verified_at: timestamp("verified_at"),
+  revoked_at: timestamp("revoked_at"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Issuers: Who can issue entitlements
+export const aethex_issuers = pgTable("aethex_issuers", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: varchar("name").notNull(),
+  issuer_class: varchar("issuer_class").notNull(), // "lab" | "platform" | "foundation" | "external"
+  scopes: json("scopes").$type<string[]>().default(sql`'[]'::json`),
+  public_key: text("public_key").notNull(),
+  is_active: boolean("is_active").default(true),
+  metadata: json("metadata").$type<Record<string, any>>().default(sql`'{}'::json`),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Issuer Keys: Key rotation
+export const aethex_issuer_keys = pgTable("aethex_issuer_keys", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  issuer_id: varchar("issuer_id").notNull(),
+  public_key: text("public_key").notNull(),
+  private_key_hash: text("private_key_hash"),
+  is_active: boolean("is_active").default(true),
+  rotated_at: timestamp("rotated_at"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Entitlements: The proofs
+export const aethex_entitlements = pgTable("aethex_entitlements", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  issuer_id: varchar("issuer_id").notNull(),
+  subject_id: varchar("subject_id"),
+  external_subject_ref: varchar("external_subject_ref"), // "roblox:12345"
+  schema_version: varchar("schema_version").default("v0.1"),
+  scope: varchar("scope").notNull(), // "achievement" | "project" | "release"
+  entitlement_type: varchar("entitlement_type").notNull(),
+  data: json("data").$type<Record<string, any>>().notNull(),
+  status: varchar("status").default("active"), // "active" | "revoked" | "expired"
+  signature: text("signature"),
+  evidence_hash: varchar("evidence_hash"),
+  issued_by_subject_id: varchar("issued_by_subject_id"),
+  expires_at: timestamp("expires_at"),
+  revoked_at: timestamp("revoked_at"),
+  revocation_reason: text("revocation_reason"),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// Entitlement Events: Audit trail
+export const aethex_entitlement_events = pgTable("aethex_entitlement_events", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  entitlement_id: varchar("entitlement_id").notNull(),
+  event_type: varchar("event_type").notNull(), // "issued" | "verified" | "revoked" | "expired"
+  actor_id: varchar("actor_id"),
+  actor_type: varchar("actor_type").notNull(), // "user" | "issuer" | "system"
+  reason: text("reason"),
+  metadata: json("metadata").$type<Record<string, any>>().default(sql`'{}'::json`),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+// Audit Log: All OS actions
+export const aethex_audit_log = pgTable("aethex_audit_log", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  action: varchar("action").notNull(), // "link_identity" | "issue_entitlement" | etc
+  actor_id: varchar("actor_id"),
+  actor_type: varchar("actor_type").notNull(), // "user" | "issuer" | "admin" | "system"
+  resource_type: varchar("resource_type").notNull(), // "subject" | "entitlement" | "issuer"
+  resource_id: varchar("resource_id").notNull(),
+  changes: json("changes").$type<Record<string, any>>().default(sql`'{}'::json`),
+  ip_address: varchar("ip_address"),
+  user_agent: text("user_agent"),
+  status: varchar("status").default("success"), // "success" | "failure"
+  error_message: text("error_message"),
+  created_at: timestamp("created_at").defaultNow(),
+});

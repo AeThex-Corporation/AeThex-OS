@@ -31,14 +31,15 @@ import AeThexOS from "@/pages/os";
 import Network from "@/pages/network";
 import NetworkProfile from "@/pages/network-profile";
 import Lab from "@/pages/lab";
-import Projects from "@/pages/projects";
-import Messaging from "@/pages/messaging";
-import Marketplace from "@/pages/marketplace";
-import Settings from "@/pages/settings";
-import FileManager from "@/pages/file-manager";
-import CodeGallery from "@/pages/code-gallery";
-import Notifications from "@/pages/notifications";
-import Analytics from "@/pages/analytics";
+import HubProjects from "@/pages/hub/projects";
+import HubMessaging from "@/pages/hub/messaging";
+import HubMarketplace from "@/pages/hub/marketplace";
+import HubSettings from "@/pages/hub/settings";
+import HubFileManager from "@/pages/hub/file-manager";
+import HubCodeGallery from "@/pages/hub/code-gallery";
+import HubNotifications from "@/pages/hub/notifications";
+import HubAnalytics from "@/pages/hub/analytics";
+import OsLink from "@/pages/os/link";
 import { LabTerminalProvider } from "@/hooks/use-lab-terminal";
 
 function Router() {
@@ -67,17 +68,18 @@ function Router() {
       <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
       <Route path="/os" component={AeThexOS} />
+      <Route path="/os/link">{() => <ProtectedRoute><OsLink /></ProtectedRoute>}</Route>
       <Route path="/network" component={Network} />
       <Route path="/network/:slug" component={NetworkProfile} />
       <Route path="/lab" component={Lab} />
-      <Route path="/projects">{() => <ProtectedRoute><Projects /></ProtectedRoute>}</Route>
-      <Route path="/messaging">{() => <ProtectedRoute><Messaging /></ProtectedRoute>}</Route>
-      <Route path="/marketplace">{() => <ProtectedRoute><Marketplace /></ProtectedRoute>}</Route>
-      <Route path="/settings">{() => <ProtectedRoute><Settings /></ProtectedRoute>}</Route>
-      <Route path="/file-manager">{() => <ProtectedRoute><FileManager /></ProtectedRoute>}</Route>
-      <Route path="/code-gallery">{() => <ProtectedRoute><CodeGallery /></ProtectedRoute>}</Route>
-      <Route path="/notifications">{() => <ProtectedRoute><Notifications /></ProtectedRoute>}</Route>
-      <Route path="/analytics">{() => <ProtectedRoute><Analytics /></ProtectedRoute>}</Route>
+      <Route path="/hub/projects">{() => <ProtectedRoute><HubProjects /></ProtectedRoute>}</Route>
+      <Route path="/hub/messaging">{() => <ProtectedRoute><HubMessaging /></ProtectedRoute>}</Route>
+      <Route path="/hub/marketplace">{() => <ProtectedRoute><HubMarketplace /></ProtectedRoute>}</Route>
+      <Route path="/hub/settings">{() => <ProtectedRoute><HubSettings /></ProtectedRoute>}</Route>
+      <Route path="/hub/file-manager">{() => <ProtectedRoute><HubFileManager /></ProtectedRoute>}</Route>
+      <Route path="/hub/code-gallery">{() => <ProtectedRoute><HubCodeGallery /></ProtectedRoute>}</Route>
+      <Route path="/hub/notifications">{() => <ProtectedRoute><HubNotifications /></ProtectedRoute>}</Route>
+      <Route path="/hub/analytics">{() => <ProtectedRoute><HubAnalytics /></ProtectedRoute>}</Route>
       <Route component={NotFound} />
     </Switch>
   );

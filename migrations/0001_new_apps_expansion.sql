@@ -148,20 +148,19 @@ CREATE TABLE IF NOT EXISTS "projects" (
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS "messages_sender_id_idx" ON "messages" ("sender_id");
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "messages_recipient_id_idx" ON "messages" ("recipient_id");
+-- Removed: marketplace_listings_seller_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "marketplace_listings_seller_id_idx" ON "marketplace_listings" ("seller_id");
+-- Removed: marketplace_listings_category_idx (schema mismatch)  
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "marketplace_listings_category_idx" ON "marketplace_listings" ("category");
+-- Removed: files_user_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "files_user_id_idx" ON "files" ("user_id");
+-- Removed: files_parent_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "files_parent_id_idx" ON "files" ("parent_id");
+-- Removed: notifications_user_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "notifications_user_id_idx" ON "notifications" ("user_id");
+-- Removed: user_analytics_user_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "user_analytics_user_id_idx" ON "user_analytics" ("user_id");
+-- Removed: code_gallery_creator_id_idx (schema mismatch)
 --> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "code_gallery_creator_id_idx" ON "code_gallery" ("creator_id");
---> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "projects_user_id_idx" ON "projects" ("user_id");
+-- Removed: projects_user_id_idx (schema mismatch)
+
