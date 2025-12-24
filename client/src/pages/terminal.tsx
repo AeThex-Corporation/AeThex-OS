@@ -5,6 +5,7 @@ import { useLabTerminal } from "@/hooks/use-lab-terminal";
 import { ArrowLeft, Terminal as TerminalIcon, Copy, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 
 interface TerminalLine {
   type: 'input' | 'output' | 'error' | 'system';
@@ -20,6 +21,18 @@ export default function Terminal() {
       timestamp: Date.now(),
     },
   ]);
+
+  const [cliCommand, setCliCommand] = useState<string>("build");
+  const [cliStatus, setCliStatus] = useState<"idle" | "running" | "done" | "error">("idle");
+  const [cliLabel, setCliLabel] = useState<string>("");
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const currentRunId = useRef<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      eventSourceRef.current?.close();
+    };
+  }, []);
 
   const [input, setInput] = useState("");
   const [commandHistory, setCommandHistory] = useState<string[]>([]);
@@ -154,6 +167,74 @@ export default function Terminal() {
     setHistoryIndex(-1);
   };
 
+  const appendCliLine = (type: TerminalLine['type'], content: string) => {
+    setLines((prev) => [...prev, { type, content, timestamp: Date.now() }]);
+  };
+
+  const stopCli = async () => {
+    if (!currentRunId.current) return;
+    try {
+      await fetch(`/api/admin/cli/stop/${currentRunId.current}`, { method: "POST", credentials: "include" });
+    } catch (_) {
+      // ignore
+    }
+    eventSourceRef.current?.close();
+    eventSourceRef.current = null;
+    currentRunId.current = null;
+    setCliStatus("idle");
+  };
+
+  const startCli = async () => {
+    if (cliStatus === "running") return;
+    setCliStatus("running");
+    appendCliLine('system', `▸ Running ${cliCommand}...`);
+
+    try {
+      const res = await fetch('/api/admin/cli/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ command: cliCommand })
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        appendCliLine('error', `Start failed: ${text || res.status}`);
+        setCliStatus("error");
+        return;
+      }
+
+      const data = await res.json();
+      currentRunId.current = data.id;
+      setCliLabel(data.label);
+
+      const es = new EventSource(`/api/admin/cli/stream/${data.id}`, { withCredentials: true } as any);
+      eventSourceRef.current = es;
+
+      es.addEventListener('message', (evt) => {
+        appendCliLine('output', evt.data);
+      });
+
+      es.addEventListener('error', (evt) => {
+        appendCliLine('error', 'Stream error');
+        setCliStatus("error");
+        es.close();
+      });
+
+      es.addEventListener('done', (evt) => {
+        const status = evt.data === 'success' ? 'done' : 'error';
+        setCliStatus(status as any);
+        appendCliLine(status === 'done' ? 'system' : 'error', `▸ ${cliLabel || cliCommand} ${status}`);
+        es.close();
+        currentRunId.current = null;
+      });
+
+    } catch (err) {
+      appendCliLine('error', 'Failed to start CLI command');
+      setCliStatus("error");
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       processCommand(input);
@@ -216,6 +297,43 @@ export default function Terminal() {
       </div>
 
       {/* Terminal Output */}
+
+      {/* Admin CLI runner */}
+      <div className="border-b border-[#2b2d30] bg-[#121216] px-4 py-3 flex flex-wrap items-center gap-3 text-sm">
+        <div className="text-white/80 font-semibold">AeThex CLI</div>
+        <Select value={cliCommand} onValueChange={setCliCommand}>
+          <SelectTrigger className="w-48 bg-[#0f0f12] border-white/10 text-white/80">
+            <SelectValue placeholder="Select command" />
+          </SelectTrigger>
+          <SelectContent className="bg-[#0f0f12] text-white/80 border-white/10">
+            <SelectItem value="build">build (npm run build)</SelectItem>
+            <SelectItem value="migrate-status">migrate-status (drizzle status)</SelectItem>
+            <SelectItem value="migrate">migrate (drizzle migrate:push)</SelectItem>
+            <SelectItem value="seed">seed (ts-node script/seed.ts)</SelectItem>
+            <SelectItem value="test">test (./test-implementation.sh)</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button
+          size="sm"
+          onClick={startCli}
+          disabled={cliStatus === "running"}
+          className="bg-cyan-600 hover:bg-cyan-500"
+        >
+          {cliStatus === "running" ? "Running..." : "Run"}
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={stopCli}
+          disabled={!currentRunId.current}
+          className="border-white/10 text-white/70 hover:text-white"
+        >
+          Stop
+        </Button>
+        <div className="text-xs text-white/50">
+          Status: {cliStatus.toUpperCase()}
+        </div>
+      </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-1 bg-[#0a0a0c]">
         {lines.map((line, i) => (
           <motion.div

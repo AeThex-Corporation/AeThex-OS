@@ -1,5 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import { spawn, type ChildProcessWithoutNullStreams } from "child_process";
+import { randomUUID } from "crypto";
 import { storage } from "./storage.js";
 import { loginSchema, signupSchema } from "../shared/schema.js";
 import { supabase } from "./supabase.js";
@@ -39,6 +41,17 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+
+  // ===== Admin CLI process registry =====
+  const CLI_ALLOWLIST: Record<string, { cmd: string; args: string[]; label: string }> = {
+    build: { cmd: "npm", args: ["run", "build"], label: "npm run build" },
+    "migrate-status": { cmd: "npx", args: ["drizzle-kit", "status"], label: "drizzle status" },
+    migrate: { cmd: "npx", args: ["drizzle-kit", "migrate:push"], label: "drizzle migrate" },
+    seed: { cmd: "npx", args: ["ts-node", "script/seed.ts"], label: "seed" },
+    test: { cmd: "bash", args: ["./test-implementation.sh"], label: "test-implementation" },
+  };
+
+  const cliProcesses = new Map<string, { proc: ChildProcessWithoutNullStreams; status: "running" | "exited" | "error" }>();
   
   // Apply capability guard to Hub and OS routes
   app.use("/api/hub/*", capabilityGuard);
