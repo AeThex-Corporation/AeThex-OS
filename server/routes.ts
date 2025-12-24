@@ -5,6 +5,7 @@ import { loginSchema, signupSchema } from "../shared/schema.js";
 import { supabase } from "./supabase.js";
 import { getChatResponse } from "./openai.js";
 import { capabilityGuard } from "./capability-guard.js";
+import { startOAuthLinking, handleOAuthCallback } from "./oauth-handlers.js";
 
 // Extend session type
 declare module 'express-session' {
@@ -43,6 +44,14 @@ export async function registerRoutes(
   app.use("/api/hub/*", capabilityGuard);
   app.use("/api/os/entitlements/*", capabilityGuard);
   app.use("/api/os/link/*", capabilityGuard);
+  
+  // ========== OAUTH ROUTES ==========
+  
+  // Start OAuth linking flow (get authorization URL)
+  app.post("/api/oauth/link/:provider", requireAuth, startOAuthLinking);
+  
+  // OAuth callback (provider redirects here with code)
+  app.get("/api/oauth/callback/:provider", handleOAuthCallback);
   
   // ========== MODE MANAGEMENT ROUTES ==========
   
