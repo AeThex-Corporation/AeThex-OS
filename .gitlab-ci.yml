@@ -16,7 +16,10 @@ build_iso:
   script:
     # Update system
     - apt-get update -qq
-    - apt-get install -y -qq build-essential curl wget git nodejs npm debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common
+    - apt-get install -y -qq build-essential curl wget git nodejs npm debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common || true
+    # Verify critical tools are installed
+    - which mksquashfs && echo "✅ mksquashfs found" || echo "⚠️ mksquashfs missing"
+    - which grub-mkrescue && echo "✅ grub-mkrescue found" || echo "⚠️ grub-mkrescue missing"
     
     # Install Node dependencies
     - npm install

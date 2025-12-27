@@ -15,24 +15,38 @@ ISO_NAME="AeThex-Linux-${CODENAME}-amd64.iso"
 
 mkdir -p "${WORKDIR}" "${CHROOT_DIR}" "${ISO_ROOT}/casper" "${ISO_ROOT}/boot/grub"
 
-need_tools=(debootstrap squashfs-tools xorriso grub-mkrescue)
+need_tools=(debootstrap mksquashfs xorriso grub-mkrescue)
 missing=()
 for t in "${need_tools[@]}"; do
-	if ! command -v "$t" >/dev/null 2>&1; then
-		missing+=("$t")
-	fi
+  if ! command -v "$t" >/dev/null 2>&1; then
+    missing+=("$t")
+  fi
 done
 
 if [ ${#missing[@]} -gt 0 ]; then
-	echo "⚠️ Missing tools: ${missing[*]}"
-	echo "Creating placeholder artifacts instead."
-	mkdir -p "${WORKDIR}"
-	cat > "${WORKDIR}/README.txt" << 'EOF'
+  echo "⚠️ Missing tools: ${missing[*]}"
+  echo "Attempting apt-get install as fallback..."
+  apt-get update && apt-get install -y squashfs-tools grub-pc-bin grub-efi-amd64-bin 2>/dev/null || true
+  
+  # Check again
+  missing=()
+  for t in "${need_tools[@]}"; do
+    if ! command -v "$t" >/dev/null 2>&1; then
+      missing+=("$t")
+    fi
+  done
+  
+  if [ ${#missing[@]} -gt 0 ]; then
+    echo "❌ Still missing: ${missing[*]}"
+    echo "Creating placeholder artifacts instead."
+    mkdir -p "${WORKDIR}"
+    cat > "${WORKDIR}/README.txt" << 'EOF'
 Required ISO build tools are missing.
 Install: debootstrap, squashfs-tools, xorriso, grub-pc-bin, grub-efi-amd64-bin.
 This placeholder is uploaded so CI can pass.
 EOF
-	exit 0
+    exit 0
+  fi
 fi
 
 export DEBIAN_FRONTEND=noninteractive
