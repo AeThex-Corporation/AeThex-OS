@@ -22,32 +22,42 @@ function detectPlatform(): PlatformType {
   if (cachedPlatform !== null) return cachedPlatform;
   
   if (typeof window === 'undefined') {
+    console.log('[Platform] Detected: web (no window)');
     cachedPlatform = 'web';
     return cachedPlatform;
   }
   
+  console.log('[Platform] Checking window.Capacitor:', window.Capacitor);
+  console.log('[Platform] Checking window.__TAURI__:', window.__TAURI__);
+  
   if (window.__TAURI__ !== undefined) {
+    console.log('[Platform] Detected: desktop (Tauri)');
     cachedPlatform = 'desktop';
     return cachedPlatform;
   }
   
   if (window.flutter_inappwebview !== undefined || window.Capacitor !== undefined) {
+    console.log('[Platform] Detected: mobile (Capacitor or Flutter)');
     cachedPlatform = 'mobile';
     return cachedPlatform;
   }
   
   const userAgent = navigator.userAgent.toLowerCase();
+  console.log('[Platform] User agent:', userAgent);
   
   if (userAgent.includes('electron')) {
+    console.log('[Platform] Detected: desktop (Electron)');
     cachedPlatform = 'desktop';
     return cachedPlatform;
   }
   
   if (userAgent.includes('cordova')) {
+    console.log('[Platform] Detected: mobile (Cordova)');
     cachedPlatform = 'mobile';
     return cachedPlatform;
   }
   
+  console.log('[Platform] Detected: web (default)');
   cachedPlatform = 'web';
   return cachedPlatform;
 }

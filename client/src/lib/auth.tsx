@@ -1,5 +1,7 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "./supabase";
+import { isMobile } from "./platform";
 
 interface User {
   id: string;
@@ -26,6 +28,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, isLoading } = useQuery({
     queryKey: ["session"],
     queryFn: async () => {
+      // On mobile, use Supabase directly
+      if (isMobile()) {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        if (!data.session) return { authenticated: false };
+        
+        return {
+          authenticated: true,
+          user: {
+            id: data.session.user.id,
+            email: data.session.user.email,
+            username: data.session.user.email?.split('@')[0] || 'user',
+            isAdmin: false
+          }
+        };
+      }
+      
+      // On web/desktop, use API server
       const res = await fetch("/api/auth/session", { credentials: "include" });
       return res.json();
     },
@@ -38,6 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const loginMutation = useMutation({
     mutationFn: async ({ email, password }: { email: string; password: string }) => {
+      // On mobile, use Supabase directly
+      if (isMobile()) {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (error) throw new Error(error.message);
+        return { success: true, user: data.user };
+      }
+      
+      // On web/desktop, use API server
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,6 +104,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      // On mobile, use Supabase directly
+      if (isMobile()) {
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        return;
+      }
+      
+      // On web/desktop, use API server
       await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     },
     onSuccess: () => {

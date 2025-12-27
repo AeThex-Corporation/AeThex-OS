@@ -1,10 +1,16 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, PanInfo } from "framer-motion";
 import { useLocation } from "wouter";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
 import { getIcon } from "@/lib/iconMap";
+import { usePlatformLayout, PlatformSwitch } from "@/hooks/use-platform-layout";
+import { useHaptics } from "@/hooks/use-haptics";
+import { useMobileNative } from "@/hooks/use-mobile-native";
+import { useNativeFeatures } from "@/hooks/use-native-features";
+import { useBiometricAuth } from "@/hooks/use-biometric-auth";
+import { MobileQuickActions } from "@/components/MobileQuickActions";
 import { 
   Terminal, FileText, IdCard, Music, Settings, Globe,
   X, Minus, Square, Maximize2, Volume2, Wifi, Battery,
@@ -16,7 +22,7 @@ import {
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
   TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
   AlertTriangle, Briefcase, CalendarDays, FolderGit2, MessageSquare,
-  ShoppingCart, Folder, Code
+  ShoppingCart, Folder, Code, Home
 } from "lucide-react";
 
 interface WindowState {
@@ -152,7 +158,14 @@ const WALLPAPERS = [
 const KONAMI_CODE = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
 
 export default function AeThexOS() {
-  const [isBooting, setIsBooting] = useState(true);
+  const layout = usePlatformLayout();
+  const { impact, notification } = useHaptics();
+  const { keyboardVisible, deviceInfo } = useMobileNative('dark');
+  const native = useNativeFeatures();
+  const biometric = useBiometricAuth();
+  
+  // Skip boot sequence on mobile
+  const [isBooting, setIsBooting] = useState(!layout.isMobile);
   const [bootProgress, setBootProgress] = useState(0);
   const [bootStep, setBootStep] = useState('');
   const [windows, setWindows] = useState<WindowState[]>([]);
@@ -1130,6 +1143,309 @@ export default function AeThexOS() {
   const parallaxX = (mousePosition.x / window.innerWidth - 0.5) * 10;
   const parallaxY = (mousePosition.y / window.innerHeight - 0.5) * 10;
 
+  // Motion values for mobile gestures (must be outside conditional)
+  const dragX = useMotionValue(0);
+  const dragOpacity = useTransform(dragX, [-200, 0, 200], [0.5, 1, 0.5]);
+
+  // Mobile-specific layout  
+  if (layout.isMobile) {
+    const activeWindows = windows.filter(w => !w.minimized);
+    const currentWindow = activeWindows[activeWindows.length - 1];
+    
+    return (
+      <div className="h-screen w-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-hidden flex flex-col">
+        {/* Status Bar */}
+        <div className="h-12 bg-black/40 backdrop-blur-md flex items-center justify-between px-4 shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-white text-sm font-medium">{deviceInfo?.model || 'AeThex OS'}</span>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/30 text-cyan-300 border border-cyan-500/50">
+              {clearanceTheme.name}
+            </span>
+          </div>
+          <div className="text-white text-xs font-mono">
+            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden relative">
+          {currentWindow ? (
+            // App Window View
+            <div className="h-full w-full bg-slate-900 flex flex-col">
+              {/* App Header */}
+              <div className="h-14 bg-slate-800/90 border-b border-white/10 flex items-center justify-between px-4 shrink-0">
+                <button
+                  onClick={() => {
+                    impact('light');
+                    closeWindow(currentWindow.id);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <h2 className="text-white font-semibold text-sm">{currentWindow.title}</h2>
+                <button
+                  onClick={() => {
+                    impact('light');
+                    minimizeWindow(currentWindow.id);
+                  }}
+                  className="w-9 h-9 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* App Content */}
+              <div className="flex-1 overflow-auto bg-white">
+                {renderAppContent(currentWindow.component)}
+              </div>
+            </div>
+          ) : (
+            // Home Screen
+            <div className="h-full overflow-auto px-4 py-6">
+              <h1 className="text-white text-2xl font-bold mb-6">Applications</h1>
+              <div className="grid grid-cols-4 gap-4">
+                {apps.map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => {
+                      impact('medium');
+                      openWindow({
+                        id: `${app.id}-${Date.now()}`,
+                        title: app.title,
+                        icon: app.icon,
+                        component: app.component,
+                        x: 0,
+                        y: 0,
+                        width: window.innerWidth,
+                        height: window.innerHeight,
+                        zIndex: maxZIndex + 1,
+                        minimized: false,
+                        maximized: true,
+                        content: renderAppContent(app.component)
+                      });
+                      setMaxZIndex(prev => prev + 1);
+                    }}
+                    className="flex flex-col items-center gap-2 p-3 active:scale-95 transition-transform"
+                  >
+                    <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg text-white">
+                      {app.icon}
+                    </div>
+                    <span className="text-white text-xs font-medium text-center line-clamp-2">
+                      {app.title}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Bottom Navigation */}
+        <div className="h-20 bg-black/60 backdrop-blur-xl border-t border-white/10 shrink-0">
+          <div className="h-full flex items-center justify-around px-4">
+            <button
+              onClick={() => {
+                impact('medium');
+                windows.forEach(w => closeWindow(w.id));
+                setShowNotifications(false);
+                setShowStartMenu(false);
+              }}
+              className="flex flex-col items-center gap-1"
+            >
+              <Home className="w-6 h-6 text-white" />
+              <span className="text-white text-[10px]">Home</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                impact('light');
+                setShowNotifications(!showNotifications);
+                setShowStartMenu(false);
+              }}
+              className="flex flex-col items-center gap-1 relative"
+            >
+              <Bell className="w-6 h-6 text-white" />
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
+                  {notifications.length}
+                </span>
+              )}
+              <span className="text-white text-[10px]">Alerts</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                impact('light');
+                const settingsApp = apps.find(a => a.id === 'settings');
+                if (settingsApp) openApp(settingsApp);
+              }}
+              className="flex flex-col items-center gap-1"
+            >
+              <Settings className="w-6 h-6 text-white" />
+              <span className="text-white text-[10px]">Settings</span>
+            </button>
+            
+            <button
+              onClick={() => {
+                impact('light');
+                setShowStartMenu(!showStartMenu);
+                setShowNotifications(false);
+              }}
+              className="flex flex-col items-center gap-1"
+            >
+              <User className="w-6 h-6 text-white" />
+              <span className="text-white text-[10px]">Profile</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Notifications Panel Overlay */}
+        <AnimatePresence>
+          {showNotifications && (
+            <motion.div
+              initial={{ y: "-100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "-100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              className="absolute inset-0 z-50 bg-slate-950/98 backdrop-blur-xl flex flex-col"
+            >
+              <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+                <h2 className="text-white text-lg font-bold">Notifications</h2>
+                <button
+                  onClick={() => {
+                    impact('light');
+                    setShowNotifications(false);
+                  }}
+                  className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                {notifications.length === 0 ? (
+                  <div className="text-center text-white/50 mt-20">No notifications</div>
+                ) : (
+                  <div className="space-y-3">
+                    {notifications.map((notif, i) => (
+                      <div key={i} className="p-4 rounded-xl bg-slate-800/50 border border-white/10">
+                        <div className="text-white">{notif}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Profile Panel Overlay */}
+        <AnimatePresence>
+          {showStartMenu && (
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              className="absolute inset-0 z-50 bg-slate-950/98 backdrop-blur-xl flex flex-col"
+            >
+              <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
+                <h2 className="text-white text-lg font-bold">Profile</h2>
+                <button
+                  onClick={() => {
+                    impact('light');
+                    setShowStartMenu(false);
+                  }}
+                  className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-6">
+                {user ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-800/50 border border-white/10">
+                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center text-white text-2xl font-bold">
+                        {user.username?.[0]?.toUpperCase() || 'U'}
+                      </div>
+                      <div>
+                        <div className="text-white font-bold text-lg">{user.username}</div>
+                        <div className="text-white/70 text-sm">{user.email}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => {
+                          impact('medium');
+                          const achievementsApp = apps.find(a => a.id === 'achievements');
+                          if (achievementsApp) {
+                            openApp(achievementsApp);
+                            setShowStartMenu(false);
+                          }
+                        }}
+                        className="w-full p-4 rounded-xl bg-slate-800/50 border border-white/10 flex items-center gap-3 text-white active:bg-slate-800/70"
+                      >
+                        <Award className="w-5 h-5 text-cyan-400" />
+                        <span>Achievements</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          impact('medium');
+                          const projectsApp = apps.find(a => a.id === 'projects');
+                          if (projectsApp) {
+                            openApp(projectsApp);
+                            setShowStartMenu(false);
+                          }
+                        }}
+                        className="w-full p-4 rounded-xl bg-slate-800/50 border border-white/10 flex items-center gap-3 text-white active:bg-slate-800/70"
+                      >
+                        <Briefcase className="w-5 h-5 text-cyan-400" />
+                        <span>Projects</span>
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          impact('medium');
+                          handleLogout();
+                        }}
+                        className="w-full p-4 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center gap-3 text-red-400 active:bg-red-500/30"
+                      >
+                        <LogOut className="w-5 h-5" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
+
+                    {deviceInfo && (
+                      <div className="p-4 rounded-xl bg-slate-800/50 border border-white/10">
+                        <div className="text-white/70 text-xs mb-2">Device</div>
+                        <div className="text-white text-sm">
+                          {deviceInfo.manufacturer} {deviceInfo.model}
+                        </div>
+                        <div className="text-white/50 text-xs font-mono mt-1">
+                          {deviceInfo.uuid?.slice(0, 16)}...
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center text-white/50 mt-20">Not logged in</div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Quick Actions FAB */}
+        <MobileQuickActions />
+      </div>
+    );
+  }
+  
+  console.log('🖥️ [OS] Rendering DESKTOP layout (isMobile=false)');
+
+  // Desktop/Web layout
   return (
     <div 
       className="h-screen w-screen overflow-hidden select-none relative transition-all duration-700"
