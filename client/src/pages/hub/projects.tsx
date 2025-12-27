@@ -249,7 +249,7 @@ export default function Projects() {
 
                   {/* Technologies */}
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {project.technologies.slice(0, 3).map((tech) => (
+                    {(Array.isArray(project.technologies) ? project.technologies : []).slice(0, 3).map((tech) => (
                       <span
                         key={tech}
                         className="bg-slate-700 text-cyan-300 text-xs px-2 py-1 rounded"
@@ -257,9 +257,9 @@ export default function Projects() {
                         {tech}
                       </span>
                     ))}
-                    {project.technologies.length > 3 && (
+                    {Array.isArray(project.technologies) && project.technologies.length > 3 && (
                       <span className="text-slate-400 text-xs px-2 py-1">
-                        +{project.technologies.length - 3}
+                        +{(project.technologies.length - 3)}
                       </span>
                     )}
                   </div>

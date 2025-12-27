@@ -235,9 +235,12 @@ export default function Notifications() {
                           <Check className="w-4 h-4" />
                         </Button>
                       )}
-                      {notification.actionUrl && (
+                      {(notification.actionUrl || (notification as any).action_url) && (
                         <Button
-                          onClick={() => window.location.href = notification.actionUrl!}
+                          onClick={() => {
+                            const url = notification.actionUrl ?? (notification as any).action_url;
+                            if (typeof url === 'string') window.location.href = url;
+                          }}
                           variant="ghost"
                           size="sm"
                           className="h-8 px-3 text-cyan-400 hover:bg-cyan-500/10"
