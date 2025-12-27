@@ -136,6 +136,12 @@ Response:
 ```
 
 ## Notes
-- All OS routes are protected by the capability guard and expect authenticated context where relevant.
+- All OS routes are always protected by the capability guard and expect authenticated context where relevant.
 - Use Supabase console to inspect tables and audit logs.
 - For production, plan issuer key rotation via `aethex_issuer_keys`; rotation endpoints can be added similarly.
+
+### Bot Integration Env (for external bots)
+Add these to your bot repo (not the OS) so it can call the OS API:
+- AETHEX_API_BASE=`https://<your-os-host>`
+- AETHEX_ISSUER_ID=`<issuer_id from step 2>`
+- AETHEX_REALM=`foundation` (optional; foundation already has required capabilities)

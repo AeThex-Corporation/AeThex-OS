@@ -1188,6 +1188,120 @@ export async function registerRoutes(
     }
   });
 
+  // Simple in-memory file storage (per-user, session-based)
+  const fileStore = new Map<string, any[]>();
+
+  app.get("/api/files", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const files = fileStore.get(userId) || [];
+      const { path } = req.query;
+
+      // Filter by path
+      const filtered = path 
+        ? files.filter(f => f.path.startsWith(`${path}/`) || f.path === path)
+        : files.filter(f => f.path === '/');
+
+      res.json({ files: filtered });
+    } catch (error) {
+      console.error("File list error:", error);
+      res.status(500).json({ error: "Failed to fetch files" });
+    }
+  });
+
+  app.post("/api/files", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { name, type, path, content, language } = req.body;
+      if (!name || !type || !path) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const fileId = randomUUID();
+      const newFile = {
+        id: fileId,
+        user_id: userId,
+        name,
+        type,
+        path,
+        content: content || '',
+        language: language || null,
+        size: content?.length || 0,
+        mime_type: null,
+        parent_id: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      const files = fileStore.get(userId) || [];
+      files.push(newFile);
+      fileStore.set(userId, files);
+
+      res.json(newFile);
+    } catch (error) {
+      console.error("File creation error:", error);
+      res.status(500).json({ error: "Failed to create file" });
+    }
+  });
+
+  app.patch("/api/files/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      const { name, content } = req.body;
+
+      const files = fileStore.get(userId) || [];
+      const file = files.find(f => f.id === id);
+
+      if (!file) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      if (name) file.name = name;
+      if (content !== undefined) file.content = content;
+      file.updated_at = new Date().toISOString();
+
+      res.json(file);
+    } catch (error) {
+      console.error("File update error:", error);
+      res.status(500).json({ error: "Failed to update file" });
+    }
+  });
+
+  app.delete("/api/files/:id", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+      const { id } = req.params;
+      let files = fileStore.get(userId) || [];
+      const fileToDelete = files.find(f => f.id === id);
+
+      if (!fileToDelete) {
+        return res.status(404).json({ error: "File not found" });
+      }
+
+      // If folder, delete all files inside
+      if (fileToDelete.type === 'folder') {
+        files = files.filter(f => !f.path.startsWith(fileToDelete.path + '/') && f.id !== id);
+      } else {
+        files = files.filter(f => f.id !== id);
+      }
+
+      fileStore.set(userId, files);
+      res.json({ id, deleted: true });
+    } catch (error) {
+      console.error("File delete error:", error);
+      res.status(500).json({ error: "Failed to delete file" });
+    }
+  });
+
   app.get("/api/os/issuers/:id", async (req, res) => {
     try {
       const { id } = req.params;
