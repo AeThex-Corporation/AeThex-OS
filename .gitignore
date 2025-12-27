@@ -1,3 +1,14 @@
+# Build artifacts and downloads
+artifacts/
+*.iso
+*.sha256.txt
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+node_modules/
 node_modules
 dist
 .DS_Store
