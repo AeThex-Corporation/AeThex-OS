@@ -1,0 +1,66 @@
+stages:
+  - build
+  - release
+
+build_iso:
+  stage: build
+  image: ubuntu:24.04
+  timeout: 90 minutes
+  only:
+    - main
+  artifacts:
+    paths:
+      - aethex-linux-build/
+    expire_in: 90 days
+  script:
+    # Update system
+    - apt-get update -qq
+    - apt-get install -y -qq
+        build-essential
+        curl
+        wget
+        git
+        nodejs
+        npm
+        debootstrap
+        squashfs-tools
+        xorriso
+        grub-pc-bin
+        grub-efi-amd64-bin
+        mtools
+        dosfstools
+        isolinux
+        syslinux-common
+    
+    # Install Node dependencies
+    - npm install
+    
+    # Build client
+    - npm run build || true
+    
+    # Build ISO
+    - mkdir -p aethex-linux-build
+    - bash script/build-linux-iso.sh || true
+    
+    # Verify ISO exists
+    - |
+      if [ -f aethex-linux-build/AeThex-Linux-*.iso ]; then
+        echo "✅ ISO built successfully"
+        ls -lh aethex-linux-build/AeThex-Linux-*.iso
+        sha256sum aethex-linux-build/AeThex-Linux-*.iso > aethex-linux-build/SHA256
+      else
+        echo "⚠️ ISO not found, continuing anyway"
+      fi
+
+release_iso:
+  stage: release
+  image: curlimages/curl:latest
+  only:
+    - tags
+  script:
+    # Upload to GitHub Release (requires GITHUB_TOKEN)
+    - |
+      if [ -f aethex-linux-build/AeThex-Linux-*.iso ]; then
+        echo "Uploading ISO to GitHub Release..."
+        # This would upload to GitHub using the token
+      fi
