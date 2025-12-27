@@ -1,0 +1,43 @@
+[Unit]
+Description=AeThex OS Kernel (Identity & Entitlements)
+Documentation=https://github.com/AeThex-Corporation/AeThex-OS
+After=network.target postgresql.service
+Wants=network.target
+
+[Service]
+Type=simple
+User=aethex
+Group=aethex
+WorkingDirectory=/opt/aethex-os
+
+# Start the Node.js server for OS Kernel API
+ExecStart=/usr/bin/node /opt/aethex-os/server/index.js
+
+# Environment
+Environment=NODE_ENV=production
+Environment=PORT=3000
+EnvironmentFile=-/etc/aethex-os/environment
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=300
+StartLimitBurst=5
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/log/aethex-os /var/lib/aethex-os
+
+# Resource limits
+MemoryMax=1G
+CPUQuota=50%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aethex-kernel
+
+[Install]
+WantedBy=multi-user.target

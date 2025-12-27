@@ -1,0 +1,124 @@
+name: Build AeThex Linux ISO
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'client/**'
+      - 'server/**'
+      - 'shared/**'
+      - 'src-tauri/**'
+      - 'script/build-linux-iso.sh'
+      - 'configs/**'
+      - '.github/workflows/build-iso.yml'
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create a GitHub release'
+        required: false
+        default: 'false'
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    
+    permissions:
+      contents: write
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            mtools \
+            dosfstools \
+            isolinux \
+            syslinux-common
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        run: npm run tauri:build
+
+      - name: Build AeThex Linux ISO
+        run: sudo bash script/build-linux-iso.sh
+
+      - name: Verify ISO
+        run: |
+          ISO_FILE=$(ls ~/aethex-linux-build/AeThex-Linux-*.iso | head -1)
+          if [ ! -f "$ISO_FILE" ]; then
+            echo "ERROR: ISO file not found"
+            exit 1
+          fi
+          echo "ISO_PATH=$ISO_FILE" >> $GITHUB_ENV
+          ls -lh "$ISO_FILE"
+          sha256sum "$ISO_FILE"
+
+      - name: Upload ISO as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AeThex-Linux-ISO
+          path: ~/aethex-linux-build/AeThex-Linux-*.iso*
+          retention-days: 90
+
+      - name: Create Release
+        if: github.event.inputs.release == 'true' && success()
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: iso-${{ github.run_number }}
+          name: AeThex Linux ISO Build #${{ github.run_number }}
+          files: ~/aethex-linux-build/AeThex-Linux-*.iso*
+          draft: false
+          prerelease: true
+          body: |
+            # AeThex Linux ISO - Build ${{ github.run_number }}
+            
+            Automatically built from commit: ${{ github.sha }}
+            
+            **SHA256 Checksum:**
+            ```
+            $(cat ~/aethex-linux-build/AeThex-Linux-*.sha256)
+            ```
+            
+            **Installation Instructions:**
+            1. Download the ISO file
+            2. Verify checksum: `sha256sum -c AeThex-Linux-*.sha256`
+            3. Create bootable USB: `sudo dd if=AeThex-Linux-*.iso of=/dev/sdX bs=4M status=progress`
+            4. Boot from USB and install
+            
+            **Default Credentials:**
+            - Username: `aethex`
+            - Password: `aethex`
+
+      - name: Notify on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ ISO build failed. Check workflow logs for details.'
+            })

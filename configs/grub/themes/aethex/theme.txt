@@ -1,0 +1,71 @@
+# AeThex Linux GRUB Theme
+# Place this file at: /boot/grub/themes/aethex/theme.txt
+
+# General settings
+title-text: "AeThex Linux"
+title-color: "#FFFFFF"
+title-font: "DejaVu Sans Bold 24"
+
+# Background
+desktop-image: "background.png"
+desktop-color: "#000000"
+
+# Terminal
+terminal-box: "terminal_box_*.png"
+terminal-font: "DejaVu Sans Mono Regular 14"
+
+# Boot menu
++ boot_menu {
+    left = 25%
+    top = 30%
+    width = 50%
+    height = 40%
+    
+    item_font = "DejaVu Sans Regular 16"
+    item_color = "#CCCCCC"
+    item_height = 32
+    item_padding = 10
+    item_spacing = 5
+    
+    selected_item_font = "DejaVu Sans Bold 16"
+    selected_item_color = "#FFFFFF"
+    selected_item_pixmap_style = "select_*.png"
+}
+
+# Progress bar
++ progress_bar {
+    id = "__timeout__"
+    left = 25%
+    top = 75%
+    width = 50%
+    height = 24
+    
+    fg_color = "#4A90E2"
+    bg_color = "#1A1A1A"
+    border_color = "#333333"
+    
+    font = "DejaVu Sans Regular 12"
+    text_color = "#FFFFFF"
+    text = "@TIMEOUT_NOTIFICATION_LONG@"
+}
+
+# Logo
++ image {
+    left = 50%
+    top = 10%
+    width = 128
+    height = 128
+    file = "logo.png"
+}
+
+# Footer text
++ label {
+    left = 0
+    top = 100%-30
+    width = 100%
+    height = 20
+    align = "center"
+    color = "#666666"
+    font = "DejaVu Sans Regular 10"
+    text = "AeThex Corporation • Press 'e' to edit boot options"
+}

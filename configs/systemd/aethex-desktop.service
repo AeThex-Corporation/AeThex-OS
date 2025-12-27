@@ -1,0 +1,43 @@
+[Unit]
+Description=AeThex Desktop Environment
+Documentation=https://github.com/AeThex-Corporation/AeThex-OS
+After=graphical.target network.target
+Wants=network.target
+ConditionPathExists=/usr/bin/aethex-desktop
+
+[Service]
+Type=simple
+User=aethex
+Group=aethex
+Environment=DISPLAY=:0
+Environment=XDG_SESSION_TYPE=x11
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+WorkingDirectory=/home/aethex
+
+# Main executable
+ExecStart=/usr/bin/aethex-desktop
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+StartLimitInterval=200
+StartLimitBurst=3
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/aethex
+
+# Resource limits
+MemoryMax=2G
+CPUQuota=80%
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aethex-desktop
+
+[Install]
+WantedBy=graphical.target

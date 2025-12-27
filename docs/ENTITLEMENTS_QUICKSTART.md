@@ -136,7 +136,7 @@ Response:
 ```
 
 ## Notes
-- All OS routes are always protected by the capability guard and expect authenticated context where relevant.
+- All OS routes are protected by the capability guard and expect authenticated context where relevant.
 - Use Supabase console to inspect tables and audit logs.
 - For production, plan issuer key rotation via `aethex_issuer_keys`; rotation endpoints can be added similarly.
 

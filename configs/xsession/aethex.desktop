@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=AeThex OS
+Comment=AeThex Desktop Environment - Web-based OS Interface
+Exec=/usr/bin/aethex-desktop
+TryExec=/usr/bin/aethex-desktop
+Icon=aethex-logo
+Type=Application
+DesktopNames=AeThex
+X-Ubuntu-Gettext-Domain=aethex-session
+Keywords=desktop;environment;os;cloud;
+Categories=System;
