@@ -22,7 +22,7 @@ echo "[*] Checking dependencies..."
 for cmd in debootstrap grub-mkrescue; do
   if ! command -v "$cmd" &> /dev/null; then
     echo "[!] Missing: $cmd. Installing..."
-    sudo apt-get update -qq && sudo apt-get install -y -qq debootstrap grub-efi-amd64-bin grub-pc-bin xorriso isolinux syslinux-common || true
+    apt-get update -qq && apt-get install -y -qq debootstrap grub-efi-amd64-bin grub-pc-bin xorriso isolinux syslinux-common || true
   fi
 done
 
@@ -36,19 +36,19 @@ fi
 
 echo "[+] Bootstrapping Ubuntu 24.04 (noble)..."
 echo "    (this may take 10-15 minutes, please wait...)"
-sudo debootstrap --arch=amd64 --variant=minbase noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/ 2>&1 | tail -5
+debootstrap --arch=amd64 --variant=minbase noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/ 2>&1 | tail -5
 
 echo "[+] Installing kernel and boot tools..."
 echo "    (packages installing...)"
-sudo chroot "$ROOTFS_DIR" bash -c '
+chroot "$ROOTFS_DIR" bash -c '
   apt-get update > /dev/null 2>&1
   apt-get install -y -qq linux-image-generic grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common > /dev/null 2>&1
   apt-get clean
 ' 2>&1 | grep -v "^Get:\|^Hit:\|^Unpacking\|^Setting up" | tail -5
 
 echo "[+] Extracting kernel and initrd..."
-KERNEL=$(sudo find "$ROOTFS_DIR/boot" -name "vmlinuz-*" -type f | head -1)
-INITRD=$(sudo find "$ROOTFS_DIR/boot" -name "initrd.img-*" -type f | head -1)
+KERNEL=$(find "$ROOTFS_DIR/boot" -name "vmlinuz-*" -type f | head -1)
+INITRD=$(find "$ROOTFS_DIR/boot" -name "initrd.img-*" -type f | head -1)
 
 if [ -z "$KERNEL" ] || [ -z "$INITRD" ]; then
   echo "[!] Kernel or initrd not found."
@@ -57,14 +57,14 @@ if [ -z "$KERNEL" ] || [ -z "$INITRD" ]; then
   exit 0
 fi
 
-sudo cp "$KERNEL" "$ISO_DIR/casper/vmlinuz"
-sudo cp "$INITRD" "$ISO_DIR/casper/initrd.img"
+cp "$KERNEL" "$ISO_DIR/casper/vmlinuz"
+cp "$INITRD" "$ISO_DIR/casper/initrd.img"
 echo "[✓] Kernel: $(basename $KERNEL)"
 echo "[✓] Initrd: $(basename $INITRD)"
 
 echo "[+] Creating squashfs (this may take 5-10 min)..."
 if command -v mksquashfs &> /dev/null; then
-  sudo mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz 2>&1 | tail -3
+  mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz 2>&1 | tail -3
 else
   echo "[!] mksquashfs not found; cannot create ISO."
   mkdir -p "$BUILD_DIR"
@@ -82,9 +82,9 @@ LABEL linux
   KERNEL /casper/vmlinuz
   APPEND initrd=/casper/initrd.img boot=casper quiet splash
 EOF
-sudo cp "$BUILD_DIR/isolinux.cfg" "$ISO_DIR/isolinux/"
-sudo cp /usr/lib/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] isolinux.bin missing"
-sudo cp /usr/lib/syslinux/ldlinux.c32 "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] ldlinux.c32 missing"
+cp "$BUILD_DIR/isolinux.cfg" "$ISO_DIR/isolinux/"
+cp /usr/lib/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] isolinux.bin missing"
+cp /usr/lib/syslinux/ldlinux.c32 "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] ldlinux.c32 missing"
 
 echo "[+] Setting up UEFI boot (GRUB)..."
 cat > "$BUILD_DIR/grub.cfg" << 'EOF'
@@ -96,10 +96,10 @@ menuentry 'AeThex OS' {
   initrd /casper/initrd.img
 }
 EOF
-sudo cp "$BUILD_DIR/grub.cfg" "$ISO_DIR/boot/grub/"
+cp "$BUILD_DIR/grub.cfg" "$ISO_DIR/boot/grub/"
 
 echo "[+] Building hybrid ISO (BIOS + UEFI)..."
-sudo grub-mkrescue -o "$BUILD_DIR/$ISO_NAME" "$ISO_DIR" 2>&1 | grep -E "done|error" || echo "[*] ISO generation in progress..."
+grub-mkrescue -o "$BUILD_DIR/$ISO_NAME" "$ISO_DIR" 2>&1 | grep -E "done|error" || echo "[*] ISO generation in progress..."
 
 echo "[+] Computing checksum..."
 if [ -f "$BUILD_DIR/$ISO_NAME" ]; then
@@ -115,6 +115,6 @@ else
 fi
 
 echo "[*] Cleaning up rootfs..."
-sudo rm -rf "$ROOTFS_DIR"
+rm -rf "$ROOTFS_DIR"
 
 echo "[✓] Done!"
