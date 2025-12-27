@@ -46,6 +46,7 @@ jobs:
             debootstrap \
             squashfs-tools \
             xorriso \
+            grub-common \
             grub-pc-bin \
             grub-efi-amd64-bin \
             isolinux \
