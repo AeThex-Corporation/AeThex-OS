@@ -53,13 +53,24 @@ jobs:
             mtools \
             dosfstools \
             isolinux \
-            syslinux-common
+            syslinux-common \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
 
       - name: Install Node dependencies
         run: npm ci
 
       - name: Build Tauri app
-        run: npm run tauri:build
+        run: |
+          npm run build
+          npm run build:tauri
 
       - name: Build AeThex Linux ISO
         run: sudo bash script/build-linux-iso.sh
