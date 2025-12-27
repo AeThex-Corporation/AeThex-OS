@@ -8,6 +8,7 @@ build_iso:
   timeout: 90 minutes
   only:
     - main
+    - tags
   artifacts:
     paths:
       - aethex-linux-build/
@@ -15,21 +16,22 @@ build_iso:
   script:
     # Update system
     - apt-get update -qq
-    - apt-get install -y -qq
-        build-essential
-        curl
-        wget
-        git
-        nodejs
-        npm
-        debootstrap
-        squashfs-tools
-        xorriso
-        grub-pc-bin
-        grub-efi-amd64-bin
-        mtools
-        dosfstools
-        isolinux
+    - apt-get install -y -qq \
+        build-essential \
+        curl \
+        wget \
+        git \
+        nodejs \
+        npm \
+        debootstrap \
+        squashfs-tools \
+        xorriso \
+        grub-common \
+        grub-pc-bin \
+        grub-efi-amd64-bin \
+        mtools \
+        dosfstools \
+        isolinux \
         syslinux-common
     
     # Install Node dependencies
@@ -44,7 +46,7 @@ build_iso:
     
     # Verify ISO exists
     - |
-      if [ -f aethex-linux-build/AeThex-Linux-*.iso ]; then
+      if ls aethex-linux-build/AeThex-Linux-*.iso 1> /dev/null 2>&1; then
         echo "✅ ISO built successfully"
         ls -lh aethex-linux-build/AeThex-Linux-*.iso
         sha256sum aethex-linux-build/AeThex-Linux-*.iso > aethex-linux-build/SHA256
