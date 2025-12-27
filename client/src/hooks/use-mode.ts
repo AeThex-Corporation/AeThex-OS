@@ -1,11 +1,11 @@
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import type { Mode, Realm } from "@/shared/app-registry";
+import { Mode, Realm } from "@/shared/app-registry";
 
 export function useMode() {
   const { user } = useAuth();
-  const [mode, setModeState] = useState<Mode>("foundation");
-  const [realm, setRealm] = useState<Realm>("foundation");
+  const [mode, setModeState] = useState<Mode>(Mode.Web);
+  const [realm, setRealm] = useState<Realm>(Realm.Foundation);
   const [enforcedRealm, setEnforcedRealm] = useState<Realm | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -53,7 +53,7 @@ export function useMode() {
     }
 
     setModeState(newMode);
-    setRealm(newMode as Realm);
+    setRealm(newMode as unknown as Realm);
 
     try {
       await fetch(`/api/user/mode-preference`, {

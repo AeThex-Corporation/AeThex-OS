@@ -35,6 +35,6 @@ export enum Realm {
 }
 
 // Minimal route access check placeholder (always allows)
-export function canAccessRoute(_user: unknown, _route: string): boolean {
+export function canAccessRoute(_user: unknown, _route?: string): boolean {
   return true;
 }

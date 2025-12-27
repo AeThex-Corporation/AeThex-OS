@@ -12,7 +12,7 @@ export function useRouteGuard() {
   useEffect(() => {
     if (loading || !realm || !mode) return;
 
-    const canAccess = canAccessRoute(location, realm, mode);
+    const canAccess = canAccessRoute({ id: location, realm }, location);
 
     if (!canAccess) {
       toast({
