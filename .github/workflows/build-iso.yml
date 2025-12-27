@@ -1,26 +1,16 @@
-name: Build AeThex Linux ISO
+name: Build & Verify AeThex
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      build_type:
-        description: 'Build type'
-        required: true
-        default: 'iso'
-        type: choice
-        options:
-          - iso
-          - test
 
 jobs:
-  build-iso:
+  build:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 30
     
-    permissions:
-      contents: write
-      packages: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,80 +21,14 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            debootstrap \
-            squashfs-tools \
-            xorriso \
-            grub-pc-bin \
-            grub-efi-amd64-bin \
-            mtools \
-            dosfstools \
-            isolinux \
-            syslinux-common \
-            libwebkit2gtk-4.1-dev \
-            build-essential \
-            curl \
-            wget \
-            file \
-            libxdo-dev \
-            libssl-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
-      - name: Install Node dependencies
-        run: npm ci --prefer-offline
+      - name: Type check
+        run: npm run check
 
       - name: Build client
         run: npm run build
-        continue-on-error: true
 
-      - name: Build Tauri app
-        run: npm run build:tauri
-        continue-on-error: true
-
-      - name: Build AeThex Linux ISO
-        run: sudo bash script/build-linux-iso.sh
-        continue-on-error: true
-
-      - name: Check for ISO
-        id: check-iso
-        run: |
-          if [ -f ~/aethex-linux-build/AeThex-Linux-*.iso ]; then
-            echo "iso_exists=true" >> $GITHUB_OUTPUT
-            ls -lh ~/aethex-linux-build/AeThex-Linux-*.iso
-          else
-            echo "iso_exists=false" >> $GITHUB_OUTPUT
-            echo "ISO file not found - build may have failed"
-            ls -lh ~/aethex-linux-build/ 2>/dev/null || echo "Build directory not found"
-          fi
-
-      - name: Upload ISO as artifact
-        if: steps.check-iso.outputs.iso_exists == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: AeThex-Linux-ISO
-          path: ~/aethex-linux-build/AeThex-Linux-*.iso*
-          retention-days: 90
-
-      - name: Report Status
-        if: always()
-        run: |
-          echo "## Build Status" >> $GITHUB_STEP_SUMMARY
-          if [ "${{ steps.check-iso.outputs.iso_exists }}" == "true" ]; then
-            echo "✅ ISO build successful - check artifacts" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "⚠️ ISO build incomplete - check logs above" >> $GITHUB_STEP_SUMMARY
-          fi
-
-      - name: Debug Info
-        if: always()
-        run: |
-          echo "Build completed at: $(date)"
-          echo "Checking build directory..."
-          ls -la ~/aethex-linux-build/ 2>/dev/null || echo "Build directory does not exist yet"
+      - name: ✅ Build complete
+        run: echo "AeThex-OS verified and built successfully"
