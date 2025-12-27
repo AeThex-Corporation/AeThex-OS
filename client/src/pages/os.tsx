@@ -10,7 +10,10 @@ import { useHaptics } from "@/hooks/use-haptics";
 import { useMobileNative } from "@/hooks/use-mobile-native";
 import { useNativeFeatures } from "@/hooks/use-native-features";
 import { useBiometricAuth } from "@/hooks/use-biometric-auth";
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { MobileQuickActions } from "@/components/MobileQuickActions";
+import { Minesweeper } from "@/components/games/Minesweeper";
+import { CookieClicker } from "@/components/games/CookieClicker";
 import { 
   Terminal, FileText, IdCard, Music, Settings, Globe,
   X, Minus, Square, Maximize2, Volume2, Wifi, Battery,
@@ -22,7 +25,8 @@ import {
   Eye, Shield, Zap, Skull, Lock, Unlock, Server, Database,
   TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
   AlertTriangle, Briefcase, CalendarDays, FolderGit2, MessageSquare,
-  ShoppingCart, Folder, Code, Home
+  ShoppingCart, Folder, Code, Home, Flag, Cookie, ChevronLeft,
+  MoreVertical, Search, Mic, ArrowLeft
 } from "lucide-react";
 
 interface WindowState {
@@ -543,7 +547,9 @@ export default function AeThexOS() {
     { id: "devtools", title: "Dev Tools", icon: <Code2 className="w-8 h-8" />, component: "devtools", defaultWidth: 450, defaultHeight: 400 },
     { id: "music", title: "Radio AeThex", icon: <Radio className="w-8 h-8" />, component: "music", defaultWidth: 400, defaultHeight: 350 },
     { id: "codeeditor", title: "The Lab", icon: <Code2 className="w-8 h-8" />, component: "codeeditor", defaultWidth: 700, defaultHeight: 500 },
-    { id: "arcade", title: "Arcade", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
+    { id: "arcade", title: "Snake", icon: <Gamepad2 className="w-8 h-8" />, component: "arcade", defaultWidth: 420, defaultHeight: 520 },
+    { id: "minesweeper", title: "Minesweeper", icon: <Flag className="w-8 h-8" />, component: "minesweeper", defaultWidth: 400, defaultHeight: 500 },
+    { id: "cookieclicker", title: "Cookie Clicker", icon: <Cookie className="w-8 h-8" />, component: "cookieclicker", defaultWidth: 420, defaultHeight: 600 },
     { id: "calculator", title: "Calculator", icon: <Calculator className="w-8 h-8" />, component: "calculator", defaultWidth: 320, defaultHeight: 450 },
     { id: "settings", title: "Settings", icon: <Settings className="w-8 h-8" />, component: "settings", defaultWidth: 550, defaultHeight: 500 },
   ];
@@ -794,6 +800,8 @@ export default function AeThexOS() {
       case 'codeeditor': return <CodeEditorApp />;
       case 'newsfeed': return <NewsFeedApp />;
       case 'arcade': return <ArcadeApp />;
+      case 'minesweeper': return <Minesweeper />;
+      case 'cookieclicker': return <CookieClicker />;
       case 'profiles': return <ProfilesApp />;
       case 'leaderboard': return <LeaderboardApp />;
       case 'calculator': return <CalculatorApp />;
@@ -1147,297 +1155,291 @@ export default function AeThexOS() {
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0.5, 1, 0.5]);
 
-  // Mobile-specific layout  
+  // Native Android App Layout
   if (layout.isMobile) {
     const activeWindows = windows.filter(w => !w.minimized);
     const currentWindow = activeWindows[activeWindows.length - 1];
     
+    // Hide system navigation bar on mount (Android only)
+    useEffect(() => {
+      const setupStatusBar = async () => {
+        try {
+          // Hide the status bar for full immersion
+          await StatusBar.hide();
+          
+          // Set navigation bar to transparent and hide it
+          if ((window as any).NavigationBar) {
+            await (window as any).NavigationBar.backgroundColorByHexString('#00000000', false);
+            await (window as any).NavigationBar.hide();
+          }
+          
+          // Enable edge-to-edge mode
+          document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
+        } catch (error) {
+          console.log('StatusBar not available on this platform');
+        }
+      };
+      
+      setupStatusBar();
+      
+      return () => {
+        // Show status bar when leaving
+        StatusBar.show().catch(() => {});
+      };
+    }, []);
+    
     return (
-      <div className="h-screen w-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 overflow-hidden flex flex-col">
-        {/* Status Bar */}
-        <div className="h-12 bg-black/40 backdrop-blur-md flex items-center justify-between px-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <span className="text-white text-sm font-medium">{deviceInfo?.model || 'AeThex OS'}</span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-cyan-500/30 text-cyan-300 border border-cyan-500/50">
-              {clearanceTheme.name}
-            </span>
-          </div>
-          <div className="text-white text-xs font-mono">
-            {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </div>
-        </div>
+      <div className="h-screen w-screen bg-black overflow-hidden flex flex-col relative">
+        {/* INGRESS STYLE - Lightweight Background */}
+        <div className="absolute inset-0 bg-black"></div>
+        
+        {/* Hexagon Grid Pattern - CSS Only */}
+        <div className="absolute inset-0 opacity-10" style={{
+          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 40px, #00ff9920 40px, #00ff9920 42px),
+                           repeating-linear-gradient(90deg, transparent, transparent 40px, #00ff9920 40px, #00ff9920 42px),
+                           repeating-linear-gradient(120deg, transparent, transparent 40px, #00ffff20 40px, #00ffff20 42px)`
+        }}></div>
+        
+        {/* Scan Lines - Pure CSS Animation */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, #00ff9905 2px, #00ff9905 4px)',
+          animation: 'scan 8s linear infinite'
+        }}></div>
+        
+        <style>{`
+          @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+          }
+          @keyframes pulse-border {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+          }
+        `}</style>
 
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden relative">
-          {currentWindow ? (
-            // App Window View
-            <div className="h-full w-full bg-slate-900 flex flex-col">
-              {/* App Header */}
-              <div className="h-14 bg-slate-800/90 border-b border-white/10 flex items-center justify-between px-4 shrink-0">
-                <button
-                  onClick={() => {
-                    impact('light');
-                    closeWindow(currentWindow.id);
-                  }}
-                  className="w-9 h-9 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center active:scale-95 transition-transform"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-                <h2 className="text-white font-semibold text-sm">{currentWindow.title}</h2>
-                <button
-                  onClick={() => {
-                    impact('light');
-                    minimizeWindow(currentWindow.id);
-                  }}
-                  className="w-9 h-9 rounded-lg bg-cyan-500/20 text-cyan-400 flex items-center justify-center active:scale-95 transition-transform"
-                >
-                  <Minus className="w-5 h-5" />
-                </button>
-              </div>
-              
-              {/* App Content */}
-              <div className="flex-1 overflow-auto bg-white">
-                {renderAppContent(currentWindow.component)}
-              </div>
-            </div>
-          ) : (
-            // Home Screen
-            <div className="h-full overflow-auto px-4 py-6">
-              <h1 className="text-white text-2xl font-bold mb-6">Applications</h1>
-              <div className="grid grid-cols-4 gap-4">
-                {apps.map((app) => (
-                  <button
-                    key={app.id}
-                    onClick={() => {
-                      impact('medium');
-                      openWindow({
-                        id: `${app.id}-${Date.now()}`,
-                        title: app.title,
-                        icon: app.icon,
-                        component: app.component,
-                        x: 0,
-                        y: 0,
-                        width: window.innerWidth,
-                        height: window.innerHeight,
-                        zIndex: maxZIndex + 1,
-                        minimized: false,
-                        maximized: true,
-                        content: renderAppContent(app.component)
-                      });
-                      setMaxZIndex(prev => prev + 1);
-                    }}
-                    className="flex flex-col items-center gap-2 p-3 active:scale-95 transition-transform"
-                  >
-                    <div className="w-14 h-14 bg-gradient-to-br from-cyan-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg text-white">
-                      {app.icon}
-                    </div>
-                    <span className="text-white text-xs font-medium text-center line-clamp-2">
-                      {app.title}
-                    </span>
-                  </button>
+        {/* Ingress Status Bar - Minimal */}
+        <div className="relative h-8 bg-black/90 border-b border-emerald-500/50 shrink-0 z-50">
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent"></div>
+          <div className="relative flex items-center justify-between px-4 h-full">
+            <div className="flex items-center gap-3">
+              <Activity className="w-3.5 h-3.5 text-emerald-400" />
+              <Wifi className="w-3.5 h-3.5 text-cyan-400" />
+              <div className="flex items-center gap-0.5">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="w-0.5 h-1.5 bg-emerald-400 rounded-full" style={{ height: `${(i + 1) * 2}px` }} />
                 ))}
               </div>
             </div>
-          )}
+            <div className="flex items-center gap-4 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+              <span>{batteryInfo?.level || 100}%</span>
+              <Battery className="w-4 h-4 text-green-400" />
+              <span className="font-mono text-cyan-400">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Bottom Navigation */}
-        <div className="h-20 bg-black/60 backdrop-blur-xl border-t border-white/10 shrink-0">
-          <div className="h-full flex items-center justify-around px-4">
+        {/* Main Content */}
+        <div className="flex-1 overflow-hidden relative">
+          <AnimatePresence mode="wait">
+            {currentWindow ? (
+              // Fullscreen App View with 3D Card Flip
+              <motion.div
+                key={currentWindow.id}
+                initial={{ rotateY: 90, opacity: 0 }}
+                animate={{ rotateY: 0, opacity: 1 }}
+                exit={{ rotateY: -90, opacity: 0 }}
+                transition={{ duration: 0.4, type: "spring" }}
+                style={{ transformStyle: "preserve-3d" }}
+                className="h-full w-full flex flex-col relative"
+              >
+                {/* Ingress Style - Minimal App Bar */}
+                <div className="relative h-12 bg-black/95 border-b-2 border-emerald-500/50 shrink-0">
+                  <div className="absolute inset-0" style={{ animation: 'pulse-border 2s ease-in-out infinite' }}>
+                    <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+                  </div>
+                  <div className="relative flex items-center px-3 h-full">
+                    <button
+                      onClick={() => {
+                        impact('light');
+                        closeWindow(currentWindow.id);
+                      }}
+                      className="w-10 h-10 flex items-center justify-center border border-emerald-500/50 active:bg-emerald-500/20"
+                      style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+                    >
+                      <ChevronLeft className="w-5 h-5 text-emerald-400" />
+                    </button>
+                    <div className="flex-1 px-4">
+                      <h1 className="text-cyan-400 font-mono font-bold text-lg uppercase tracking-widest">
+                        {currentWindow.title}
+                      </h1>
+                    </div>
+                    <button
+                      className="w-10 h-10 flex items-center justify-center border border-cyan-500/50 active:bg-cyan-500/20"
+                      style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+                    >
+                      <MoreVertical className="w-5 h-5 text-cyan-400" />
+                    </button>
+                  </div>
+                </div>
+                
+                {/* App Content */}
+                <div className="flex-1 overflow-auto relative bg-black">
+                  {renderAppContent(currentWindow.component)}
+                </div>
+              </motion.div>
+            ) : (
+              // ULTRA FUTURISTIC LAUNCHER
+              <motion.div
+                key="launcher"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="h-full flex flex-col relative"
+              >
+                {/* Ingress Style Search Bar */}
+                <div className="px-4 pt-6 pb-4">
+                  <div className="relative bg-black/80 border border-emerald-500/50 p-3">
+                    <div className="absolute inset-0 border border-cyan-500/30" style={{ clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))' }}></div>
+                    <div className="relative flex items-center gap-3">
+                      <Search className="w-5 h-5 text-emerald-400" />
+                      <input
+                        type="text"
+                        placeholder="SCANNER SEARCH..."
+                        className="flex-1 bg-transparent text-emerald-400 placeholder:text-emerald-400/40 outline-none text-sm font-mono uppercase tracking-wide"
+                        onFocus={() => impact('light')}
+                      />
+                      <Mic className="w-5 h-5 text-cyan-400" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* App Grid - Hexagonal */}
+                <div className="flex-1 overflow-auto px-4 pb-24">
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-3 px-2">
+                      <div className="w-2 h-2 bg-emerald-400"></div>
+                      <h2 className="text-emerald-400 text-xs uppercase tracking-widest font-mono font-bold">
+                        Quick Access
+                      </h2>
+                      <div className="flex-1 h-[1px] bg-emerald-500/30"></div>
+                    </div>
+                    <div className="grid grid-cols-4 gap-3">
+                      {apps.slice(0, 8).map((app) => (
+                        <button
+                          key={app.id}
+                          onClick={() => {
+                            impact('medium');
+                            openApp(app);
+                          }}
+                          className="flex flex-col items-center gap-2 p-2 active:bg-emerald-500/10"
+                        >
+                          <div 
+                            className="relative w-16 h-16 bg-black border-2 border-emerald-500/50 flex items-center justify-center active:border-cyan-400"
+                            style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+                          >
+                            <div className="text-emerald-400 scale-75">{app.icon}</div>
+                            <div className="absolute inset-0 border border-cyan-500/20" style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}></div>
+                          </div>
+                          <span className="text-cyan-400 text-[9px] font-mono text-center line-clamp-2 leading-tight uppercase">
+                            {app.title}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* All Apps - Minimal List */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-3 px-2">
+                      <div className="w-2 h-2 bg-cyan-400"></div>
+                      <h2 className="text-cyan-400 text-xs uppercase tracking-widest font-mono font-bold">
+                        All Systems
+                      </h2>
+                      <div className="flex-1 h-[1px] bg-cyan-500/30"></div>
+                    </div>
+                    <div className="space-y-2">
+                      {apps.slice(8).map((app) => (
+                        <button
+                          key={app.id}
+                          onClick={() => {
+                            impact('medium');
+                            openApp(app);
+                          }}
+                          className="relative w-full flex items-center gap-3 p-3 border border-emerald-500/30 active:bg-emerald-500/10 active:border-cyan-500"
+                        >
+                          <div className="w-10 h-10 bg-black border border-emerald-500/50 flex items-center justify-center shrink-0">
+                            <div className="text-emerald-400 scale-75">{app.icon}</div>
+                          </div>
+                          <span className="text-cyan-400 font-mono text-sm text-left flex-1 uppercase tracking-wide">{app.title}</span>
+                          <ChevronRight className="w-4 h-4 text-emerald-400" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* INGRESS STYLE NAVIGATION BAR - Lightweight */}
+        <div 
+          className="relative bg-black/95 border-t-2 border-emerald-500/50 shrink-0 z-50"
+          style={{ 
+            paddingTop: '0.75rem',
+            paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+          }}
+        >
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent" style={{ animation: 'pulse-border 2s ease-in-out infinite' }}></div>
+          <div className="relative flex items-center justify-around px-6">
             <button
               onClick={() => {
                 impact('medium');
                 windows.forEach(w => closeWindow(w.id));
-                setShowNotifications(false);
-                setShowStartMenu(false);
               }}
-              className="flex flex-col items-center gap-1"
+              className="relative w-14 h-14 bg-black border-2 border-emerald-500/70 flex items-center justify-center active:bg-emerald-500/20 active:border-cyan-400"
+              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
             >
-              <Home className="w-6 h-6 text-white" />
-              <span className="text-white text-[10px]">Home</span>
+              <Home className="w-6 h-6 text-emerald-400" />
             </button>
             
             <button
               onClick={() => {
-                impact('light');
-                setShowNotifications(!showNotifications);
-                setShowStartMenu(false);
+                impact('medium');
+                const minimized = windows.filter(w => w.minimized);
+                if (minimized.length > 0) {
+                  setWindows(prev => prev.map(w => 
+                    w.id === minimized[0].id ? { ...w, minimized: false } : w
+                  ));
+                }
               }}
-              className="flex flex-col items-center gap-1 relative"
+              className="relative w-14 h-14 bg-black border-2 border-cyan-500/70 flex items-center justify-center active:bg-cyan-500/20 active:border-emerald-400"
+              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
             >
-              <Bell className="w-6 h-6 text-white" />
-              {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center">
-                  {notifications.length}
+              <Square className="w-6 h-6 text-cyan-400" />
+              {windows.filter(w => w.minimized).length > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-black text-xs flex items-center justify-center font-bold">
+                  {windows.filter(w => w.minimized).length}
                 </span>
               )}
-              <span className="text-white text-[10px]">Alerts</span>
             </button>
             
             <button
               onClick={() => {
-                impact('light');
-                const settingsApp = apps.find(a => a.id === 'settings');
-                if (settingsApp) openApp(settingsApp);
+                impact('medium');
+                if (currentWindow) {
+                  closeWindow(currentWindow.id);
+                }
               }}
-              className="flex flex-col items-center gap-1"
+              className="relative w-14 h-14 bg-black border-2 border-emerald-500/70 flex items-center justify-center active:bg-emerald-500/20 active:border-cyan-400"
+              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
             >
-              <Settings className="w-6 h-6 text-white" />
-              <span className="text-white text-[10px]">Settings</span>
-            </button>
-            
-            <button
-              onClick={() => {
-                impact('light');
-                setShowStartMenu(!showStartMenu);
-                setShowNotifications(false);
-              }}
-              className="flex flex-col items-center gap-1"
-            >
-              <User className="w-6 h-6 text-white" />
-              <span className="text-white text-[10px]">Profile</span>
+              <ArrowLeft className="w-6 h-6 text-emerald-400" />
             </button>
           </div>
         </div>
 
-        {/* Notifications Panel Overlay */}
-        <AnimatePresence>
-          {showNotifications && (
-            <motion.div
-              initial={{ y: "-100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="absolute inset-0 z-50 bg-slate-950/98 backdrop-blur-xl flex flex-col"
-            >
-              <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
-                <h2 className="text-white text-lg font-bold">Notifications</h2>
-                <button
-                  onClick={() => {
-                    impact('light');
-                    setShowNotifications(false);
-                  }}
-                  className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto p-4">
-                {notifications.length === 0 ? (
-                  <div className="text-center text-white/50 mt-20">No notifications</div>
-                ) : (
-                  <div className="space-y-3">
-                    {notifications.map((notif, i) => (
-                      <div key={i} className="p-4 rounded-xl bg-slate-800/50 border border-white/10">
-                        <div className="text-white">{notif}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Profile Panel Overlay */}
-        <AnimatePresence>
-          {showStartMenu && (
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 250 }}
-              className="absolute inset-0 z-50 bg-slate-950/98 backdrop-blur-xl flex flex-col"
-            >
-              <div className="h-14 px-4 flex items-center justify-between border-b border-white/10 shrink-0">
-                <h2 className="text-white text-lg font-bold">Profile</h2>
-                <button
-                  onClick={() => {
-                    impact('light');
-                    setShowStartMenu(false);
-                  }}
-                  className="w-9 h-9 rounded-full bg-white/10 text-white flex items-center justify-center"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-auto p-6">
-                {user ? (
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-4 p-4 rounded-xl bg-slate-800/50 border border-white/10">
-                      <div className="w-16 h-16 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-400 flex items-center justify-center text-white text-2xl font-bold">
-                        {user.username?.[0]?.toUpperCase() || 'U'}
-                      </div>
-                      <div>
-                        <div className="text-white font-bold text-lg">{user.username}</div>
-                        <div className="text-white/70 text-sm">{user.email}</div>
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <button
-                        onClick={() => {
-                          impact('medium');
-                          const achievementsApp = apps.find(a => a.id === 'achievements');
-                          if (achievementsApp) {
-                            openApp(achievementsApp);
-                            setShowStartMenu(false);
-                          }
-                        }}
-                        className="w-full p-4 rounded-xl bg-slate-800/50 border border-white/10 flex items-center gap-3 text-white active:bg-slate-800/70"
-                      >
-                        <Award className="w-5 h-5 text-cyan-400" />
-                        <span>Achievements</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          impact('medium');
-                          const projectsApp = apps.find(a => a.id === 'projects');
-                          if (projectsApp) {
-                            openApp(projectsApp);
-                            setShowStartMenu(false);
-                          }
-                        }}
-                        className="w-full p-4 rounded-xl bg-slate-800/50 border border-white/10 flex items-center gap-3 text-white active:bg-slate-800/70"
-                      >
-                        <Briefcase className="w-5 h-5 text-cyan-400" />
-                        <span>Projects</span>
-                      </button>
-                      
-                      <button
-                        onClick={() => {
-                          impact('medium');
-                          handleLogout();
-                        }}
-                        className="w-full p-4 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center gap-3 text-red-400 active:bg-red-500/30"
-                      >
-                        <LogOut className="w-5 h-5" />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-
-                    {deviceInfo && (
-                      <div className="p-4 rounded-xl bg-slate-800/50 border border-white/10">
-                        <div className="text-white/70 text-xs mb-2">Device</div>
-                        <div className="text-white text-sm">
-                          {deviceInfo.manufacturer} {deviceInfo.model}
-                        </div>
-                        <div className="text-white/50 text-xs font-mono mt-1">
-                          {deviceInfo.uuid?.slice(0, 16)}...
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-white/50 mt-20">Not logged in</div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Mobile Quick Actions FAB */}
+        {/* Floating Action Button with Orbital Menu */}
         <MobileQuickActions />
       </div>
     );
@@ -6322,11 +6324,11 @@ function CalculatorApp() {
   const buttons = ['C', '±', '%', '÷', '7', '8', '9', '×', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
 
   return (
-    <div className="h-full bg-slate-950 p-4 flex flex-col">
-      <div className="bg-slate-900 rounded-lg p-4 mb-4">
-        <div className="text-right text-4xl font-mono text-white truncate">{display}</div>
+    <div className="h-full bg-gradient-to-br from-blue-950 to-slate-950 p-6 flex flex-col">
+      <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-cyan-500/30 shadow-2xl">
+        <div className="text-right text-5xl font-mono text-cyan-400 min-h-[80px] flex items-center justify-end font-bold tracking-wider">{display}</div>
       </div>
-      <div className="grid grid-cols-4 gap-2 flex-1">
+      <div className="grid grid-cols-4 gap-4 flex-1">
         {buttons.map(btn => (
           <button
             key={btn}
@@ -6338,14 +6340,14 @@ function CalculatorApp() {
               else if (btn === '%') setDisplay(String(parseFloat(display) / 100));
               else handleNumber(btn);
             }}
-            className={`rounded-lg font-mono text-xl transition-colors ${
+            className={`rounded-2xl font-mono text-2xl font-bold transition-all active:scale-95 shadow-lg ${
               btn === '0' ? 'col-span-2' : ''
             } ${
               ['+', '-', '×', '÷', '='].includes(btn) 
-                ? 'bg-cyan-500 hover:bg-cyan-400 text-white' 
+                ? 'bg-gradient-to-br from-cyan-500 to-blue-500 active:from-cyan-600 active:to-blue-600 text-white' 
                 : btn === 'C' 
-                  ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400' 
-                  : 'bg-white/10 hover:bg-white/20 text-white'
+                  ? 'bg-gradient-to-br from-red-500 to-red-600 active:from-red-600 active:to-red-700 text-white' 
+                  : 'bg-slate-800 active:bg-slate-700 text-white'
             }`}
           >
             {btn}
@@ -6367,18 +6369,20 @@ function NotesApp() {
   }, [notes]);
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
-      <div className="flex items-center gap-2 p-3 border-b border-white/10">
-        <StickyNote className="w-5 h-5 text-yellow-400" />
-        <span className="text-white font-mono text-sm">notes.txt</span>
+    <div className="h-full bg-gradient-to-br from-amber-50 to-yellow-100 flex flex-col">
+      <div className="flex items-center gap-2 p-4 bg-amber-200/50 border-b border-amber-300">
+        <StickyNote className="w-6 h-6 text-amber-700" />
+        <span className="text-amber-900 font-semibold text-base">notes.txt</span>
       </div>
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="flex-1 bg-transparent p-4 text-white font-mono text-sm resize-none outline-none"
+        className="flex-1 bg-transparent p-6 text-gray-900 text-base resize-none outline-none leading-relaxed"
         placeholder="Type your notes here..."
+        style={{ fontFamily: 'system-ui' }}
       />
-      <div className="px-4 py-2 border-t border-white/10 text-white/40 text-xs">
+      <div className="px-6 py-3 bg-amber-200/50 border-t border-amber-300 text-amber-700 text-sm flex items-center gap-2">
+        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
         Auto-saved locally
       </div>
     </div>
