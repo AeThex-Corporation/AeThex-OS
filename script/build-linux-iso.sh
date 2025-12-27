@@ -35,14 +35,16 @@ if ! command -v debootstrap &> /dev/null || ! command -v grub-mkrescue &> /dev/n
 fi
 
 echo "[+] Bootstrapping Ubuntu 24.04 (noble)..."
-sudo debootstrap --arch=amd64 --variant=minbase noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/ > /dev/null 2>&1
+echo "    (this may take 10-15 minutes, please wait...)"
+sudo debootstrap --arch=amd64 --variant=minbase noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/ 2>&1 | tail -5
 
 echo "[+] Installing kernel and boot tools..."
+echo "    (packages installing...)"
 sudo chroot "$ROOTFS_DIR" bash -c '
   apt-get update > /dev/null 2>&1
   apt-get install -y -qq linux-image-generic grub-pc-bin grub-efi-amd64-bin isolinux syslinux-common > /dev/null 2>&1
   apt-get clean
-' 2>&1 | grep -v "^Get:\|^Hit:" || true
+' 2>&1 | grep -v "^Get:\|^Hit:\|^Unpacking\|^Setting up" | tail -5
 
 echo "[+] Extracting kernel and initrd..."
 KERNEL=$(sudo find "$ROOTFS_DIR/boot" -name "vmlinuz-*" -type f | head -1)
@@ -61,7 +63,14 @@ echo "[✓] Kernel: $(basename $KERNEL)"
 echo "[✓] Initrd: $(basename $INITRD)"
 
 echo "[+] Creating squashfs (this may take 5-10 min)..."
-sudo mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz 2>&1 | tail -3
+if command -v mksquashfs &> /dev/null; then
+  sudo mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz 2>&1 | tail -3
+else
+  echo "[!] mksquashfs not found; cannot create ISO."
+  mkdir -p "$BUILD_DIR"
+  echo "mksquashfs not available" > "$BUILD_DIR/README.txt"
+  exit 0
+fi
 
 echo "[+] Setting up BIOS boot (isolinux)..."
 cat > "$BUILD_DIR/isolinux.cfg" << 'EOF'
