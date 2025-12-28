@@ -1,0 +1,18 @@
+script/build-linux-iso-full.sh: line 2: set: -: invalid option
+set: usage: set [-abefhkmnptuvxBCEHPT] [-o option-name] [--] [-] [arg ...]
+script/build-linux-iso-full.sh: line 3: $'\r': command not found
+script/build-linux-iso-full.sh: line 6: $'\r': command not found
+script/build-linux-iso-full.sh: line 12: $'\r': command not found
+═══════════════════════════════════════════════════════════════
+  AeThex OS - Full Build
+  Layered Architecture: Base + Runtimes + Shell
+═══════════════════════════════════════════════════════════════
+
+[*] Build directory: ./aethex-linux-build
+[*] Target ISO: AeThex-OS-Full-amd64.iso
+
+script/build-linux-iso-full.sh: line 21: $'\r': command not found
+script/build-linux-iso-full.sh: line 25: $'\r': command not found
+[*] Checking dependencies...
+script/build-linux-iso-full.sh: line 28: syntax error near unexpected token `$'do\r''
+script/build-linux-iso-full.sh: line 28: `for cmd in debootstrap xorriso genisoimage mksquashfs grub-mkrescue; do'
