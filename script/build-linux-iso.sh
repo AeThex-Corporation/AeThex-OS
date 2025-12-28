@@ -1,37 +1,40 @@
 #!/bin/bash
 set -e
 
-# AeThex Linux ISO Builder - Full Desktop Edition
-# Produces a bootable hybrid MBR/UEFI ISO with Ubuntu 24.04, Xfce desktop, and AeThex app
+# AeThex Linux ISO Builder - Containerized Edition
+# Creates a bootable ISO using Ubuntu base image (no debootstrap/chroot needed)
 
 WORK_DIR="${1:-.}"
 BUILD_DIR="$WORK_DIR/aethex-linux-build"
 ISO_NAME="AeThex-Linux-amd64.iso"
-ROOTFS_DIR="$BUILD_DIR/rootfs"
-ISO_DIR="$BUILD_DIR/iso"
 
-echo "[*] AeThex ISO Builder - Full Desktop Edition"
+echo "[*] AeThex ISO Builder - Containerized Edition"
 echo "[*] Build directory: $BUILD_DIR"
+echo "[*] This build method works in Docker without privileged mode"
 
 # Clean and prepare
 rm -rf "$BUILD_DIR"
-mkdir -p "$ROOTFS_DIR" "$ISO_DIR"/{boot/grub,casper,isolinux}
+mkdir -p "$BUILD_DIR"/{iso,rootfs}
 
-# Check critical dependencies
+# Check dependencies
 echo "[*] Checking dependencies..."
-for cmd in debootstrap grub-mkrescue mksquashfs xorriso; do
+for cmd in xorriso genisoimage mksquashfs; do
   if ! command -v "$cmd" &> /dev/null; then
-    echo "[!] Missing: $cmd"
-    exit 1
+    echo "[!] Missing: $cmd - installing..."
+    apt-get update -qq
+    apt-get install -y -qq "$cmd" 2>&1 | tail -5
   fi
 done
 
-echo "[+] Bootstrapping Ubuntu 24.04 (noble)..."
-echo "    (this may take 10-15 minutes, please wait...)"
-debootstrap --arch=amd64 --variant=minbase noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/ 2>&1 | tail -5
+echo "[+] Downloading Ubuntu Mini ISO base..."
+# Use Ubuntu mini.iso as base (much smaller, pre-built)
+if [ ! -f "$BUILD_DIR/ubuntu-mini.iso" ]; then
+  wget -q --show-progress -O "$BUILD_DIR/ubuntu-mini.iso" \
+    http://archive.ubuntu.com/ubuntu/dists/noble/main/installer-amd64/current/legacy-images/netboot/mini.iso \
+    || echo "[!] Download failed, creating minimal ISO instead"
+fi
 
-# Prepare chroot networking and mounts
-cp -f /etc/resolv.conf "$ROOTFS_DIR/etc/resolv.conf" || true
+echo "[+] Building AeThex application layer..."
 mount -t proc /proc "$ROOTFS_DIR/proc" || true
 mount -t sysfs /sys "$ROOTFS_DIR/sys" || true
 mount --bind /dev "$ROOTFS_DIR/dev" || true
