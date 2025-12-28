@@ -94,22 +94,70 @@ LIGHTDM
 
 echo "[+] Setting up AeThex Desktop application..."
 
+# Build mobile app if possible
+if [ -f "package.json" ]; then
+  echo "    Building AeThex mobile app..."
+  npm run build 2>&1 | tail -5 || echo "    Build skipped"
+fi
+
 # Copy app files (if available, otherwise note for manual addition)
 if [ -d "client" ] && [ -d "server" ]; then
   echo "    Copying AeThex Desktop files..."
   mkdir -p "$ROOTFS_DIR/opt/aethex-desktop"
+  
+  # Copy source files
   cp -r client "$ROOTFS_DIR/opt/aethex-desktop/"
   cp -r server "$ROOTFS_DIR/opt/aethex-desktop/"
   cp -r shared "$ROOTFS_DIR/opt/aethex-desktop/" 2>/dev/null || true
   cp package*.json "$ROOTFS_DIR/opt/aethex-desktop/" 2>/dev/null || true
+  cp tsconfig.json "$ROOTFS_DIR/opt/aethex-desktop/" 2>/dev/null || true
+  cp vite.config.ts "$ROOTFS_DIR/opt/aethex-desktop/" 2>/dev/null || true
+  
+  # Copy built assets if they exist
+  if [ -d "dist" ]; then
+    cp -r dist "$ROOTFS_DIR/opt/aethex-desktop/"
+  fi
+  
+  # Copy Capacitor Android build if it exists (for native features)
+  if [ -d "android" ]; then
+    mkdir -p "$ROOTFS_DIR/opt/aethex-desktop/android"
+    cp -r android/app "$ROOTFS_DIR/opt/aethex-desktop/android/" 2>/dev/null || true
+  fi
   
   # Install dependencies in chroot
-  chroot "$ROOTFS_DIR" bash -c 'cd /opt/aethex-desktop && npm install --production' 2>&1 | tail -10 || echo "    npm install skipped"
+  echo "    Installing Node.js dependencies..."
+  chroot "$ROOTFS_DIR" bash -c 'cd /opt/aethex-desktop && npm install --production --legacy-peer-deps' 2>&1 | tail -10 || echo "    npm install skipped"
+  
+  # Set ownership
+  chroot "$ROOTFS_DIR" chown -R aethex:aethex /opt/aethex-desktop
 else
   echo "    (client/server not found; skipping app copy)"
 fi
 
-# Create systemd service for AeThex server
+# Create systemd service for AeThex mobile server
+cat > "$ROOTFS_DIR/etc/systemd/system/aethex-mobile-server.service" << 'SERVICEEOF'
+[Unit]
+Description=AeThex Mobile Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aethex
+WorkingDirectory=/opt/aethex-desktop
+Environment="NODE_ENV=production"
+Environment="PORT=5000"
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+SERVICEEOF
+
+# Create backward-compatible legacy service name
 cat > "$ROOTFS_DIR/etc/systemd/system/aethex-desktop.service" << 'SERVICEEOF'
 [Unit]
 Description=AeThex Desktop Server
@@ -127,24 +175,30 @@ RestartSec=5
 WantedBy=multi-user.target
 SERVICEEOF
 
-# Enable AeThex service
-chroot "$ROOTFS_DIR" systemctl enable aethex-desktop.service 2>/dev/null || echo "    systemd service added"
+# Enable both services
+chroot "$ROOTFS_DIR" systemctl enable aethex-mobile-server.service 2>/dev/null || echo "    Mobile server service added"
+chroot "$ROOTFS_DIR" systemctl enable aethex-desktop.service 2>/dev/null || echo "    Desktop service added"
 
-# Create auto-start script for Firefox kiosk
+# Create auto-start script for Firefox kiosk pointing to mobile server
 mkdir -p "$ROOTFS_DIR/home/aethex/.config/autostart"
 cat > "$ROOTFS_DIR/home/aethex/.config/autostart/aethex-kiosk.desktop" << 'KIOSK'
 [Desktop Entry]
 Type=Application
-Name=AeThex Kiosk
-Exec=firefox --kiosk http://localhost:5000
+Name=AeThex Mobile UI
+Exec=sh -c "sleep 5 && firefox --kiosk http://localhost:5000"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
+Comment=Launch AeThex mobile interface in fullscreen
 KIOSK
 
 chroot "$ROOTFS_DIR" chown -R aethex:aethex /home/aethex
 
-echo "[✓] AeThex Desktop integrated with Xfce auto-login and Firefox kiosk"
+echo "[✓] AeThex Mobile UI integrated:"
+echo "    - Server runs on port 5000"
+echo "    - Firefox launches in kiosk mode"
+echo "    - Xfce desktop with auto-login"
+echo "    - Ingress-style mobile interface"
 
 echo "[+] Extracting kernel and initrd..."
 KERNEL="$(ls -1 $ROOTFS_DIR/boot/vmlinuz-* 2>/dev/null | head -n 1)"
@@ -153,6 +207,8 @@ INITRD="$(ls -1 $ROOTFS_DIR/boot/initrd.img-* 2>/dev/null | head -n 1)"
 if [ -z "$KERNEL" ] || [ -z "$INITRD" ]; then
   echo "[!] Kernel or initrd not found."
   ls -la "$ROOTFS_DIR/boot/" || true
+  mkdir -p "$BUILD_DIR"
+  echo "No kernel found in rootfs" > "$BUILD_DIR/README.txt"
   exit 1
 fi
 
@@ -160,33 +216,26 @@ cp "$KERNEL" "$ISO_DIR/casper/vmlinuz"
 cp "$INITRD" "$ISO_DIR/casper/initrd.img"
 echo "[✓] Kernel: $(basename "$KERNEL")"
 echo "[✓] Initrd: $(basename "$INITRD")"
-  echo "No kernel found in rootfs" > "$BUILD_DIR/README.txt"
-  exit 0
-fi
-
-cp "$KERNEL" "$ISO_DIR/casper/vmlinuz"
-cp "$INITRD" "$ISO_DIR/casper/initrd.i
 
 # Unmount before squashfs
 echo "[+] Unmounting chroot filesystems..."
-umount -lf "$ROOTFS_DIR/procfilesystem..."
+umount -lf "$ROOTFS_DIR/proc" 2>/dev/null || true
+umount -lf "$ROOTFS_DIR/sys" 2>/dev/null || true
+umount -lf "$ROOTFS_DIR/dev" 2>/dev/null || true
+
+echo "[+] Creating SquashFS filesystem..."
 echo "    (compressing ~2-3GB desktop, takes 10-15 minutes...)"
-mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz -Xdict-size 100% 2>&1 | tail -3mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz 2>&1 | tail -3
+if command -v mksquashfs &> /dev/null; then
+  mksquashfs "$ROOTFS_DIR" "$ISO_DIR/casper/filesystem.squashfs" -b 1048576 -comp xz -Xdict-size 100% 2>&1 | tail -3
 else
   echo "[!] mksquashfs not found; cannot create ISO."
   mkdir -p "$BUILD_DIR"
   echo "mksquashfs not available" > "$BUILD_DIR/README.txt"
-  exit 0
+  exit 1
 fi
 
 echo "[+] Setting up BIOS boot (isolinux)..."
-cat > "$BUILD_DIR/isolinux.cfg" << 'EOF'
-PROMPT 0
-TIMEOUT 50
-DEFAULT linux
-
-LABEL linux
-  KERNELISO_DIR/isolinux/isolinux.cfg" << 'EOF'
+cat > "$ISO_DIR/isolinux/isolinux.cfg" << 'EOF'
 PROMPT 0
 TIMEOUT 50
 DEFAULT linux
@@ -196,6 +245,7 @@ LABEL linux
   KERNEL /casper/vmlinuz
   APPEND initrd=/casper/initrd.img boot=casper quiet splash
 EOF
+
 cp /usr/lib/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || \
 cp /usr/share/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] isolinux.bin missing"
 cp /usr/lib/syslinux/ldlinux.c32 "$ISO_DIR/isolinux/" 2>/dev/null || \
@@ -205,7 +255,14 @@ echo "[+] Setting up UEFI boot (GRUB)..."
 cat > "$ISO_DIR/boot/grub/grub.cfg" << 'EOF'
 set timeout=10
 set default=0
-with grub-mkrescue..."
+
+menuentry "AeThex OS" {
+  linux /casper/vmlinuz boot=casper quiet splash
+  initrd /casper/initrd.img
+}
+EOF
+
+echo "[+] Creating hybrid ISO with grub-mkrescue..."
 grub-mkrescue -o "$BUILD_DIR/$ISO_NAME" "$ISO_DIR" --verbose 2>&1 | tail -20
 
 echo "[+] Computing SHA256 checksum..."
@@ -226,15 +283,25 @@ rm -rf "$ROOTFS_DIR"
 
 echo "[✓] Build complete!"
 echo ""
-echo "=== AeThex OS Full Desktop Edition ==="
+echo "=== AeThex OS - Mobile UI Edition ==="
 echo "Features:"
+echo "  - Ubuntu 24.04 LTS base"
 echo "  - Xfce desktop environment"
-echo "  - Firefox browser (auto-launches in kiosk mode)"
+echo "  - Firefox browser (auto-launches mobile UI in kiosk mode)"
 echo "  - Node.js 20.x + npm"
-echo "  - AeThex Desktop app at /opt/aethex-desktop"
-echo "  - Auto-login as user 'aethex'"
+echo "  - AeThex Mobile App (Ingress-style) at /opt/aethex-desktop"
+echo "  - Server: http://localhost:5000"
+echo "  - Auto-login as user 'aethex' (password: aethex)"
 echo "  - NetworkManager for WiFi/Ethernet"
-echo "  - Audio support (PulseAudio)"
+echo "  - PipeWire audio support"
+echo "  - 18 Capacitor plugins integrated"
 echo ""
-echo "Flash to USB: sudo ./script/flash-usb.sh -i $BUILD_DIR/$ISO_NAME
+echo "Mobile UI Features:"
+echo "  - Ingress-style hexagonal design"
+echo "  - Green/Cyan color scheme"
+echo "  - CSS-only animations (low CPU)"
+echo "  - Native-like performance"
+echo "  - Calculator, Notes, File Manager, Terminal, Games, etc."
+echo ""
+echo "Flash to USB: sudo ./script/flash-usb.sh -i $BUILD_DIR/$ISO_NAME"
 echo "[✓] Done!"

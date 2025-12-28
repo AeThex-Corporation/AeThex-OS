@@ -17,22 +17,24 @@ build_iso:
   script:
     # Update system
     - apt-get update -qq
-    - apt-get install -y -qq build-essential curl wget git nodejs npm debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common || true
+    - apt-get install -y -qq build-essential curl wget git nodejs npm debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common
+    
     # Verify critical tools are installed
-    - which mksquashfs && echo "✅ mksquashfs found" || echo "⚠️ mksquashfs missing"
-    - which grub-mkrescue && echo "✅ grub-mkrescue found" || echo "⚠️ grub-mkrescue missing"
+    - which mksquashfs && echo "✅ mksquashfs found" || (echo "❌ mksquashfs missing" && exit 1)
+    - which grub-mkrescue && echo "✅ grub-mkrescue found" || (echo "❌ grub-mkrescue missing" && exit 1)
+    - which debootstrap && echo "✅ debootstrap found" || (echo "❌ debootstrap missing" && exit 1)
     
     # Install Node dependencies
     - npm install
     
     # Build client
-    - npm run build || true
+    - npm run build
     
-    # Build ISO
+    # Build ISO (fail if it errors)
     - mkdir -p aethex-linux-build
-    - bash script/build-linux-iso.sh || true
+    - bash script/build-linux-iso.sh
     
-    # Verify ISO exists
+    # Verify ISO exists (fail the build if not)
     - |
       ISO_PATH=$(ls aethex-linux-build/AeThex-Linux-*.iso 2>/dev/null | head -n 1)
       if [ -n "$ISO_PATH" ]; then
@@ -43,7 +45,9 @@ build_iso:
         cp "$ISO_PATH" artifacts/local/
         cp aethex-linux-build/SHA256 artifacts/local/$(basename "$ISO_PATH").sha256
       else
-        echo "⚠️ ISO not found, continuing anyway"
+        echo "❌ ISO not found! Build failed."
+        ls -la aethex-linux-build/ || echo "Build directory doesn't exist"
+        exit 1
       fi
 
 release_iso:

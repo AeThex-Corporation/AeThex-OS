@@ -1,0 +1,38 @@
+[Unit]
+Description=AeThex Mobile Server
+Documentation=https://github.com/AeThex-Corporation/AeThex-OS
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=aethex
+Group=aethex
+WorkingDirectory=/opt/aethex-desktop
+Environment="NODE_ENV=production"
+Environment="PORT=5000"
+
+# Start the Node.js server
+ExecStart=/usr/bin/npm start
+
+# Restart policy
+Restart=always
+RestartSec=10
+StartLimitInterval=200
+StartLimitBurst=5
+
+# Security
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/opt/aethex-desktop
+ReadWritePaths=/home/aethex/.local/share/aethex
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aethex-mobile
+
+[Install]
+WantedBy=multi-user.target
