@@ -1,0 +1,12 @@
+[Unit]
+Description=AeThex Runtime Selector
+After=graphical.target
+Wants=aethex-desktop.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/aethex/shell/bin/runtime-selector.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
