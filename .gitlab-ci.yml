@@ -14,10 +14,12 @@ build_iso:
       - aethex-linux-build/
       - artifacts/local/
     expire_in: 90 days
+  tags:
+    - docker
   script:
-    # Install minimal dependencies
+    # Install full dependencies for layered OS build
     - apt-get update -qq
-    - apt-get install -y -qq xorriso genisoimage syslinux syslinux-common isolinux wget curl nodejs npm
+    - apt-get install -y -qq debootstrap xorriso genisoimage syslinux syslinux-common isolinux squashfs-tools grub-pc-bin grub-efi-amd64-bin wget curl nodejs npm git ca-certificates gnupg
     
     # Install Node dependencies
     - npm install
@@ -25,14 +27,14 @@ build_iso:
     # Build client
     - npm run build || echo "Build failed but continuing"
     
-    # Build ISO using full method (requires privileged mode)
+    # Build full ISO with Wine + Docker + Dev Tools (requires privileged mode)
     - mkdir -p aethex-linux-build
-    - chmod +x script/build-linux-iso.sh
-    - bash script/build-linux-iso.sh
+    - chmod +x script/build-linux-iso-full.sh
+    - bash script/build-linux-iso-full.sh
     
     # Verify ISO exists (fail the build if not)
     - |
-      ISO_PATH=$(ls aethex-linux-build/AeThex-Linux-*.iso 2>/dev/null | head -n 1)
+      ISO_PATH=$(ls aethex-linux-build/AeThex-OS-Full-*.iso 2>/dev/null | head -n 1)
       if [ -n "$ISO_PATH" ]; then
         echo "✅ ISO built successfully: $ISO_PATH"
         ls -lh "$ISO_PATH"
