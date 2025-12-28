@@ -11,8 +11,13 @@ PIPELINE_ID="${PIPELINE_ID:-}"
 OUT_DIR="${OUT_DIR:-artifacts}"
 
 if [[ -z "${GITLAB_TOKEN:-}" ]]; then
-  echo "GITLAB_TOKEN is required" >&2
-  exit 1
+  if [[ -n "${GITLAB_TOKEN_FILE:-}" && -r "$GITLAB_TOKEN_FILE" ]]; then
+    GITLAB_TOKEN=$(cat "$GITLAB_TOKEN_FILE")
+  else
+    echo "GITLAB_TOKEN is required. Set GITLAB_TOKEN or GITLAB_TOKEN_FILE." >&2
+    echo "Example: export GITLAB_TOKEN=... or export GITLAB_TOKEN_FILE=~/gitlab.token" >&2
+    exit 1
+  fi
 fi
 
 if [[ -z "$PROJECT_PATH" ]]; then
@@ -55,9 +60,7 @@ if [[ -z "$PIPELINE_ID" ]]; then
 fi
 
 JOBS_JSON=$(get_json "$API_BASE/projects/$PROJECT_ENC/pipelines/$PIPELINE_ID/jobs?scope=success")
-JOB_ID=$(echo "$JOBS_JSON" | jq -r 
-  --arg name "$JOB_NAME" 
-  '[.[] | select(.name == $name and .artifacts_file and (.artifacts_file.filename != null))][0].id')
+JOB_ID=$(echo "$JOBS_JSON" | jq -r --arg name "$JOB_NAME" '[.[] | select(.name == $name and .artifacts_file and (.artifacts_file.filename != null))][0].id')
 
 if [[ -z "$JOB_ID" || "$JOB_ID" == "null" ]]; then
   echo "No job with artifacts found matching name=$JOB_NAME in pipeline=$PIPELINE_ID" >&2
