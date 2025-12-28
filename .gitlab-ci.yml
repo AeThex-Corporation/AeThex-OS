@@ -25,10 +25,10 @@ build_iso:
     # Build client
     - npm run build || echo "Build failed but continuing"
     
-    # Build ISO using simple method
+    # Build ISO using full method (requires privileged mode)
     - mkdir -p aethex-linux-build
-    - chmod +x script/build-linux-iso-simple.sh
-    - bash script/build-linux-iso-simple.sh
+    - chmod +x script/build-linux-iso.sh
+    - bash script/build-linux-iso.sh
     
     # Verify ISO exists (fail the build if not)
     - |
