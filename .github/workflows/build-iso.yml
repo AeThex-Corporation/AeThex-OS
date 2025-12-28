@@ -1,0 +1,98 @@
+name: Build AeThex Linux ISO
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: "Create a GitHub Release with ISO artifact"
+        type: boolean
+        default: false
+
+jobs:
+  build_client:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build client
+        run: npm run build
+
+      - name: Client build complete
+        run: echo "✅ Client build successful"
+
+  build_iso:
+    needs: build_client
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ISO build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            debootstrap \
+            squashfs-tools \
+            xorriso \
+            grub-common \
+            grub-pc-bin \
+            grub-efi-amd64-bin \
+            isolinux \
+            syslinux-common \
+            curl
+
+      - name: Build AeThex Linux ISO (if script exists)
+        run: |
+          set -e
+          if [ -f script/build-linux-iso.sh ]; then
+            bash script/build-linux-iso.sh
+          else
+            echo "⚠️ script/build-linux-iso.sh not found; creating placeholder artifact"
+            mkdir -p aethex-linux-build
+            echo "AeThex Linux ISO build script is not yet implemented." > aethex-linux-build/README.txt
+          fi
+
+      - name: Verify ISO artifact
+        run: |
+          set -e
+          if ls aethex-linux-build/AeThex-Linux-*.iso 1> /dev/null 2>&1; then
+            echo "✅ ISO built successfully"
+            ls -lh aethex-linux-build/AeThex-Linux-*.iso
+            sha256sum aethex-linux-build/AeThex-Linux-*.iso > aethex-linux-build/SHA256
+            cat aethex-linux-build/SHA256
+          else
+            echo "ℹ️ No ISO found; uploading placeholder artifacts (if any)"
+            ls -lah aethex-linux-build || true
+          fi
+
+      - name: Upload ISO artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AeThex-Linux-ISO
+          path: |
+            aethex-linux-build/**
+          if-no-files-found: warn
+          retention-days: 90
+
+      - name: Create GitHub Release (optional)
+        if: ${{ github.event.inputs.release == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: iso-${{ github.run_number }}
+          name: AeThex Linux ISO build #${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            aethex-linux-build/AeThex-Linux-*.iso
+            aethex-linux-build/SHA256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

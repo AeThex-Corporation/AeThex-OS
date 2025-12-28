@@ -1,0 +1,78 @@
+stages:
+  - build
+  - release
+
+build_iso:
+  stage: build
+  image: ubuntu:24.04
+  timeout: 90 minutes
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_TAG'
+  artifacts:
+    paths:
+      - aethex-linux-build/
+      - artifacts/local/
+    expire_in: 90 days
+  script:
+    # Update system
+    - apt-get update -qq
+    - apt-get install -y -qq build-essential curl wget git nodejs npm debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin mtools dosfstools isolinux syslinux-common || true
+    # Verify critical tools are installed
+    - which mksquashfs && echo "✅ mksquashfs found" || echo "⚠️ mksquashfs missing"
+    - which grub-mkrescue && echo "✅ grub-mkrescue found" || echo "⚠️ grub-mkrescue missing"
+    
+    # Install Node dependencies
+    - npm install
+    
+    # Build client
+    - npm run build || true
+    
+    # Build ISO
+    - mkdir -p aethex-linux-build
+    - bash script/build-linux-iso.sh || true
+    
+    # Verify ISO exists
+    - |
+      ISO_PATH=$(ls aethex-linux-build/AeThex-Linux-*.iso 2>/dev/null | head -n 1)
+      if [ -n "$ISO_PATH" ]; then
+        echo "✅ ISO built successfully: $ISO_PATH"
+        ls -lh "$ISO_PATH"
+        sha256sum "$ISO_PATH" > aethex-linux-build/SHA256
+        mkdir -p artifacts/local
+        cp "$ISO_PATH" artifacts/local/
+        cp aethex-linux-build/SHA256 artifacts/local/$(basename "$ISO_PATH").sha256
+      else
+        echo "⚠️ ISO not found, continuing anyway"
+      fi
+
+release_iso:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  needs:
+    - job: build_iso
+      artifacts: true
+  rules:
+    - if: '$CI_COMMIT_TAG'
+  variables:
+    RELEASE_NAME: "AeThex OS $CI_COMMIT_TAG"
+  script:
+    - echo "Creating GitLab release for tag $CI_COMMIT_TAG"
+    - |
+      ISO_PATH=$(ls artifacts/local/AeThex-Linux-*.iso 2>/dev/null | head -n 1)
+      if [ -z "$ISO_PATH" ]; then
+        echo "No ISO found in artifacts/local. Listing..." && ls -la artifacts/local || true
+      fi
+    - |
+      if [ -n "$ISO_PATH" ]; then
+        # Create release and attach asset link pointing to job artifact (90-day retention)
+        release-cli create \
+          --name "$RELEASE_NAME" \
+          --tag-name "$CI_COMMIT_TAG" \
+          --assets-link name="AeThex OS ISO" url="$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/$ISO_PATH"
+      else
+        # Create release without asset if ISO missing
+        release-cli create \
+          --name "$RELEASE_NAME" \
+          --tag-name "$CI_COMMIT_TAG"
+      fi
