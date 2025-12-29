@@ -13,6 +13,24 @@ import { setupWebSocket, websocket } from "./websocket.js";
 const app = express();
 const httpServer = createServer(app);
 
+// Health check for Railway/monitoring
+app.get("/health", (_req, res) => {
+  res.json({ status: "healthy", timestamp: new Date().toISOString() });
+});
+
+// Root endpoint
+app.get("/", (_req, res) => {
+  res.json({ 
+    status: "AeThex OS Kernel: ONLINE", 
+    version: "1.0.0",
+    endpoints: {
+      link: "/api/os/link/*",
+      entitlements: "/api/os/entitlements/*",
+      subjects: "/api/os/subjects/*"
+    }
+  });
+});
+
 // Trust proxy for proper cookie handling behind Vite dev server
 app.set("trust proxy", 1);
 

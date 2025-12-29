@@ -77,6 +77,9 @@ export interface IStorage {
     totalXP: number;
     avgLevel: number;
   }>;
+
+  // Funnel tracking
+  logFunnelEvent(event: { user_id?: string; event_type: string; source?: string; payload?: any; created_at?: string }): Promise<void>;
 }
 
 export class SupabaseStorage implements IStorage {
@@ -420,6 +423,21 @@ export class SupabaseStorage implements IStorage {
     return notifications.sort((a, b) => 
       new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
     );
+  }
+
+  async logFunnelEvent(event: { user_id?: string; event_type: string; source?: string; payload?: any; created_at?: string }): Promise<void> {
+    const { error } = await supabase
+      .from('funnel_events')
+      .insert({
+        user_id: event.user_id || null,
+        event_type: event.event_type,
+        source: event.source || null,
+        payload: event.payload || null,
+        created_at: event.created_at || new Date().toISOString(),
+      });
+    if (error) {
+      console.error('Log funnel event error:', error);
+    }
   }
   
   async getMetrics(): Promise<{

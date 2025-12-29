@@ -398,6 +398,22 @@ export default function AeThexOS() {
         addLog('▸ AEGIS: Threat level ELEVATED - Defensive protocols engaged');
         setBootStep('THREAT LEVEL: ELEVATED - PROTOCOLS ENGAGED');
       }
+
+      // Schedule upgrade alert in system tray once per session
+      try {
+        const shown = localStorage.getItem('aethex-upgrade-alert-shown');
+        if (!shown) {
+          setTimeout(() => {
+            try {
+              if (!localStorage.getItem('aethex-upgrade-alert-shown')) {
+                setActiveTrayPanel('upgrade');
+                addToast('⚠️ Architect Access Available — Use tray to upgrade', 'info');
+                localStorage.setItem('aethex-upgrade-alert-shown', 'true');
+              }
+            } catch {}
+          }, 30000);
+        }
+      } catch {}
       setBootProgress(75);
       await new Promise(r => setTimeout(r, 400));
       
@@ -3257,7 +3273,26 @@ function Taskbar({ windows, activeWindowId, apps, time, showStartMenu, user, isA
                     </div>
                   </div>
                   <button
-                    onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
+                    onClick={async () => {
+                      try {
+                        await fetch('/api/track/upgrade-click', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ source: 'tray-upgrade', timestamp: new Date().toISOString() }),
+                        });
+                      } catch {}
+                      try {
+                        const resp = await fetch('/api/payments/create-checkout-session', { method: 'POST' });
+                        if (resp.ok) {
+                          const data = await resp.json();
+                          if (data?.url) {
+                            openIframeWindow?.(data.url, 'Architect Access');
+                            return;
+                          }
+                        }
+                      } catch {}
+                      openIframeWindow?.('https://aethex.studio', 'The Foundry');
+                    }}
                     className="block w-full text-center px-4 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors text-sm"
                   >
                     Upgrade Now — $500
@@ -5660,6 +5695,16 @@ function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url:
     },
   });
 
+  useEffect(() => {
+    if (!isLoading) {
+      fetch('/api/track/event', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_type: 'directory_view', source: 'networkneighborhood', payload: { count: founders.length }, timestamp: new Date().toISOString() })
+      }).catch(() => {});
+    }
+  }, [isLoading]);
+
   const reservedSlots = Array.from({ length: Math.max(0, 7 - founders.length) }, (_, i) => ({
     id: `reserved-${i}`,
     name: "[LOCKED - REQUIRES ARCHITECT ACCESS]",
@@ -5743,6 +5788,14 @@ function FoundryApp({ openIframeWindow }: { openIframeWindow?: (url: string, tit
   const basePrice = 500;
   const discount = promoApplied && promoCode.toUpperCase() === 'TERMINAL10' ? 0.10 : 0;
   const finalPrice = basePrice * (1 - discount);
+
+  useEffect(() => {
+    fetch('/api/track/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_type: 'foundry_open', source: 'foundry-app', timestamp: new Date().toISOString() })
+    }).catch(() => {});
+  }, []);
   
   return (
     <div className="h-full bg-gradient-to-br from-yellow-950 to-black flex flex-col font-mono">
@@ -6002,7 +6055,16 @@ REVENUE MODEL
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: idx * 0.1 }}
-              onClick={() => setSelectedFile(file.name)}
+              onClick={() => {
+                setSelectedFile(file.name);
+                try {
+                  fetch('/api/track/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_type: 'intel_open', source: 'intel-app', payload: { file: file.name }, timestamp: new Date().toISOString() })
+                  });
+                } catch {}
+              }}
               className="w-full flex items-center gap-3 py-2 px-3 border-l-2 border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/15 transition-colors text-left"
             >
               <span className="text-amber-400">{file.icon}</span>
@@ -6061,7 +6123,16 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
                   ? 'border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10' 
                   : 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
               }`}
-              onClick={() => setSelectedDrive(drive.id)}
+              onClick={() => {
+                setSelectedDrive(drive.id);
+                if (drive.id === 'D') {
+                  fetch('/api/track/event', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ event_type: 'drive_d_open', source: 'drives-app', timestamp: new Date().toISOString() })
+                  }).catch(() => {});
+                }
+              }}
             >
               <div className="flex items-center gap-4">
                 <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
