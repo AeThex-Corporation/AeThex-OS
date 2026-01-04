@@ -6,6 +6,8 @@ set -e
 
 WORK_DIR="${1:-.}"
 BUILD_DIR="$WORK_DIR/aethex-linux-build"
+ROOTFS_DIR="$BUILD_DIR/rootfs"
+ISO_DIR="$BUILD_DIR/iso"
 ISO_NAME="AeThex-Linux-amd64.iso"
 
 echo "[*] AeThex ISO Builder - Containerized Edition"
@@ -14,7 +16,7 @@ echo "[*] This build method works in Docker without privileged mode"
 
 # Clean and prepare
 rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"/{iso,rootfs}
+mkdir -p "$ROOTFS_DIR" "$ISO_DIR"/{casper,isolinux,boot/grub}
 
 # Check dependencies
 echo "[*] Checking dependencies..."
