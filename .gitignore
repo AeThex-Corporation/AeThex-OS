@@ -1,5 +1,6 @@
 # Build artifacts and downloads
 artifacts/
+aethex-linux-build/
 *.iso
 *.sha256.txt
 *.zip
