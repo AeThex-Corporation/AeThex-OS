@@ -15,6 +15,8 @@
 - ✅ Capacitor mobile apps (iOS/Android)
 - 🔄 **Need to implement: Sales funnel features**
 
+> **📋 For complete flow tracking, see [FLOWS.md](./FLOWS.md)** - comprehensive list of all implemented and unfinished flows.
+
 ---
 
 ## 📊 The Architecture

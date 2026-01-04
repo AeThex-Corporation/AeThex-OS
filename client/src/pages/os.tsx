@@ -230,17 +230,34 @@ export default function AeThexOS() {
   const [batteryInfo, setBatteryInfo] = useState<{ level: number; charging: boolean } | null>(null);
 
   useEffect(() => {
+    let battery: any = null;
+    let levelChangeHandler: (() => void) | null = null;
+    let chargingChangeHandler: (() => void) | null = null;
+
     if ('getBattery' in navigator) {
-      (navigator as any).getBattery().then((battery: any) => {
+      (navigator as any).getBattery().then((bat: any) => {
+        battery = bat;
         setBatteryInfo({ level: Math.round(battery.level * 100), charging: battery.charging });
-        battery.addEventListener('levelchange', () => {
+
+        levelChangeHandler = () => {
           setBatteryInfo(prev => prev ? { ...prev, level: Math.round(battery.level * 100) } : null);
-        });
-        battery.addEventListener('chargingchange', () => {
+        };
+        chargingChangeHandler = () => {
           setBatteryInfo(prev => prev ? { ...prev, charging: battery.charging } : null);
-        });
+        };
+
+        battery.addEventListener('levelchange', levelChangeHandler);
+        battery.addEventListener('chargingchange', chargingChangeHandler);
       });
     }
+
+    // Cleanup: remove battery event listeners to prevent memory leak
+    return () => {
+      if (battery) {
+        if (levelChangeHandler) battery.removeEventListener('levelchange', levelChangeHandler);
+        if (chargingChangeHandler) battery.removeEventListener('chargingchange', chargingChangeHandler);
+      }
+    };
   }, []);
 
   const { data: weatherData, isFetching: weatherFetching } = useQuery({
