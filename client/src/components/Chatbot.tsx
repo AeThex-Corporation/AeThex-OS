@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Bot, User, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
+import { isMobile } from "@/lib/platform";
 
 interface Message {
   id: string;
@@ -63,7 +64,7 @@ export function Chatbot() {
   };
 
   // Don't render chatbot on the OS page - it has its own environment
-  if (location === "/os") {
+  if (location === "/os" || isMobile()) {
     return null;
   }
 

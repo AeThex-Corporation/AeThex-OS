@@ -78,54 +78,67 @@ export default function Marketplace() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <button className="text-slate-400 hover:text-white">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          </Link>
-          <h1 className="text-2xl font-bold text-white">Marketplace</h1>
-        </div>
-        <div className="flex items-center gap-4">
-          <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700">
-            <p className="text-sm text-slate-400">Balance</p>
-            <p className="text-xl font-bold text-cyan-400">{balance} LP</p>
+      <div className="bg-slate-950 border-b border-slate-700 px-3 md:px-6 py-3 md:py-4 sticky top-0 z-10">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 md:gap-4 min-w-0 flex-1">
+            <Link href="/">
+              <button className="text-slate-400 hover:text-white shrink-0">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
+            <h1 className="text-lg md:text-2xl font-bold text-white truncate">Marketplace</h1>
           </div>
-          <Button className="bg-cyan-600 hover:bg-cyan-700 gap-2">
-            <Plus className="w-4 h-4" />
-            Sell Item
-          </Button>
+          <div className="flex items-center gap-2 md:gap-4 shrink-0">
+            <div className="bg-slate-800 px-2 md:px-4 py-1.5 md:py-2 rounded-lg border border-slate-700">
+              <p className="text-xs text-slate-400 hidden sm:block">Balance</p>
+              <p className="text-sm md:text-xl font-bold text-cyan-400">{balance} LP</p>
+            </div>
+            <Button className="bg-cyan-600 hover:bg-cyan-700 gap-1 md:gap-2 text-xs md:text-sm px-2 md:px-4 h-8 md:h-10">
+              <Plus className="w-3 h-3 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Sell Item</span>
+              <span className="sm:hidden">Sell</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="p-6 max-w-7xl mx-auto">
+      <div className="p-3 md:p-6 max-w-7xl mx-auto">
         {/* Category Tabs */}
         <Tabs value={selectedCategory} onValueChange={setSelectedCategory} className="mb-6">
-          <TabsList className="bg-slate-800 border-b border-slate-700">
-            <TabsTrigger value="all" className="text-slate-300">
+          <TabsList className="bg-slate-800 border-b border-slate-700 w-full overflow-x-auto flex-nowrap">
+            <TabsTrigger value="all" className="text-slate-300 text-xs md:text-sm whitespace-nowrap">
               All Items
             </TabsTrigger>
-            <TabsTrigger value="code" className="text-slate-300">
-              Code & Snippets
+            <TabsTrigger value="code" className="text-slate-300 text-xs md:text-sm whitespace-nowrap">
+              Code
             </TabsTrigger>
-            <TabsTrigger value="achievement" className="text-slate-300">
+            <TabsTrigger value="achievement" className="text-slate-300 text-xs md:text-sm whitespace-nowrap">
               Achievements
             </TabsTrigger>
-            <TabsTrigger value="service" className="text-slate-300">
+            <TabsTrigger value="service" className="text-slate-300 text-xs md:text-sm whitespace-nowrap">
               Services
             </TabsTrigger>
-            <TabsTrigger value="credential" className="text-slate-300">
+            <TabsTrigger value="credential" className="text-slate-300 text-xs md:text-sm whitespace-nowrap">
               Credentials
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value={selectedCategory} className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+              </div>
+            ) : filteredListings.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No items found in this category</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {filteredListings.map((listing) => (
                 <Card
                   key={listing.id}
-                  className="bg-slate-800 border-slate-700 p-5 hover:border-cyan-500 transition-all group cursor-pointer"
+                  className="bg-slate-800 border-slate-700 p-4 md:p-5 hover:border-cyan-500 transition-all group cursor-pointer active:scale-[0.98]"
                 >
                   {/* Category Badge */}
                   <div className="mb-3 flex items-center gap-2">
@@ -139,13 +152,13 @@ export default function Marketplace() {
                   </div>
 
                   {/* Title */}
-                  <h3 className="text-white font-bold mb-2 text-lg group-hover:text-cyan-400 transition-colors">
+                  <h3 className="text-white font-bold mb-2 text-base md:text-lg group-hover:text-cyan-400 transition-colors line-clamp-2">
                     {listing.title}
                   </h3>
 
                   {/* Seller Info */}
                   <div className="mb-3 text-sm">
-                    <p className="text-slate-400">by {listing.seller}</p>
+                    <p className="text-slate-400 truncate">by {listing.seller}</p>
                   </div>
 
                   {/* Rating & Purchases */}
@@ -158,30 +171,31 @@ export default function Marketplace() {
                   </div>
 
                   {/* Price & Button */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-2xl font-bold text-cyan-400">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-xl md:text-2xl font-bold text-cyan-400">
                       {listing.price}
-                      <span className="text-sm text-slate-400 ml-1">LP</span>
+                      <span className="text-xs md:text-sm text-slate-400 ml-1">LP</span>
                     </div>
-                    <Button className="bg-cyan-600 hover:bg-cyan-700 gap-2 h-9 px-3">
-                      <ShoppingCart className="w-4 h-4" />
+                    <Button className="bg-cyan-600 hover:bg-cyan-700 gap-1 md:gap-2 h-8 md:h-9 px-2 md:px-3 text-xs md:text-sm">
+                      <ShoppingCart className="w-3 h-3 md:w-4 md:h-4" />
                       Buy
                     </Button>
                   </div>
                 </Card>
               ))}
             </div>
+            )}
           </TabsContent>
         </Tabs>
 
         {/* Featured Section */}
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-white mb-4">Featured Sellers</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h2 className="text-xl md:text-2xl font-bold text-white mb-4">Featured Sellers</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {["CodeMaster", "TechGuru", "AchievmentHunter"].map((seller) => (
               <Card
                 key={seller}
-                className="bg-slate-800 border-slate-700 p-4 hover:border-cyan-500 transition-colors"
+                className="bg-slate-800 border-slate-700 p-4 hover:border-cyan-500 transition-colors cursor-pointer active:scale-[0.98]"
               >
                 <div className="text-center">
                   <div className="w-12 h-12 rounded-full bg-cyan-600 mx-auto mb-3"></div>

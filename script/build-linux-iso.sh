@@ -2,10 +2,12 @@
 set -e
 
 # AeThex Linux ISO Builder - Containerized Edition
-# Creates a bootable ISO using Ubuntu base image (no debootstrap/chroot needed)
+# Creates a bootable ISO using debootstrap + chroot
 
 WORK_DIR="${1:-.}"
 BUILD_DIR="$WORK_DIR/aethex-linux-build"
+ROOTFS_DIR="$BUILD_DIR/rootfs"
+ISO_DIR="$BUILD_DIR/iso"
 ISO_NAME="AeThex-Linux-amd64.iso"
 
 echo "[*] AeThex ISO Builder - Containerized Edition"
@@ -13,31 +15,40 @@ echo "[*] Build directory: $BUILD_DIR"
 echo "[*] This build method works in Docker without privileged mode"
 
 # Clean and prepare
-rm -rf "$BUILD_DIR"
-mkdir -p "$BUILD_DIR"/{iso,rootfs}
+if [ -d "$BUILD_DIR" ]; then
+  sudo rm -rf "$BUILD_DIR" 2>/dev/null || {
+    find "$BUILD_DIR" -type f -exec chmod 644 {} \; 2>/dev/null || true
+    find "$BUILD_DIR" -type d -exec chmod 755 {} \; 2>/dev/null || true
+    rm -rf "$BUILD_DIR"
+  }
+fi
+mkdir -p "$ROOTFS_DIR" "$ISO_DIR" "$ISO_DIR"/casper "$ISO_DIR"/isolinux "$ISO_DIR"/boot/grub
 
 # Check dependencies
 echo "[*] Checking dependencies..."
-for cmd in xorriso genisoimage mksquashfs; do
-  if ! command -v "$cmd" &> /dev/null; then
-    echo "[!] Missing: $cmd - installing..."
-    apt-get update -qq
-    apt-get install -y -qq "$cmd" 2>&1 | tail -5
-  fi
-done
+apt-get update -qq
+apt-get install -y -qq \
+  debootstrap squashfs-tools xorriso grub-common grub-pc-bin grub-efi-amd64-bin \
+  syslinux-common isolinux mtools dosfstools wget ca-certificates 2>&1 | tail -10
 
-echo "[+] Downloading Ubuntu Mini ISO base..."
-# Use Ubuntu mini.iso as base (much smaller, pre-built)
-if [ ! -f "$BUILD_DIR/ubuntu-mini.iso" ]; then
-  wget -q --show-progress -O "$BUILD_DIR/ubuntu-mini.iso" \
-    http://archive.ubuntu.com/ubuntu/dists/noble/main/installer-amd64/current/legacy-images/netboot/mini.iso \
-    || echo "[!] Download failed, creating minimal ISO instead"
-fi
+echo "[+] Bootstrapping Ubuntu base (noble)..."
+debootstrap --arch=amd64 noble "$ROOTFS_DIR" http://archive.ubuntu.com/ubuntu/
+cp /etc/resolv.conf "$ROOTFS_DIR/etc/resolv.conf"
+
+cleanup_mounts() {
+  umount -lf "$ROOTFS_DIR/proc" 2>/dev/null || true
+  umount -lf "$ROOTFS_DIR/sys" 2>/dev/null || true
+  umount -lf "$ROOTFS_DIR/dev/pts" 2>/dev/null || true
+  umount -lf "$ROOTFS_DIR/dev" 2>/dev/null || true
+}
+trap cleanup_mounts EXIT
 
 echo "[+] Building AeThex application layer..."
-mount -t proc /proc "$ROOTFS_DIR/proc" || true
-mount -t sysfs /sys "$ROOTFS_DIR/sys" || true
+mkdir -p "$ROOTFS_DIR/proc" "$ROOTFS_DIR/sys" "$ROOTFS_DIR/dev/pts"
+mount -t proc proc "$ROOTFS_DIR/proc" || true
+mount -t sysfs sys "$ROOTFS_DIR/sys" || true
 mount --bind /dev "$ROOTFS_DIR/dev" || true
+mount --bind /dev/pts "$ROOTFS_DIR/dev/pts" || true
 
 echo "[+] Installing Xfce desktop, Firefox, and system tools..."
 echo "    (packages installing, ~15-20 minutes...)"
@@ -53,6 +64,7 @@ chroot "$ROOTFS_DIR" bash -c '
   apt-get install -y \
     linux-image-generic \
     grub-pc-bin grub-efi-amd64-bin grub-common xorriso \
+    casper live-boot live-boot-initramfs-tools \
     xorg xfce4 xfce4-goodies lightdm \
     firefox network-manager \
     sudo curl wget git ca-certificates gnupg \
@@ -61,6 +73,12 @@ chroot "$ROOTFS_DIR" bash -c '
     xfce4-terminal mousepad ristretto \
     dbus-x11
   apt-get clean
+  
+  # Verify kernel was installed
+  if ! ls /boot/vmlinuz-* 2>/dev/null | grep -q .; then
+    echo "ERROR: linux-image-generic failed to install!"
+    exit 1
+  fi
 ' 2>&1 | tail -50
 
 echo "[+] Installing Node.js 20.x from NodeSource..."
@@ -203,27 +221,43 @@ echo "    - Firefox launches in kiosk mode"
 echo "    - Xfce desktop with auto-login"
 echo "    - Ingress-style mobile interface"
 
-echo "[+] Extracting kernel and initrd..."
+echo "[+] Extracting kernel and initrd from rootfs..."
 KERNEL="$(ls -1 $ROOTFS_DIR/boot/vmlinuz-* 2>/dev/null | head -n 1)"
 INITRD="$(ls -1 $ROOTFS_DIR/boot/initrd.img-* 2>/dev/null | head -n 1)"
 
 if [ -z "$KERNEL" ] || [ -z "$INITRD" ]; then
-  echo "[!] Kernel or initrd not found."
+  echo "[!] FATAL: Kernel or initrd not found in $ROOTFS_DIR/boot/"
+  echo "[!] Contents of $ROOTFS_DIR/boot/:"
   ls -la "$ROOTFS_DIR/boot/" || true
-  mkdir -p "$BUILD_DIR"
-  echo "No kernel found in rootfs" > "$BUILD_DIR/README.txt"
   exit 1
 fi
 
-cp "$KERNEL" "$ISO_DIR/casper/vmlinuz"
-cp "$INITRD" "$ISO_DIR/casper/initrd.img"
-echo "[✓] Kernel: $(basename "$KERNEL")"
-echo "[✓] Initrd: $(basename "$INITRD")"
+echo "[+] Copying kernel and initrd to $ISO_DIR/casper/..."
+cp -v "$KERNEL" "$ISO_DIR/casper/vmlinuz" || { echo "[!] Failed to copy kernel"; exit 1; }
+cp -v "$INITRD" "$ISO_DIR/casper/initrd.img" || { echo "[!] Failed to copy initrd"; exit 1; }
+
+# Verify files exist
+if [ ! -f "$ISO_DIR/casper/vmlinuz" ]; then
+  echo "[!] ERROR: vmlinuz not found after copy"
+  ls -la "$ISO_DIR/casper/" || true
+  exit 1
+fi
+if [ ! -f "$ISO_DIR/casper/initrd.img" ]; then
+  echo "[!] ERROR: initrd.img not found after copy"
+  ls -la "$ISO_DIR/casper/" || true
+  exit 1
+fi
+
+echo "[✓] Kernel: $(basename "$KERNEL") ($(du -h "$ISO_DIR/casper/vmlinuz" | cut -f1))"
+echo "[✓] Initrd: $(basename "$INITRD") ($(du -h "$ISO_DIR/casper/initrd.img" | cut -f1))"
+echo "[✓] Initrd -> $ISO_DIR/casper/initrd.img"
+echo "[✓] Files verified in ISO directory"
 
 # Unmount before squashfs
 echo "[+] Unmounting chroot filesystems..."
 umount -lf "$ROOTFS_DIR/proc" 2>/dev/null || true
 umount -lf "$ROOTFS_DIR/sys" 2>/dev/null || true
+umount -lf "$ROOTFS_DIR/dev/pts" 2>/dev/null || true
 umount -lf "$ROOTFS_DIR/dev" 2>/dev/null || true
 
 echo "[+] Creating SquashFS filesystem..."
@@ -237,36 +271,135 @@ else
   exit 1
 fi
 
-echo "[+] Setting up BIOS boot (isolinux)..."
-cat > "$ISO_DIR/isolinux/isolinux.cfg" << 'EOF'
-PROMPT 0
-TIMEOUT 50
-DEFAULT linux
+echo "[+] Final verification before ISO creation..."
+for file in "$ISO_DIR/casper/vmlinuz" "$ISO_DIR/casper/initrd.img" "$ISO_DIR/casper/filesystem.squashfs"; do
+  if [ ! -f "$file" ]; then
+    echo "[!] CRITICAL: Missing $file"
+    echo "[!] ISO directory contents:"
+    find "$ISO_DIR" -type f 2>/dev/null | head -20
+    exit 1
+  fi
+  echo "[✓] $(basename "$file") - $(du -h "$file" | cut -f1)"
+done
+echo "[+] Final verification before ISO creation..."
+for f in "$ISO_DIR/casper/vmlinuz" "$ISO_DIR/casper/initrd.img" "$ISO_DIR/casper/filesystem.squashfs"; do
+  if [ ! -f "$f" ]; then
+    echo "[!] CRITICAL: Missing $f"
+    ls -la "$ISO_DIR/casper/" || true
+    exit 1
+  fi
+  echo "[✓] $(basename "$f") $(du -h "$f" | awk '{print $1}')"
+done
 
-LABEL linux
-  MENU LABEL AeThex OS
+echo "[+] Creating live boot manifest..."
+printf $(du -sx --block-size=1 "$ROOTFS_DIR" | cut -f1) > "$ISO_DIR/casper/filesystem.size"
+cat > "$ISO_DIR/casper/filesystem.manifest" << 'MANIFEST'
+casper
+live-boot
+live-boot-initramfs-tools
+MANIFEST
+
+echo "[+] Setting up BIOS boot (isolinux)..."
+mkdir -p "$ISO_DIR/isolinux"
+cat > "$ISO_DIR/isolinux/isolinux.cfg" << 'EOF'
+DEFAULT vesamenu.c32
+PROMPT 0
+TIMEOUT 100
+
+LABEL live
+  MENU LABEL ^AeThex OS
   KERNEL /casper/vmlinuz
-  APPEND initrd=/casper/initrd.img boot=casper quiet splash
+  APPEND initrd=/casper/initrd.img root=/dev/sr0 ro live-media=/dev/sr0 boot=live config ip=dhcp live-config hostname=aethex
+
+LABEL safe
+  MENU LABEL AeThex OS (^Safe Mode)
+  KERNEL /casper/vmlinuz
+  APPEND initrd=/casper/initrd.img root=/dev/sr0 ro live-media=/dev/sr0 boot=live nomodeset config ip=dhcp live-config hostname=aethex
 EOF
 
-cp /usr/lib/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || \
-cp /usr/share/syslinux/isolinux.bin "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] isolinux.bin missing"
-cp /usr/lib/syslinux/ldlinux.c32 "$ISO_DIR/isolinux/" 2>/dev/null || \
-cp /usr/share/syslinux/ldlinux.c32 "$ISO_DIR/isolinux/" 2>/dev/null || echo "[!] ldlinux.c32 missing"
+# Copy syslinux binaries
+for src in /usr/lib/syslinux/modules/bios /usr/lib/ISOLINUX /usr/share/syslinux; do
+  if [ -f "$src/isolinux.bin" ]; then
+    cp "$src/isolinux.bin" "$ISO_DIR/isolinux/" 2>/dev/null
+    cp "$src/ldlinux.c32" "$ISO_DIR/isolinux/" 2>/dev/null || true
+    cp "$src/vesamenu.c32" "$ISO_DIR/isolinux/" 2>/dev/null || true
+    cp "$src/libcom32.c32" "$ISO_DIR/isolinux/" 2>/dev/null || true
+    cp "$src/libutil.c32" "$ISO_DIR/isolinux/" 2>/dev/null || true
+  fi
+done
 
 echo "[+] Setting up UEFI boot (GRUB)..."
+mkdir -p "$ISO_DIR/boot/grub"
 cat > "$ISO_DIR/boot/grub/grub.cfg" << 'EOF'
 set timeout=10
 set default=0
 
 menuentry "AeThex OS" {
-  linux /casper/vmlinuz boot=casper quiet splash
+  linux /casper/vmlinuz root=/dev/sr0 ro live-media=/dev/sr0 boot=live config ip=dhcp live-config hostname=aethex
+  initrd /casper/initrd.img
+}
+
+menuentry "AeThex OS (safe mode)" {
+  linux /casper/vmlinuz root=/dev/sr0 ro live-media=/dev/sr0 boot=live nomodeset config ip=dhcp live-config hostname=aethex
   initrd /casper/initrd.img
 }
 EOF
 
-echo "[+] Creating hybrid ISO with grub-mkrescue..."
-grub-mkrescue -o "$BUILD_DIR/$ISO_NAME" "$ISO_DIR" --verbose 2>&1 | tail -20
+echo "[+] Verifying ISO structure before xorriso..."
+echo "[*] Checking ISO_DIR contents:"
+ls -lh "$ISO_DIR/" || echo "ISO_DIR missing!"
+echo "[*] Checking casper contents:"
+ls -lh "$ISO_DIR/casper/" || echo "casper dir missing!"
+echo "[*] Checking isolinux contents:"
+ls -lh "$ISO_DIR/isolinux/" || echo "isolinux dir missing!"
+
+if [ ! -f "$ISO_DIR/casper/vmlinuz" ]; then
+  echo "[!] CRITICAL: vmlinuz not in ISO_DIR/casper!"
+  find "$ISO_DIR" -name "vmlinuz*" 2>/dev/null || echo "vmlinuz not found anywhere in ISO_DIR"
+  exit 1
+fi
+
+if [ ! -f "$ISO_DIR/casper/initrd.img" ]; then
+  echo "[!] CRITICAL: initrd.img not in ISO_DIR/casper!"
+  exit 1
+fi
+
+echo "[✓] All casper files verified in place"
+
+echo "[+] Creating EFI boot image..."
+mkdir -p "$ISO_DIR/EFI/boot"
+grub-mkstandalone \
+  --format=x86_64-efi \
+  --output="$ISO_DIR/EFI/boot/bootx64.efi" \
+  --locales="" \
+  --fonts="" \
+  "boot/grub/grub.cfg=$ISO_DIR/boot/grub/grub.cfg" 2>&1 | tail -5
+
+# Create EFI image for ISO
+dd if=/dev/zero of="$ISO_DIR/boot/grub/efi.img" bs=1M count=10 2>/dev/null
+mkfs.vfat "$ISO_DIR/boot/grub/efi.img" >/dev/null 2>&1
+EFI_MOUNT=$(mktemp -d)
+mount -o loop "$ISO_DIR/boot/grub/efi.img" "$EFI_MOUNT"
+mkdir -p "$EFI_MOUNT/EFI/boot"
+cp "$ISO_DIR/EFI/boot/bootx64.efi" "$EFI_MOUNT/EFI/boot/"
+umount "$EFI_MOUNT"
+rmdir "$EFI_MOUNT"
+
+echo "[+] Creating hybrid ISO with xorriso (El Torito boot)..."
+xorriso -as mkisofs \
+  -iso-level 3 \
+  -full-iso9660-filenames \
+  -volid "AeThex-OS" \
+  -eltorito-boot isolinux/isolinux.bin \
+  -eltorito-catalog isolinux/boot.cat \
+  -no-emul-boot -boot-load-size 4 -boot-info-table \
+  -eltorito-alt-boot \
+  -e boot/grub/efi.img \
+  -no-emul-boot \
+  -isohybrid-mbr /usr/lib/ISOLINUX/isohdpfx.bin \
+  -isohybrid-gpt-basdat \
+  -output "$BUILD_DIR/$ISO_NAME" \
+  "$ISO_DIR" 2>&1 | tail -20
 
 echo "[+] Computing SHA256 checksum..."
 if [ -f "$BUILD_DIR/$ISO_NAME" ]; then

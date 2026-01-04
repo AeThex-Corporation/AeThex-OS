@@ -26,7 +26,7 @@ import {
   TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
   AlertTriangle, Briefcase, CalendarDays, FolderGit2, MessageSquare,
   ShoppingCart, Folder, Code, Home, Flag, Cookie, ChevronLeft,
-  MoreVertical, Search, Mic, ArrowLeft
+  MoreVertical, Search, Mic, ArrowLeft, RefreshCw, Star, Clock, MapPin
 } from "lucide-react";
 
 interface WindowState {
@@ -352,7 +352,10 @@ export default function AeThexOS() {
           setBootProgress(50);
           await new Promise(r => setTimeout(r, 500));
         }
-      } catch {}
+      } catch (err) {
+        // Session fetch failed, continue with guest mode
+        if (import.meta.env.DEV) console.debug('[Boot] Session check failed:', err);
+      }
       
       if (!foundIdentity) {
         addLog('▸ PASSPORT: No active identity token found');
@@ -410,10 +413,14 @@ export default function AeThexOS() {
                 addToast('⚠️ Architect Access Available — Use tray to upgrade', 'info');
                 localStorage.setItem('aethex-upgrade-alert-shown', 'true');
               }
-            } catch {}
+            } catch (err) {
+              if (import.meta.env.DEV) console.debug('[Boot] localStorage access failed:', err);
+            }
           }, 30000);
         }
-      } catch {}
+      } catch (err) {
+        if (import.meta.env.DEV) console.debug('[Boot] Upgrade check failed:', err);
+      }
       setBootProgress(75);
       await new Promise(r => setTimeout(r, 400));
       
@@ -457,7 +464,10 @@ export default function AeThexOS() {
         if (Array.isArray(data)) {
           setNotifications(data.map((n: any) => n.message));
         }
-      } catch {}
+      } catch (err) {
+        // Notifications fetch failed, not critical
+        if (import.meta.env.DEV) console.debug('[OS] Notifications fetch failed:', err);
+      }
     };
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 60000);
@@ -521,7 +531,10 @@ export default function AeThexOS() {
           const savedPos = positions[w.id];
           return savedPos ? { ...w, ...savedPos } : w;
         }));
-      } catch {}
+      } catch (err) {
+        // Corrupted localStorage data, ignore and use defaults
+        if (import.meta.env.DEV) console.debug('[OS] Failed to restore window positions:', err);
+      }
     }
     const hasVisited = localStorage.getItem('aethex-visited');
     if (!hasVisited) {
@@ -1205,23 +1218,7 @@ export default function AeThexOS() {
     }, []);
     
     return (
-      <div className="h-screen w-screen bg-black overflow-hidden flex flex-col relative">
-        {/* INGRESS STYLE - Lightweight Background */}
-        <div className="absolute inset-0 bg-black"></div>
-        
-        {/* Hexagon Grid Pattern - CSS Only */}
-        <div className="absolute inset-0 opacity-10" style={{
-          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 40px, #00ff9920 40px, #00ff9920 42px),
-                           repeating-linear-gradient(90deg, transparent, transparent 40px, #00ff9920 40px, #00ff9920 42px),
-                           repeating-linear-gradient(120deg, transparent, transparent 40px, #00ffff20 40px, #00ffff20 42px)`
-        }}></div>
-        
-        {/* Scan Lines - Pure CSS Animation */}
-        <div className="absolute inset-0 pointer-events-none" style={{
-          background: 'repeating-linear-gradient(0deg, transparent 0px, transparent 2px, #00ff9905 2px, #00ff9905 4px)',
-          animation: 'scan 8s linear infinite'
-        }}></div>
-        
+      <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
         <style>{`
           @keyframes scan {
             0% { transform: translateY(-100%); }
@@ -1234,7 +1231,7 @@ export default function AeThexOS() {
         `}</style>
 
         {/* Ingress Status Bar - Minimal */}
-        <div className="relative h-8 bg-black/90 border-b border-emerald-500/50 shrink-0 z-50">
+        <div className="relative h-8 bg-black/90 border-b border-emerald-500/50 shrink-0">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent"></div>
           <div className="relative flex items-center justify-between px-4 h-full">
             <div className="flex items-center gap-3">
@@ -1255,7 +1252,7 @@ export default function AeThexOS() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative bg-black">
           <AnimatePresence mode="wait">
             {currentWindow ? (
               // Fullscreen App View with 3D Card Flip
@@ -4518,29 +4515,29 @@ function FilesApp() {
   });
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
+    <div className="min-h-full bg-slate-950 flex flex-col">
       <div className="flex items-center gap-2 p-2 bg-slate-900 border-b border-white/10">
-        <div className="flex-1 bg-slate-800 rounded px-3 py-1.5 text-white/60 text-sm font-mono">
+        <div className="flex-1 bg-slate-800 rounded px-3 py-1.5 text-white/60 text-xs md:text-sm font-mono overflow-x-auto whitespace-nowrap">
           /home/architect/projects
         </div>
       </div>
-      <div className="flex-1 p-4 overflow-auto">
+      <div className="flex-1 p-3 md:p-4 overflow-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
+          <div className="flex items-center justify-center h-40">
             <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <FolderOpen className="w-6 h-6 text-cyan-400 mb-2" />
+            <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+              <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
+                <FolderOpen className="w-5 h-5 md:w-6 md:h-6 text-cyan-400 mb-2" />
                 <div className="text-xs text-white/50">Total Projects</div>
-                <div className="text-xl font-bold text-white">{metrics?.totalProjects || 0}</div>
+                <div className="text-lg md:text-xl font-bold text-white">{metrics?.totalProjects || 0}</div>
               </div>
-              <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                <User className="w-6 h-6 text-purple-400 mb-2" />
+              <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
+                <User className="w-5 h-5 md:w-6 md:h-6 text-purple-400 mb-2" />
                 <div className="text-xs text-white/50">Architects</div>
-                <div className="text-xl font-bold text-white">{metrics?.totalProfiles || 0}</div>
+                <div className="text-lg md:text-xl font-bold text-white">{metrics?.totalProfiles || 0}</div>
               </div>
             </div>
             
@@ -4548,13 +4545,13 @@ function FilesApp() {
             {projects?.length > 0 ? (
               <div className="space-y-2">
                 {projects.map((p: any) => (
-                  <div key={p.id} className="flex items-center gap-3 p-2 bg-white/5 rounded border border-white/10 hover:border-cyan-500/30 transition-colors">
-                    <FolderOpen className="w-5 h-5 text-cyan-400" />
+                  <div key={p.id} className="flex items-center gap-3 p-3 bg-white/5 rounded border border-white/10 hover:border-cyan-500/30 transition-colors active:bg-white/10">
+                    <FolderOpen className="w-5 h-5 text-cyan-400 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-white text-sm truncate">{p.title}</div>
                       <div className="text-white/40 text-xs">{p.engine || 'Unknown engine'}</div>
                     </div>
-                    <span className={`text-xs px-2 py-0.5 rounded ${p.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/50'}`}>
+                    <span className={`text-xs px-2 py-0.5 rounded shrink-0 ${p.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/50'}`}>
                       {p.status || 'unknown'}
                     </span>
                   </div>
@@ -4595,12 +4592,12 @@ function AchievementsApp() {
   ];
 
   return (
-    <div className="h-full bg-slate-950 p-4 overflow-auto">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
-        <Trophy className="w-6 h-6 text-yellow-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Achievements</h2>
-        <span className="ml-auto text-xs text-white/40 font-mono">
-          {(userAchievements || []).length} / {(allAchievements || []).length} Unlocked
+        <Trophy className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Achievements</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono shrink-0">
+          {(userAchievements || []).length} / {(allAchievements || []).length}
         </span>
       </div>
       
@@ -4658,12 +4655,12 @@ function OpportunitiesApp() {
   };
 
   return (
-    <div className="h-full bg-slate-950 p-4 overflow-auto">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
-        <Briefcase className="w-6 h-6 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Opportunities</h2>
-        <span className="ml-auto text-xs text-white/40 font-mono">
-          {opportunities?.length || 0} Open Positions
+        <Briefcase className="w-5 h-5 md:w-6 md:h-6 text-cyan-400" />
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Opportunities</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono shrink-0">
+          {opportunities?.length || 0}
         </span>
       </div>
       
@@ -4679,16 +4676,16 @@ function OpportunitiesApp() {
       ) : (
         <div className="space-y-3">
           {opportunities.map((opp: any) => (
-            <div key={opp.id} className="bg-white/5 border border-white/10 p-4 hover:border-cyan-400/30 transition-all">
-              <div className="flex items-start justify-between gap-3 mb-2">
-                <h3 className="font-mono text-sm text-white font-semibold">{opp.title}</h3>
-                <span className="text-cyan-400 font-mono text-xs whitespace-nowrap">
+            <div key={opp.id} className="bg-white/5 border border-white/10 p-3 md:p-4 hover:border-cyan-400/30 active:border-cyan-400 transition-all">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="font-mono text-sm text-white font-semibold line-clamp-2 flex-1">{opp.title}</h3>
+                <span className="text-cyan-400 font-mono text-xs whitespace-nowrap shrink-0">
                   {formatSalary(opp.salary_min, opp.salary_max)}
                 </span>
               </div>
               <p className="text-xs text-white/60 mb-3 line-clamp-2">{opp.description}</p>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 uppercase font-mono">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 border border-cyan-400/30 uppercase font-mono text-[10px]">
                   {opp.arm_affiliation}
                 </span>
                 <span className="text-white/40">{opp.job_type || 'Full-time'}</span>
@@ -4715,12 +4712,12 @@ function EventsApp() {
   };
 
   return (
-    <div className="h-full bg-slate-950 p-4 overflow-auto">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
-        <CalendarDays className="w-6 h-6 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Events</h2>
-        <span className="ml-auto text-xs text-white/40 font-mono">
-          {events?.length || 0} Upcoming
+        <CalendarDays className="w-5 h-5 md:w-6 md:h-6 text-cyan-400" />
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Events</h2>
+        <span className="ml-auto text-xs text-white/40 font-mono shrink-0">
+          {events?.length || 0}
         </span>
       </div>
       
@@ -4736,7 +4733,7 @@ function EventsApp() {
       ) : (
         <div className="space-y-3">
           {events.map((event: any) => (
-            <div key={event.id} className="bg-white/5 border border-white/10 p-4 hover:border-cyan-400/30 transition-all">
+            <div key={event.id} className="bg-white/5 border border-white/10 p-3 md:p-4 hover:border-cyan-400/30 active:border-cyan-400 transition-all">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-12 h-12 bg-cyan-500/20 border border-cyan-400/50 flex flex-col items-center justify-center text-cyan-400">
                   <div className="text-xs font-mono">{formatDate(event.date).split(' ')[0]}</div>
@@ -4804,8 +4801,8 @@ function ChatApp() {
   };
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
-      <div className="flex-1 p-4 overflow-auto space-y-3">
+    <div className="min-h-full bg-slate-950 flex flex-col">
+      <div className="flex-1 p-3 md:p-4 overflow-auto space-y-3">
         {messages.map((msg, i) => (
           <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[80%] p-3 rounded-lg text-sm ${msg.role === 'user' ? 'bg-cyan-500/20 text-white' : 'bg-white/10 text-white/80'}`}>
@@ -4841,9 +4838,9 @@ function ChatApp() {
 
 function ManifestoApp() {
   return (
-    <div className="h-full p-6 bg-slate-950 overflow-auto">
-      <div className="max-w-lg mx-auto font-mono text-sm leading-relaxed">
-        <h1 className="text-2xl font-display text-cyan-400 uppercase tracking-wider mb-6">The AeThex Manifesto</h1>
+    <div className="min-h-full p-4 md:p-6 bg-slate-950 overflow-auto">
+      <div className="max-w-lg mx-auto font-mono text-xs md:text-sm leading-relaxed">
+        <h1 className="text-xl md:text-2xl font-display text-cyan-400 uppercase tracking-wider mb-4 md:mb-6">The AeThex Manifesto</h1>
         <div className="space-y-4 text-white/80">
           <p>We are the architects of tomorrow.</p>
           <p>In a world where the digital and physical converge, we stand at the frontier of a new reality. The Metaverse is not just a destination - it is a canvas for human potential.</p>
@@ -4868,7 +4865,7 @@ function MusicApp() {
   ];
 
   return (
-    <div className="h-full p-4 bg-gradient-to-b from-purple-950/50 to-slate-950 flex flex-col">
+    <div className="min-h-full p-3 md:p-4 bg-gradient-to-b from-purple-950/50 to-slate-950 flex flex-col">
       <div className="text-center mb-4">
         <div className="w-20 h-20 mx-auto bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center mb-3">
           <Music className="w-10 h-10 text-white" />
@@ -5129,13 +5126,13 @@ function NetworkMapApp() {
   const nodes = architects?.slice(0, 8) || [];
 
   return (
-    <div className="h-full bg-slate-950 p-4 overflow-hidden relative">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto relative">
       <div className="flex items-center gap-2 mb-4">
         <Network className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Network Map</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Network Map</h2>
       </div>
       
-      <div className="relative h-[calc(100%-60px)] flex items-center justify-center">
+      <div className="relative min-h-[400px] md:h-[calc(100%-60px)] flex items-center justify-center py-8">
         <div className="absolute inset-0 opacity-20">
           <svg className="w-full h-full">
             {nodes.map((_: any, i: number) => {
@@ -5187,6 +5184,7 @@ function NetworkMapApp() {
 }
 
 function MetricsDashboardApp() {
+  const layout = useLayout();
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['os-dashboard-metrics'],
     queryFn: async () => {
@@ -5220,57 +5218,57 @@ function MetricsDashboardApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 p-4">
+      <div className="min-h-full bg-slate-950 p-3 md:p-4">
         <div className="flex items-center gap-2 mb-4">
           <Activity className="w-5 h-5 text-cyan-400" />
           <Skeleton className="h-6 w-32" />
         </div>
-        <div className="grid grid-cols-2 gap-4">
-          <Skeleton className="h-28 rounded-lg" />
-          <Skeleton className="h-28 rounded-lg" />
-          <Skeleton className="h-28 rounded-lg" />
-          <Skeleton className="h-28 rounded-lg" />
+        <div className="grid grid-cols-2 gap-3 md:gap-4">
+          <Skeleton className="h-24 md:h-28 rounded-lg" />
+          <Skeleton className="h-24 md:h-28 rounded-lg" />
+          <Skeleton className="h-24 md:h-28 rounded-lg" />
+          <Skeleton className="h-24 md:h-28 rounded-lg" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-full bg-slate-950 p-4 overflow-auto">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto">
       <div className="flex items-center gap-2 mb-4">
         <Activity className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Live Metrics</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Live Metrics</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div className="bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 rounded-lg p-4 border border-cyan-500/30">
+      <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
+        <div className="bg-gradient-to-br from-cyan-500/20 to-cyan-500/5 rounded-lg p-3 md:p-4 border border-cyan-500/30">
           <div className="text-xs text-cyan-400 uppercase">Architects</div>
-          <div className="text-3xl font-bold text-white font-mono">{animatedValues.profiles}</div>
+          <div className="text-2xl md:text-3xl font-bold text-white font-mono">{animatedValues.profiles}</div>
           <div className="flex items-center gap-1 text-green-400 text-xs mt-1">
             <ArrowUp className="w-3 h-3" /> +{Math.floor(Math.random() * 5) + 1} today
           </div>
         </div>
-        <div className="bg-gradient-to-br from-purple-500/20 to-purple-500/5 rounded-lg p-4 border border-purple-500/30">
+        <div className="bg-gradient-to-br from-purple-500/20 to-purple-500/5 rounded-lg p-3 md:p-4 border border-purple-500/30">
           <div className="text-xs text-purple-400 uppercase">Projects</div>
-          <div className="text-3xl font-bold text-white font-mono">{animatedValues.projects}</div>
+          <div className="text-2xl md:text-3xl font-bold text-white font-mono">{animatedValues.projects}</div>
           <div className="flex items-center gap-1 text-green-400 text-xs mt-1">
             <TrendingUp className="w-3 h-3" /> Active
           </div>
         </div>
-        <div className="bg-gradient-to-br from-green-500/20 to-green-500/5 rounded-lg p-4 border border-green-500/30">
+        <div className="bg-gradient-to-br from-green-500/20 to-green-500/5 rounded-lg p-3 md:p-4 border border-green-500/30">
           <div className="text-xs text-green-400 uppercase">Total XP</div>
-          <div className="text-3xl font-bold text-white font-mono">{animatedValues.xp.toLocaleString()}</div>
+          <div className="text-2xl md:text-3xl font-bold text-white font-mono">{animatedValues.xp.toLocaleString()}</div>
         </div>
-        <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 rounded-lg p-4 border border-yellow-500/30">
+        <div className="bg-gradient-to-br from-yellow-500/20 to-yellow-500/5 rounded-lg p-3 md:p-4 border border-yellow-500/30">
           <div className="text-xs text-yellow-400 uppercase">Online</div>
-          <div className="text-3xl font-bold text-white font-mono">{metrics?.onlineUsers || 0}</div>
+          <div className="text-2xl md:text-3xl font-bold text-white font-mono">{metrics?.onlineUsers || 0}</div>
           <div className="flex items-center gap-1 text-yellow-400 text-xs mt-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" /> Live
           </div>
         </div>
       </div>
 
-      <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+      <div className="bg-white/5 rounded-lg p-3 md:p-4 border border-white/10">
         <div className="text-xs text-white/50 uppercase mb-3">Network Activity</div>
         <div className="flex items-end gap-1 h-24">
           {Array.from({ length: 20 }).map((_, i) => {
@@ -5414,30 +5412,30 @@ class MetaverseRegistry {
   };
 
   return (
-    <div className="h-full bg-[#1e1e1e] flex flex-col">
-      <div className="flex items-center gap-2 px-4 py-2 bg-[#252526] border-b border-[#3c3c3c]">
-        <div className="flex items-center gap-2 px-3 py-1 bg-[#1e1e1e] rounded-t border-t-2 border-cyan-500">
-          <Code2 className="w-4 h-4 text-cyan-400" />
-          <span className="text-sm text-white/80">registry.ts</span>
+    <div className="min-h-full bg-[#1e1e1e] flex flex-col">
+      <div className="flex items-center gap-2 px-2 md:px-4 py-2 bg-[#252526] border-b border-[#3c3c3c] overflow-x-auto">
+        <div className="flex items-center gap-2 px-2 md:px-3 py-1 bg-[#1e1e1e] rounded-t border-t-2 border-cyan-500 shrink-0">
+          <Code2 className="w-3 h-3 md:w-4 md:h-4 text-cyan-400" />
+          <span className="text-xs md:text-sm text-white/80">registry.ts</span>
           <span className="text-white/30 text-xs">~</span>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <button className="text-xs text-white/50 hover:text-white/80 px-2 py-1 bg-white/5 rounded">Format</button>
-          <button className="text-xs text-white/50 hover:text-white/80 px-2 py-1 bg-white/5 rounded">Run</button>
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <button className="text-[10px] md:text-xs text-white/50 hover:text-white/80 px-1.5 md:px-2 py-1 bg-white/5 rounded">Format</button>
+          <button className="text-[10px] md:text-xs text-white/50 hover:text-white/80 px-1.5 md:px-2 py-1 bg-white/5 rounded">Run</button>
         </div>
       </div>
       
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative touch-pan-x touch-pan-y">
         <div className="absolute inset-0 flex">
-          <div className="w-12 bg-[#1e1e1e] border-r border-[#3c3c3c] pt-4 text-right pr-2 text-white/30 text-sm font-mono select-none overflow-hidden">
+          <div className="w-8 md:w-12 bg-[#1e1e1e] border-r border-[#3c3c3c] pt-2 md:pt-4 text-right pr-1 md:pr-2 text-white/30 text-[10px] md:text-sm font-mono select-none overflow-hidden">
             {code.split('\n').map((_, i) => (
               <div key={i} className={`h-[1.5rem] ${cursorPos.line === i + 1 ? 'text-white/60' : ''}`}>{i + 1}</div>
             ))}
           </div>
           <div className="flex-1 relative">
-            <div className="absolute inset-0 p-4 font-mono text-sm leading-6 pointer-events-none overflow-auto whitespace-pre" style={{ color: '#d4d4d4' }}>
+            <div className="absolute inset-0 p-2 md:p-4 font-mono text-xs md:text-sm leading-5 md:leading-6 pointer-events-none overflow-auto whitespace-pre" style={{ color: '#d4d4d4' }}>
               {code.split('\n').map((line, i) => (
-                <div key={i} className={`h-6 ${cursorPos.line === i + 1 ? 'bg-white/5' : ''}`} 
+                <div key={i} className={`h-5 md:h-6 ${cursorPos.line === i + 1 ? 'bg-white/5' : ''}`} 
                   dangerouslySetInnerHTML={{ __html: highlightLine(line) || '&nbsp;' }} />
               ))}
             </div>
@@ -5448,7 +5446,7 @@ class MetaverseRegistry {
               onKeyDown={handleKeyDown}
               onKeyUp={updateCursorPos}
               onClick={updateCursorPos}
-              className="absolute inset-0 p-4 font-mono text-sm leading-6 bg-transparent text-transparent caret-white resize-none focus:outline-none"
+              className="absolute inset-0 p-2 md:p-4 font-mono text-xs md:text-sm leading-5 md:leading-6 bg-transparent text-transparent caret-white resize-none focus:outline-none"
               spellCheck={false}
             />
             {showAutocomplete && autocompleteItems.length > 0 && (
@@ -5469,52 +5467,106 @@ class MetaverseRegistry {
         </div>
       </div>
       
-      <div className="px-4 py-2 bg-[#007acc] text-white text-xs flex items-center gap-4">
+      <div className="px-2 md:px-4 py-1.5 md:py-2 bg-[#007acc] text-white text-[10px] md:text-xs flex items-center gap-2 md:gap-4 overflow-x-auto">
         <span>TypeScript</span>
         <span>UTF-8</span>
-        <span>Spaces: 2</span>
-        <span className="ml-auto">Ln {cursorPos.line}, Col {cursorPos.col}</span>
-        <span className="text-white/60">Ctrl+Space for suggestions</span>
+        <span className="hidden sm:inline">Spaces: 2</span>
+        <span className="ml-auto shrink-0">Ln {cursorPos.line}, Col {cursorPos.col}</span>
+        <span className="text-white/60 hidden md:inline">Ctrl+Space for suggestions</span>
       </div>
     </div>
   );
 }
 
 function NewsFeedApp() {
-  const newsItems = [
+  const { data: activities, isLoading, refetch } = useQuery({
+    queryKey: ['activity-feed'],
+    queryFn: async () => {
+      const res = await fetch('/api/track/events?limit=20');
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setTimeout(() => setIsRefreshing(false), 500);
+  };
+
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const getEventType = (eventType: string) => {
+    if (eventType.includes('achievement') || eventType.includes('unlock')) return 'success';
+    if (eventType.includes('error') || eventType.includes('fail')) return 'warning';
+    return 'info';
+  };
+
+  const formatEventTitle = (event: any) => {
+    if (event.event_type === 'page_view') return `User viewed ${event.payload?.page || 'page'}`;
+    if (event.event_type === 'app_open') return `${event.payload?.app || 'App'} opened`;
+    if (event.event_type === 'achievement_unlock') return `Achievement unlocked: ${event.payload?.name || 'unknown'}`;
+    return event.event_type.replace(/_/g, ' ');
+  };
+
+  const newsItems = activities?.length ? activities.map((a: any) => ({
+    time: formatTime(a.timestamp),
+    title: formatEventTitle(a),
+    type: getEventType(a.event_type),
+  })) : [
     { time: '2 min ago', title: 'New architect joined the network', type: 'info' },
     { time: '15 min ago', title: 'Project "Genesis" reached milestone', type: 'success' },
     { time: '1 hour ago', title: 'AEGIS blocked 3 intrusion attempts', type: 'warning' },
-    { time: '3 hours ago', title: 'Codex certification updated', type: 'info' },
-    { time: '5 hours ago', title: 'Network expansion: 5 new nodes', type: 'success' },
-    { time: '1 day ago', title: 'System maintenance completed', type: 'info' },
   ];
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
-      <div className="flex items-center gap-2 p-4 border-b border-white/10">
+    <div className="min-h-full bg-slate-950 flex flex-col">
+      <div className="flex items-center gap-2 p-3 md:p-4 border-b border-white/10">
         <Newspaper className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">News Feed</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">News Feed</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="ml-auto p-1.5 hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
-      <div className="flex-1 overflow-auto p-4 space-y-3">
-        {newsItems.map((item, i) => (
+      {isLoading ? (
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
+        </div>
+      ) : (
+      <div className="flex-1 overflow-auto p-3 md:p-4 space-y-3">
+        {newsItems.map((item: any, i: number) => (
           <motion.div
             key={i}
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="p-3 bg-white/5 rounded-lg border border-white/10 hover:border-cyan-500/30 transition-colors"
+            transition={{ delay: i * 0.05 }}
+            className="p-3 bg-white/5 rounded-lg border border-white/10 hover:border-cyan-500/30 active:border-cyan-500/50 transition-colors"
           >
             <div className="flex items-start gap-3">
-              <div className={`w-2 h-2 mt-2 rounded-full ${item.type === 'success' ? 'bg-green-500' : item.type === 'warning' ? 'bg-yellow-500' : 'bg-cyan-500'}`} />
-              <div className="flex-1">
-                <div className="text-white text-sm">{item.title}</div>
+              <div className={`w-2 h-2 mt-2 rounded-full shrink-0 ${item.type === 'success' ? 'bg-green-500' : item.type === 'warning' ? 'bg-yellow-500' : 'bg-cyan-500'}`} />
+              <div className="flex-1 min-w-0">
+                <div className="text-white text-sm line-clamp-2">{item.title}</div>
                 <div className="text-white/40 text-xs mt-1">{item.time}</div>
               </div>
             </div>
           </motion.div>
         ))}
       </div>
+      )}
     </div>
   );
 }
@@ -5579,15 +5631,15 @@ function ArcadeApp() {
   };
 
   return (
-    <div className="h-full bg-slate-950 p-4 flex flex-col items-center">
-      <div className="flex items-center gap-2 mb-4">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 flex flex-col items-center overflow-auto">
+      <div className="flex items-center gap-2 mb-3 md:mb-4">
         <Gamepad2 className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Cyber Snake</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Cyber Snake</h2>
       </div>
       
-      <div className="text-cyan-400 font-mono mb-2">Score: {score}</div>
+      <div className="text-cyan-400 font-mono text-sm md:text-base mb-2">Score: {score}</div>
       
-      <div className="grid gap-px bg-cyan-900/20 border border-cyan-500/30 rounded" style={{ gridTemplateColumns: 'repeat(20, 16px)' }}>
+      <div className="grid gap-px bg-cyan-900/20 border border-cyan-500/30 rounded" style={{ gridTemplateColumns: 'repeat(20, 12px)' }}>
         {Array.from({ length: 400 }).map((_, i) => {
           const x = i % 20;
           const y = Math.floor(i / 20);
@@ -5597,19 +5649,56 @@ function ArcadeApp() {
           return (
             <div
               key={i}
-              className={`w-4 h-4 ${isHead ? 'bg-cyan-400' : isSnake ? 'bg-green-500' : isFood ? 'bg-red-500' : 'bg-slate-900'}`}
+              className={`w-3 h-3 ${isHead ? 'bg-cyan-400' : isSnake ? 'bg-green-500' : isFood ? 'bg-red-500' : 'bg-slate-900'}`}
             />
           );
         })}
       </div>
 
       {!isPlaying && (
-        <button onClick={startGame} className="mt-4 px-6 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg border border-cyan-500/50 transition-colors font-mono">
+        <button onClick={startGame} className="mt-3 md:mt-4 px-4 md:px-6 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 rounded-lg border border-cyan-500/50 transition-colors font-mono text-sm md:text-base">
           {gameOver ? 'Play Again' : 'Start Game'}
         </button>
       )}
       
-      <div className="mt-2 text-white/40 text-xs">Use arrow keys to move</div>
+      {isPlaying && (
+        <div className="mt-3 md:mt-4 grid grid-cols-3 gap-2 md:hidden">
+          <div />
+          <button
+            onClick={() => direction.y !== 1 && setDirection({ x: 0, y: -1 })}
+            className="p-3 bg-cyan-500/20 active:bg-cyan-500/40 rounded border border-cyan-500/50 transition-colors"
+          >
+            <ChevronUp className="w-5 h-5 text-cyan-400 mx-auto" />
+          </button>
+          <div />
+          <button
+            onClick={() => direction.x !== 1 && setDirection({ x: -1, y: 0 })}
+            className="p-3 bg-cyan-500/20 active:bg-cyan-500/40 rounded border border-cyan-500/50 transition-colors"
+          >
+            <ChevronUp className="w-5 h-5 text-cyan-400 mx-auto rotate-[270deg]" />
+          </button>
+          <div />
+          <button
+            onClick={() => direction.x !== -1 && setDirection({ x: 1, y: 0 })}
+            className="p-3 bg-cyan-500/20 active:bg-cyan-500/40 rounded border border-cyan-500/50 transition-colors"
+          >
+            <ChevronUp className="w-5 h-5 text-cyan-400 mx-auto rotate-90" />
+          </button>
+          <div />
+          <button
+            onClick={() => direction.y !== -1 && setDirection({ x: 0, y: 1 })}
+            className="p-3 bg-cyan-500/20 active:bg-cyan-500/40 rounded border border-cyan-500/50 transition-colors"
+          >
+            <ChevronUp className="w-5 h-5 text-cyan-400 mx-auto rotate-180" />
+          </button>
+          <div />
+        </div>
+      )}
+      
+      <div className="mt-2 text-white/40 text-xs text-center">
+        <span className="md:inline hidden">Use arrow keys to move</span>
+        <span className="md:hidden">Tap buttons to move</span>
+      </div>
     </div>
   );
 }
@@ -5625,16 +5714,16 @@ function ProfilesApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 flex flex-col">
-        <div className="flex items-center gap-2 p-4 border-b border-white/10">
+      <div className="min-h-full bg-slate-950 flex flex-col">
+        <div className="flex items-center gap-2 p-3 md:p-4 border-b border-white/10">
           <Users className="w-5 h-5 text-cyan-400" />
-          <Skeleton className="h-6 w-40" />
+          <Skeleton className="h-5 md:h-6 w-32 md:w-40" />
         </div>
-        <div className="flex-1 overflow-auto p-4 grid grid-cols-2 gap-4">
+        <div className="flex-1 overflow-auto p-3 md:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
           {[1,2,3,4].map(i => (
-            <div key={i} className="bg-slate-800/50 rounded-lg p-4 border border-white/10">
+            <div key={i} className="bg-slate-800/50 rounded-lg p-3 md:p-4 border border-white/10">
               <div className="flex items-center gap-3">
-                <Skeleton className="w-12 h-12 rounded-full" />
+                <Skeleton className="w-12 h-12 rounded-full shrink-0" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-24" />
                   <Skeleton className="h-3 w-16" />
@@ -5652,25 +5741,25 @@ function ProfilesApp() {
   }
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
-      <div className="flex items-center gap-2 p-4 border-b border-white/10">
+    <div className="min-h-full bg-slate-950 flex flex-col">
+      <div className="flex items-center gap-2 p-3 md:p-4 border-b border-white/10">
         <Users className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Architect Profiles</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Architect Profiles</h2>
       </div>
-      <div className="flex-1 overflow-auto p-4 grid grid-cols-2 gap-4">
+      <div className="flex-1 overflow-auto p-3 md:p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {profiles?.map((profile: any) => (
           <motion.div
             key={profile.id}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 border border-white/10 hover:border-cyan-500/30 transition-colors"
+            className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 border border-white/10 hover:border-cyan-500/30 active:border-cyan-500 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${profile.verified ? 'bg-green-500/20 border-2 border-green-500' : 'bg-cyan-500/20 border border-cyan-500/50'}`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${profile.verified ? 'bg-green-500/20 border-2 border-green-500' : 'bg-cyan-500/20 border border-cyan-500/50'}`}>
                 <User className="w-6 h-6 text-white" />
               </div>
-              <div>
-                <div className="text-white font-mono">{profile.username || 'Anonymous'}</div>
+              <div className="min-w-0 flex-1">
+                <div className="text-white font-mono truncate">{profile.username || 'Anonymous'}</div>
                 <div className="text-cyan-400 text-xs">Level {profile.level}</div>
               </div>
             </div>
@@ -5714,10 +5803,10 @@ function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url:
 
   if (isLoading) {
     return (
-      <div className="h-full bg-black flex flex-col font-mono">
-        <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+      <div className="min-h-full bg-black flex flex-col font-mono">
+        <div className="flex items-center gap-2 p-2.5 md:p-3 border-b border-cyan-500/30 bg-cyan-500/5">
           <Network className="w-4 h-4 text-cyan-400" />
-          <span className="text-cyan-400 text-sm uppercase tracking-wider">Network Neighborhood</span>
+          <span className="text-cyan-400 text-xs md:text-sm uppercase tracking-wider">Network Neighborhood</span>
         </div>
         <div className="flex-1 p-4 flex items-center justify-center">
           <Loader2 className="w-6 h-6 text-cyan-400 animate-spin" />
@@ -5727,10 +5816,10 @@ function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url:
   }
 
   return (
-    <div className="h-full bg-black flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+    <div className="min-h-full bg-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-2.5 md:p-3 border-b border-cyan-500/30 bg-cyan-500/5">
         <Network className="w-4 h-4 text-cyan-400" />
-        <span className="text-cyan-400 text-sm uppercase tracking-wider">Network Neighborhood</span>
+        <span className="text-cyan-400 text-xs md:text-sm uppercase tracking-wider">Network Neighborhood</span>
         <span className="text-cyan-500/40 text-xs ml-auto">{founders.length} nodes online</span>
       </div>
       <div className="flex-1 overflow-auto p-2 space-y-1">
@@ -5740,16 +5829,16 @@ function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url:
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: idx * 0.05 }}
-            className="flex items-center justify-between py-2 px-3 border-l-2 border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 transition-colors cursor-pointer"
+            className="flex items-center justify-between py-2 px-2 md:px-3 border-l-2 border-cyan-500/40 bg-cyan-500/5 hover:bg-cyan-500/10 active:bg-cyan-500/15 transition-colors cursor-pointer"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-cyan-500/60 text-xs">[{String(idx + 1).padStart(3, '0')}]</span>
-              <div>
-                <span className="text-white font-bold">{architect.name}</span>
-                <span className="text-cyan-500/50 text-sm ml-2">— {architect.role}</span>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <span className="text-cyan-500/60 text-xs shrink-0">[{String(idx + 1).padStart(3, '0')}]</span>
+              <div className="min-w-0">
+                <span className="text-white font-bold text-xs md:text-sm truncate block">{architect.name}</span>
+                <span className="text-cyan-500/50 text-xs hidden sm:inline">— {architect.role}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
               <span className="text-xs text-cyan-500/40">Lv.{architect.level || 1}</span>
               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
             </div>
@@ -5758,17 +5847,17 @@ function NetworkNeighborhoodApp({ openIframeWindow }: { openIframeWindow?: (url:
         {reservedSlots.map((slot: any, idx: number) => (
           <div
             key={slot.id}
-            className="flex items-center justify-between py-2 px-3 border-l-2 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
+            className="flex items-center justify-between py-2 px-2 md:px-3 border-l-2 border-yellow-500/30 bg-yellow-500/5 hover:bg-yellow-500/10 transition-colors"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-yellow-500/50 text-xs">[{String(founders.length + idx + 1).padStart(3, '0')}]</span>
-              <span className="text-yellow-500/70">{slot.name}</span>
+            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+              <span className="text-yellow-500/50 text-xs shrink-0">[{String(founders.length + idx + 1).padStart(3, '0')}]</span>
+              <span className="text-yellow-500/70 text-xs md:text-sm truncate">{slot.name}</span>
             </div>
             <button 
               onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
-              className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors uppercase tracking-wider flex items-center gap-1"
+              className="text-xs text-yellow-500 hover:text-yellow-400 transition-colors uppercase tracking-wider flex items-center gap-1 shrink-0"
             >
-              Join <ExternalLink className="w-3 h-3" />
+              <span className="hidden sm:inline">Join</span> <ExternalLink className="w-3 h-3" />
             </button>
           </div>
         ))}
@@ -5798,22 +5887,22 @@ function FoundryApp({ openIframeWindow }: { openIframeWindow?: (url: string, tit
   }, []);
   
   return (
-    <div className="h-full bg-gradient-to-br from-yellow-950 to-black flex flex-col font-mono">
-      <div className="flex items-center justify-between p-3 border-b border-yellow-500/30 bg-yellow-500/5">
+    <div className="min-h-full bg-gradient-to-br from-yellow-950 to-black flex flex-col font-mono">
+      <div className="flex items-center justify-between p-2.5 md:p-3 border-b border-yellow-500/30 bg-yellow-500/5">
         <div className="flex items-center gap-2">
           <Award className="w-4 h-4 text-yellow-400" />
-          <span className="text-yellow-400 text-sm uppercase tracking-wider">FOUNDRY.EXE</span>
+          <span className="text-yellow-400 text-xs md:text-sm uppercase tracking-wider">FOUNDRY.EXE</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           <button 
             onClick={() => setViewMode('info')}
-            className={`px-2 py-1 text-xs uppercase ${viewMode === 'info' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
+            className={`px-2 py-1 text-[10px] md:text-xs uppercase ${viewMode === 'info' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
           >
             Info
           </button>
           <button 
             onClick={() => setViewMode('enroll')}
-            className={`px-2 py-1 text-xs uppercase ${viewMode === 'enroll' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
+            className={`px-2 py-1 text-[10px] md:text-xs uppercase ${viewMode === 'enroll' ? 'bg-yellow-500 text-black' : 'text-yellow-400 hover:bg-yellow-500/20'} transition-colors`}
           >
             Enroll
           </button>
@@ -5821,26 +5910,26 @@ function FoundryApp({ openIframeWindow }: { openIframeWindow?: (url: string, tit
       </div>
       
       {viewMode === 'info' ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-          <div className="w-20 h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-6">
-            <Award className="w-10 h-10 text-yellow-400" />
+        <div className="flex-1 flex flex-col items-center justify-center p-4 md:p-6 text-center overflow-auto">
+          <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-yellow-500/20 border-2 border-yellow-500/50 flex items-center justify-center mb-4 md:mb-6">
+            <Award className="w-8 h-8 md:w-10 md:h-10 text-yellow-400" />
           </div>
-          <h2 className="text-2xl font-bold text-yellow-400 mb-2">The Foundry</h2>
-          <p className="text-white/70 text-sm mb-6 max-w-xs">
+          <h2 className="text-xl md:text-2xl font-bold text-yellow-400 mb-2">The Foundry</h2>
+          <p className="text-white/70 text-xs md:text-sm mb-4 md:mb-6 max-w-xs px-4 md:px-0">
             Train to become a certified Metaverse Architect. Learn the protocols. Join the network.
           </p>
-          <div className="space-y-2 text-left text-sm text-white/60 mb-6">
-            <div className="flex items-center gap-2"><Zap className="w-4 h-4 text-yellow-400" /> 8-week intensive curriculum</div>
-            <div className="flex items-center gap-2"><Shield className="w-4 h-4 text-yellow-400" /> AeThex Passport certification</div>
-            <div className="flex items-center gap-2"><Users className="w-4 h-4 text-yellow-400" /> Join the architect network</div>
+          <div className="space-y-2 text-left text-xs md:text-sm text-white/60 mb-4 md:mb-6">
+            <div className="flex items-center gap-2"><Zap className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" /> 8-week intensive curriculum</div>
+            <div className="flex items-center gap-2"><Shield className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" /> AeThex Passport certification</div>
+            <div className="flex items-center gap-2"><Users className="w-3 h-3 md:w-4 md:h-4 text-yellow-400" /> Join the architect network</div>
           </div>
           <button 
             onClick={() => setViewMode('enroll')}
-            className="px-6 py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold uppercase tracking-wider transition-colors flex items-center gap-2"
+            className="px-4 md:px-6 py-2.5 md:py-3 bg-yellow-500 hover:bg-yellow-400 text-black font-bold text-sm md:text-base uppercase tracking-wider transition-colors flex items-center gap-2"
           >
             Enroll Now <ChevronRight className="w-4 h-4" />
           </button>
-          <div className="mt-4 text-xs text-yellow-500/50">
+          <div className="mt-3 md:mt-4 text-xs text-yellow-500/50">
             Hint: Check the terminal for secret codes
           </div>
         </div>
@@ -5919,26 +6008,26 @@ function DevToolsApp({ openIframeWindow }: { openIframeWindow?: (url: string, ti
   ];
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-purple-500/30 bg-purple-500/5">
+    <div className="min-h-full bg-slate-950 flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-2.5 md:p-3 border-b border-purple-500/30 bg-purple-500/5">
         <Code2 className="w-4 h-4 text-purple-400" />
-        <span className="text-purple-400 text-sm uppercase tracking-wider">Dev Tools</span>
+        <span className="text-purple-400 text-xs md:text-sm uppercase tracking-wider">Dev Tools</span>
       </div>
-      <div className="flex-1 overflow-auto p-4 space-y-3">
+      <div className="flex-1 overflow-auto p-3 md:p-4 space-y-2 md:space-y-3">
         {tools.map((tool, idx) => (
           <button
             key={idx}
             onClick={() => tool.url !== '#' && openIframeWindow?.(tool.url, tool.name)}
-            className="w-full flex items-center gap-4 p-4 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 transition-colors rounded-lg text-left"
+            className="w-full flex items-center gap-3 md:gap-4 p-3 md:p-4 border border-purple-500/20 bg-purple-500/5 hover:bg-purple-500/10 active:bg-purple-500/15 transition-colors rounded-lg text-left"
           >
-            <div className="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
               {tool.icon}
             </div>
-            <div className="flex-1">
-              <div className="text-white font-bold">{tool.name}</div>
-              <div className="text-purple-400/60 text-sm">{tool.desc}</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-white font-bold text-sm md:text-base truncate">{tool.name}</div>
+              <div className="text-purple-400/60 text-xs md:text-sm truncate">{tool.desc}</div>
             </div>
-            <ExternalLink className="w-4 h-4 text-purple-400/40" />
+            <ExternalLink className="w-3 h-3 md:w-4 md:h-4 text-purple-400/40 shrink-0" />
           </button>
         ))}
       </div>
@@ -6037,15 +6126,15 @@ REVENUE MODEL
   ];
 
   return (
-    <div className="h-full bg-black flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-amber-500/30 bg-amber-500/5">
+    <div className="min-h-full bg-black flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-2.5 md:p-3 border-b border-amber-500/30 bg-amber-500/5">
         <FolderSearch className="w-4 h-4 text-amber-400" />
-        <span className="text-amber-400 text-sm uppercase tracking-wider">INTEL</span>
+        <span className="text-amber-400 text-xs md:text-sm uppercase tracking-wider">INTEL</span>
         <span className="text-amber-500/40 text-xs ml-auto">CLASSIFIED</span>
       </div>
       
       {!selectedFile ? (
-        <div className="flex-1 overflow-auto p-3 space-y-2">
+        <div className="flex-1 overflow-auto p-2.5 md:p-3 space-y-2">
           <div className="text-amber-500/60 text-xs mb-3 border-b border-amber-500/20 pb-2">
             📁 /intel/market_data/
           </div>
@@ -6063,13 +6152,15 @@ REVENUE MODEL
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ event_type: 'intel_open', source: 'intel-app', payload: { file: file.name }, timestamp: new Date().toISOString() })
                   });
-                } catch {}
+                } catch (err) {
+                  if (import.meta.env.DEV) console.debug('[IntelApp] Track event failed:', err);
+                }
               }}
-              className="w-full flex items-center gap-3 py-2 px-3 border-l-2 border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/15 transition-colors text-left"
+              className="w-full flex items-center gap-2 md:gap-3 py-2 px-2.5 md:px-3 border-l-2 border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/15 active:bg-amber-500/20 transition-colors text-left"
             >
-              <span className="text-amber-400">{file.icon}</span>
-              <span className="text-white">{file.name}</span>
-              <span className="text-amber-500/40 text-xs ml-auto">OPEN</span>
+              <span className="text-amber-400 shrink-0">{file.icon}</span>
+              <span className="text-white text-xs md:text-sm truncate">{file.name}</span>
+              <span className="text-amber-500/40 text-xs ml-auto shrink-0">OPEN</span>
             </motion.button>
           ))}
         </div>
@@ -6082,10 +6173,10 @@ REVENUE MODEL
             >
               ← Back
             </button>
-            <span className="text-white text-sm">{selectedFile}</span>
+            <span className="text-white text-xs md:text-sm truncate">{selectedFile}</span>
           </div>
-          <div className="flex-1 overflow-auto p-4">
-            <pre className="text-green-400 text-xs whitespace-pre-wrap leading-relaxed">
+          <div className="flex-1 overflow-auto p-3 md:p-4">
+            <pre className="text-green-400 text-[10px] md:text-xs whitespace-pre-wrap leading-relaxed">
               {files.find(f => f.name === selectedFile)?.content}
             </pre>
           </div>
@@ -6104,21 +6195,21 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
   ];
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
+    <div className="min-h-full bg-slate-950 flex flex-col font-mono">
+      <div className="flex items-center gap-2 p-2.5 md:p-3 border-b border-cyan-500/30 bg-cyan-500/5">
         <HardDrive className="w-4 h-4 text-cyan-400" />
-        <span className="text-cyan-400 text-sm uppercase tracking-wider">My Computer</span>
+        <span className="text-cyan-400 text-xs md:text-sm uppercase tracking-wider">My Computer</span>
       </div>
       
-      <div className="flex-1 overflow-auto p-4">
-        <div className="text-white/50 text-xs mb-4 uppercase tracking-wider">Storage Devices</div>
-        <div className="space-y-3">
+      <div className="flex-1 overflow-auto p-3 md:p-4">
+        <div className="text-white/50 text-xs mb-3 md:mb-4 uppercase tracking-wider">Storage Devices</div>
+        <div className="space-y-2 md:space-y-3">
           {drives.map((drive) => (
             <motion.div
               key={drive.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+              className={`border rounded-lg p-3 md:p-4 cursor-pointer transition-all ${
                 drive.status === 'online' 
                   ? 'border-cyan-500/30 bg-cyan-500/5 hover:bg-cyan-500/10' 
                   : 'border-red-500/30 bg-red-500/5 hover:bg-red-500/10'
@@ -6134,16 +6225,16 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
                 }
               }}
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 rounded-lg flex items-center justify-center ${
+              <div className="flex items-center gap-3 md:gap-4">
+                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center shrink-0 ${
                   drive.status === 'online' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-red-500/20 text-red-400'
                 }`}>
                   {drive.icon}
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-white font-bold">({drive.id}:)</span>
-                    <span className="text-white/70">{drive.name}</span>
+                    <span className="text-white font-bold text-sm md:text-base">({drive.id}:)</span>
+                    <span className="text-white/70 text-sm md:text-base truncate">{drive.name}</span>
                   </div>
                   <div className="text-xs mt-1">
                     {drive.status === 'online' ? (
@@ -6169,21 +6260,21 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-6 border border-red-500/30 bg-red-500/10 rounded-lg p-4"
+              className="mt-4 md:mt-6 border border-red-500/30 bg-red-500/10 rounded-lg p-3 md:p-4"
             >
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div className="flex items-start gap-2 md:gap-3">
+                <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-400 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="text-red-400 font-bold mb-1">ERROR: Drive Not Mounted</div>
-                  <div className="text-white/70 text-sm mb-3">
+                  <div className="text-red-400 font-bold text-sm md:text-base mb-1">ERROR: Drive Not Mounted</div>
+                  <div className="text-white/70 text-xs md:text-sm mb-2 md:mb-3">
                     No .aethex domain detected for this identity.
                   </div>
-                  <div className="text-white/50 text-xs mb-4">
+                  <div className="text-white/50 text-xs mb-3 md:mb-4">
                     Join The Foundry to reserve your namespace in the AeThex ecosystem.
                   </div>
                   <button
                     onClick={() => openIframeWindow?.('https://aethex.studio', 'The Foundry')}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-sm font-bold uppercase tracking-wider transition-colors"
+                    className="inline-flex items-center gap-2 px-3 md:px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black text-xs md:text-sm font-bold uppercase tracking-wider transition-colors"
                   >
                     Join The Foundry <ExternalLink className="w-3 h-3" />
                   </button>
@@ -6196,10 +6287,10 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-6 border border-cyan-500/30 bg-cyan-500/5 rounded-lg p-4"
+              className="mt-4 md:mt-6 border border-cyan-500/30 bg-cyan-500/5 rounded-lg p-3 md:p-4"
             >
-              <div className="text-cyan-400 font-bold mb-2">Local System Storage</div>
-              <div className="space-y-2 text-sm">
+              <div className="text-cyan-400 font-bold text-sm md:text-base mb-2">Local System Storage</div>
+              <div className="space-y-2 text-xs md:text-sm">
                 <div className="flex justify-between text-white/70">
                   <span>/system</span><span>32 GB</span>
                 </div>
@@ -6223,53 +6314,33 @@ function DrivesApp({ openIframeWindow }: { openIframeWindow?: (url: string, titl
 
 function MissionApp() {
   return (
-    <div className="h-full bg-black flex flex-col font-mono">
-      <div className="flex items-center gap-2 p-3 border-b border-cyan-500/30 bg-cyan-500/5">
-        <FileText className="w-4 h-4 text-cyan-400" />
-        <span className="text-cyan-400 text-sm">Mission.txt</span>
-      </div>
-      <div className="flex-1 overflow-auto p-4 text-sm leading-relaxed">
-        <pre className="text-green-400 whitespace-pre-wrap">
-{`// AETHEX MANIFESTO
-// Last Updated: 2025
-
-> "We are not building for the Metaverse.
-   We ARE the Metaverse."
-
-====================================
-THE VISION
-====================================
-
-AeThex is an Operating System for the 
-Metaverse. We are building the tools,
-protocols, and people that will power
-the next generation of digital reality.
-
-====================================
-THE TRINITY
-====================================
-
-AXIOM   - The foundational principles
-CODEX   - The certification system  
-AEGIS   - The security layer
-
-====================================
-THE MISSION
-====================================
-
-To transform talent into certified
-Metaverse Architects through rigorous
-training, real projects, and a network
-of like-minded builders.
-
-====================================
-JOIN THE FOUNDRY
-====================================
-
-Apply at: aethex.studio
-
-// END OF FILE`}
-        </pre>
+    <div className="min-h-full bg-gradient-to-br from-yellow-500 to-orange-500 p-3 md:p-6 flex items-center justify-center">
+      <div className="text-center max-w-2xl">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          className="w-16 h-16 md:w-24 md:h-24 mx-auto mb-4 md:mb-6 bg-black rounded-full flex items-center justify-center"
+        >
+          <Target className="w-8 h-8 md:w-12 md:h-12 text-yellow-400" />
+        </motion.div>
+        <h1 className="text-2xl md:text-4xl font-display text-black uppercase tracking-wider mb-3 md:mb-4">THE MISSION</h1>
+        <p className="text-base md:text-lg text-black/80 mb-4 md:mb-6 leading-relaxed px-2 md:px-0">
+          Build the <strong>neutral identity layer</strong> for the next generation of digital creators.
+        </p>
+        <p className="text-sm md:text-base text-black/70 mb-4 md:mb-6 px-4 md:px-0">
+          No platform lock-in. No 30% cuts. Just architects, their work, and their audience.
+        </p>
+        <div className="flex flex-wrap gap-2 md:gap-4 justify-center text-black/60 text-xs md:text-sm">
+          <span className="flex items-center gap-1">
+            <Check className="w-3 h-3 md:w-4 md:h-4" /> Cross-Platform Identity
+          </span>
+          <span className="flex items-center gap-1">
+            <Check className="w-3 h-3 md:w-4 md:h-4" /> Direct-to-Consumer
+          </span>
+          <span className="flex items-center gap-1">
+            <Check className="w-3 h-3 md:w-4 md:h-4" /> Open Protocol
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -6287,12 +6358,12 @@ function LeaderboardApp() {
 
   if (isLoading) {
     return (
-      <div className="h-full bg-slate-950 flex flex-col">
-        <div className="flex items-center gap-2 p-4 border-b border-white/10">
+      <div className="min-h-full bg-slate-950 flex flex-col">
+        <div className="flex items-center gap-2 p-3 md:p-4 border-b border-white/10">
           <Trophy className="w-5 h-5 text-yellow-400" />
-          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-5 md:h-6 w-28 md:w-32" />
         </div>
-        <div className="flex-1 overflow-auto p-4 space-y-2">
+        <div className="flex-1 overflow-auto p-3 md:p-4 space-y-2">
           {[1,2,3,4,5].map(i => (
             <div key={i} className="flex items-center gap-4 p-3 rounded-lg bg-white/5 border border-white/10">
               <Skeleton className="w-8 h-8 rounded" />
@@ -6310,12 +6381,12 @@ function LeaderboardApp() {
   }
 
   return (
-    <div className="h-full bg-slate-950 flex flex-col">
-      <div className="flex items-center gap-2 p-4 border-b border-white/10">
+    <div className="min-h-full bg-slate-950 flex flex-col">
+      <div className="flex items-center gap-2 p-3 md:p-4 border-b border-white/10">
         <Trophy className="w-5 h-5 text-yellow-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">Leaderboard</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Leaderboard</h2>
       </div>
-      <div className="flex-1 overflow-auto p-4">
+      <div className="flex-1 overflow-auto p-3 md:p-4">
         {architects?.map((architect: any, i: number) => {
           const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
           return (
@@ -6324,20 +6395,20 @@ function LeaderboardApp() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.05 }}
-              className={`flex items-center gap-4 p-3 rounded-lg mb-2 ${i < 3 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20' : 'bg-white/5 border border-white/10'}`}
+              className={`flex items-center gap-3 md:gap-4 p-2.5 md:p-3 rounded-lg mb-2 ${i < 3 ? 'bg-gradient-to-r from-yellow-500/10 to-transparent border border-yellow-500/20' : 'bg-white/5 border border-white/10'}`}
             >
-              <div className="w-8 text-center font-mono text-lg">
+              <div className="w-6 md:w-8 text-center font-mono text-base md:text-lg shrink-0">
                 {medal || <span className="text-white/40">{i + 1}</span>}
               </div>
-              <div className="w-10 h-10 rounded-full bg-cyan-500/20 flex items-center justify-center">
-                <User className="w-5 h-5 text-cyan-400" />
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-cyan-500/20 flex items-center justify-center shrink-0">
+                <User className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" />
               </div>
-              <div className="flex-1">
-                <div className="text-white font-mono">{architect.username || 'Anonymous'}</div>
+              <div className="flex-1 min-w-0">
+                <div className="text-white font-mono text-sm md:text-base truncate">{architect.username || 'Anonymous'}</div>
                 <div className="text-white/50 text-xs">Level {architect.level}</div>
               </div>
-              <div className="text-right">
-                <div className="text-cyan-400 font-mono font-bold">{architect.xp || 0}</div>
+              <div className="text-right shrink-0">
+                <div className="text-cyan-400 font-mono font-bold text-sm md:text-base">{architect.xp || 0}</div>
                 <div className="text-white/40 text-xs">XP</div>
               </div>
             </motion.div>
@@ -6395,11 +6466,11 @@ function CalculatorApp() {
   const buttons = ['C', '±', '%', '÷', '7', '8', '9', '×', '4', '5', '6', '-', '1', '2', '3', '+', '0', '.', '='];
 
   return (
-    <div className="h-full bg-gradient-to-br from-blue-950 to-slate-950 p-6 flex flex-col">
-      <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-6 mb-6 border border-cyan-500/30 shadow-2xl">
-        <div className="text-right text-5xl font-mono text-cyan-400 min-h-[80px] flex items-center justify-end font-bold tracking-wider">{display}</div>
+    <div className="min-h-full bg-gradient-to-br from-blue-950 to-slate-950 p-3 md:p-6 flex flex-col">
+      <div className="bg-slate-800/80 backdrop-blur-sm rounded-2xl p-4 md:p-6 mb-4 md:mb-6 border border-cyan-500/30 shadow-2xl">
+        <div className="text-right text-3xl md:text-5xl font-mono text-cyan-400 min-h-[60px] md:min-h-[80px] flex items-center justify-end font-bold tracking-wider break-all">{display}</div>
       </div>
-      <div className="grid grid-cols-4 gap-4 flex-1">
+      <div className="grid grid-cols-4 gap-2 md:gap-4 flex-1">
         {buttons.map(btn => (
           <button
             key={btn}
@@ -6411,7 +6482,7 @@ function CalculatorApp() {
               else if (btn === '%') setDisplay(String(parseFloat(display) / 100));
               else handleNumber(btn);
             }}
-            className={`rounded-2xl font-mono text-2xl font-bold transition-all active:scale-95 shadow-lg ${
+            className={`rounded-xl md:rounded-2xl font-mono text-lg md:text-2xl font-bold transition-all active:scale-95 shadow-lg ${
               btn === '0' ? 'col-span-2' : ''
             } ${
               ['+', '-', '×', '÷', '='].includes(btn) 
@@ -6439,22 +6510,43 @@ function NotesApp() {
     localStorage.setItem('aethex-notes', notes);
   }, [notes]);
 
+  const wordCount = notes.trim().split(/\s+/).filter(w => w).length;
+  const charCount = notes.length;
+
+  const handleClear = () => {
+    if (confirm('Clear all notes?')) {
+      setNotes('');
+    }
+  };
+
   return (
-    <div className="h-full bg-gradient-to-br from-amber-50 to-yellow-100 flex flex-col">
-      <div className="flex items-center gap-2 p-4 bg-amber-200/50 border-b border-amber-300">
-        <StickyNote className="w-6 h-6 text-amber-700" />
-        <span className="text-amber-900 font-semibold text-base">notes.txt</span>
+    <div className="min-h-full bg-gradient-to-br from-amber-50 to-yellow-100 flex flex-col">
+      <div className="flex items-center gap-2 p-3 md:p-4 bg-amber-200/50 border-b border-amber-300">
+        <StickyNote className="w-5 h-5 md:w-6 md:h-6 text-amber-700" />
+        <span className="text-amber-900 font-semibold text-sm md:text-base">notes.txt</span>
+        <button
+          onClick={handleClear}
+          className="ml-auto px-2 py-1 text-xs bg-amber-300 hover:bg-amber-400 text-amber-900 rounded transition-colors"
+        >
+          Clear
+        </button>
       </div>
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="flex-1 bg-transparent p-6 text-gray-900 text-base resize-none outline-none leading-relaxed"
+        className="flex-1 bg-transparent p-4 md:p-6 text-gray-900 text-sm md:text-base resize-none outline-none leading-relaxed"
         placeholder="Type your notes here..."
         style={{ fontFamily: 'system-ui' }}
       />
-      <div className="px-6 py-3 bg-amber-200/50 border-t border-amber-300 text-amber-700 text-sm flex items-center gap-2">
-        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-        Auto-saved locally
+      <div className="px-4 md:px-6 py-2 md:py-3 bg-amber-200/50 border-t border-amber-300 text-amber-700 text-xs md:text-sm flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+          <span>Auto-saved</span>
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-[10px] md:text-xs">
+          <span>{wordCount} words</span>
+          <span>{charCount} chars</span>
+        </div>
       </div>
     </div>
   );
@@ -6464,6 +6556,15 @@ function SystemMonitorApp() {
   const [cpu, setCpu] = useState(45);
   const [ram, setRam] = useState(62);
   const [network, setNetwork] = useState(78);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setCpu(Math.floor(Math.random() * 40) + 30);
+    setRam(Math.floor(Math.random() * 40) + 40);
+    setNetwork(Math.floor(Math.random() * 30) + 60);
+    setTimeout(() => setIsRefreshing(false), 800);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -6497,21 +6598,28 @@ function SystemMonitorApp() {
   );
 
   return (
-    <div className="h-full bg-slate-950 p-4">
-      <div className="flex items-center gap-2 mb-6">
+    <div className="min-h-full bg-slate-950 p-3 md:p-4 overflow-auto">
+      <div className="flex items-center gap-2 mb-4 md:mb-6">
         <Cpu className="w-5 h-5 text-cyan-400" />
-        <h2 className="text-lg font-display text-white uppercase tracking-wider">System Monitor</h2>
+        <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">System Monitor</h2>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="ml-auto p-1.5 hover:bg-white/10 rounded transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-cyan-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+        </button>
       </div>
       
-      <div className="flex justify-around mb-6">
+      <div className="flex flex-wrap justify-center md:justify-around gap-4 md:gap-0 mb-4 md:mb-6">
         <Gauge label="CPU" value={cpu} color="#22d3ee" />
         <Gauge label="RAM" value={ram} color="#a855f7" />
         <Gauge label="NET" value={network} color="#22c55e" />
       </div>
 
       <div className="space-y-3">
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="flex justify-between text-sm mb-2">
+        <div className="bg-white/5 rounded-lg p-2.5 md:p-3">
+          <div className="flex justify-between text-xs md:text-sm mb-2">
             <span className="text-white/60">Aegis Shield</span>
             <span className="text-green-400">ACTIVE</span>
           </div>
@@ -6519,8 +6627,8 @@ function SystemMonitorApp() {
             <div className="h-full bg-gradient-to-r from-green-500 to-cyan-500 w-full" />
           </div>
         </div>
-        <div className="bg-white/5 rounded-lg p-3">
-          <div className="flex justify-between text-sm mb-2">
+        <div className="bg-white/5 rounded-lg p-2.5 md:p-3">
+          <div className="flex justify-between text-xs md:text-sm mb-2">
             <span className="text-white/60">Network Nodes</span>
             <span className="text-cyan-400">24 Connected</span>
           </div>
@@ -6562,15 +6670,15 @@ function WebcamApp() {
   };
 
   return (
-    <div className="h-full bg-black flex flex-col">
-      <div className="flex items-center justify-between p-3 bg-slate-900 border-b border-red-500/30">
+    <div className="min-h-full bg-black flex flex-col">
+      <div className="flex items-center justify-between p-2.5 md:p-3 bg-slate-900 border-b border-red-500/30">
         <div className="flex items-center gap-2">
-          <Eye className="w-5 h-5 text-red-500" />
-          <span className="text-red-400 font-mono text-sm">AEGIS SURVEILLANCE</span>
+          <Eye className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
+          <span className="text-red-400 font-mono text-xs md:text-sm">AEGIS SURVEILLANCE</span>
         </div>
-        <div className="flex items-center gap-2 text-red-400 text-xs">
+        <div className="flex items-center gap-1.5 md:gap-2 text-red-400 text-xs">
           <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-          MONITORING
+          <span className="hidden sm:inline">MONITORING</span>
         </div>
       </div>
       
@@ -6612,9 +6720,9 @@ function WebcamApp() {
       </div>
       
       {hasPermission && (
-        <div className="p-3 bg-slate-900 border-t border-red-500/30 flex justify-center">
-          <button onClick={runScan} disabled={isScanning} className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded border border-red-500/50 transition-colors text-sm flex items-center gap-2 disabled:opacity-50">
-            <Shield className="w-4 h-4" />
+        <div className="p-2.5 md:p-3 bg-slate-900 border-t border-red-500/30 flex justify-center">
+          <button onClick={runScan} disabled={isScanning} className="px-3 md:px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded border border-red-500/50 transition-colors text-xs md:text-sm flex items-center gap-2 disabled:opacity-50">
+            <Shield className="w-3 h-3 md:w-4 md:h-4" />
             {isScanning ? 'Scanning...' : 'Run Biometric Scan'}
           </button>
         </div>

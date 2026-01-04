@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Plus, Trash2, ExternalLink, Github, Globe, Loader2 } from "lucide-react";
+import { MobileHeader } from "@/components/mobile/MobileHeader";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -103,8 +104,13 @@ export default function Projects() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+      {/* Mobile Header */}
+      <div className="md:hidden">
+        <MobileHeader title="Projects" />
+      </div>
+      
+      {/* Desktop Header */}
+      <div className="hidden md:block bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
         <div className="flex items-center gap-4">
           <Link href="/">
             <button className="text-slate-400 hover:text-white transition-colors">

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "myLocalServer": {
+      "command": "python my_mcp_server.py",
+      "cwd": "./mcp_server"
+    }
+  }
+}

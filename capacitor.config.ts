@@ -22,6 +22,14 @@ const config: CapacitorConfig = {
       splashFullScreen: true,
       splashImmersive: true
     },
+    StatusBar: {
+      style: 'DARK',
+      backgroundColor: '#000000',
+      overlaysWebView: true
+    },
+    App: {
+      backButtonEnabled: true
+    },
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert']
     },
@@ -30,7 +38,13 @@ const config: CapacitorConfig = {
       iconColor: '#488AFF',
       sound: 'beep.wav'
     }
+  },
+  android: {
+    allowMixedContent: true,
+    captureInput: true,
+    webContentsDebuggingEnabled: true
   }
 };
 
 export default config;
+
