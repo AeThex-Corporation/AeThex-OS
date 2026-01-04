@@ -19,7 +19,14 @@ wine "$EXE_FILE" 2>&1 | tee /tmp/wine-debug.log
 if [ $? -ne 0 ]; then
   zenity --question --text="Wine failed. Use Windows VM instead?"
   if [ $? -eq 0 ]; then
-    # Launch QEMU/KVM Windows VM (TODO: implement)
+    # TODO: [UNFINISHED FLOW] Implement QEMU/KVM Windows VM launcher
+    # Required steps:
+    #   1. Check for QEMU/KVM installation
+    #   2. Download or locate Windows VM image
+    #   3. Configure hardware passthrough (GPU, USB)
+    #   4. Launch VM with proper networking
+    #   5. Pass the .exe file to the VM for execution
+    # See: FLOWS.md section "Windows Runtime (Wine Launcher)"
     notify-send "VM launcher not implemented yet"
   fi
 fi

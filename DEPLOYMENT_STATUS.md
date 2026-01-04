@@ -126,14 +126,16 @@ After deployment:
 
 ---
 
-## Next Steps
+## Next Steps (UNFINISHED DEPLOYMENT FLOW)
+
+> **Note:** These items are tracked in `/FLOWS.md` - update both documents when completing items.
 
 1. ✅ Railway config created
-2. ⏳ Deploy to Railway
-3. ⏳ Configure custom domain
-4. ⏳ Update Warden bot config
-5. ⏳ Test end-to-end flow
-6. ⏳ Monitor logs and metrics
+2. ⏳ **[UNFINISHED]** Deploy to Railway
+3. ⏳ **[UNFINISHED]** Configure custom domain
+4. ⏳ **[UNFINISHED]** Update Warden bot config
+5. ⏳ **[UNFINISHED]** Test end-to-end flow
+6. ⏳ **[UNFINISHED]** Monitor logs and metrics
 
 ---
 
