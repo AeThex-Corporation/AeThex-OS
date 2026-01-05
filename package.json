@@ -17,7 +17,9 @@
     "db:push": "drizzle-kit push",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build"
+    "tauri:build": "tauri build",
+    "audit:org-scope": "tsx script/org-scope-audit.ts",
+    "test:org-scope": "tsx --test server/org-scoping.test.ts"
   },
   "dependencies": {
     "@capacitor-community/privacy-screen": "^6.0.0",
@@ -133,6 +135,7 @@
     "@types/react-dom": "^19.2.0",
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/ui": "^4.0.16",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.4",
@@ -141,7 +144,8 @@
     "tailwindcss": "^4.1.14",
     "tsx": "^4.20.5",
     "typescript": "5.6.3",
-    "vite": "^7.1.9"
+    "vite": "^7.1.9",
+    "vitest": "^4.0.16"
   },
   "optionalDependencies": {
     "bufferutil": "4.1.0"

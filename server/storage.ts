@@ -39,8 +39,8 @@ export interface IStorage {
   createUserPassport(userId: string): Promise<any>;
   
   // Applications
-  getApplications(): Promise<Application[]>;
-  updateApplication(id: string, updates: Partial<Application>): Promise<Application>;
+  getApplications(orgId?: string): Promise<Application[]>;
+  updateApplication(id: string, updates: Partial<Application>, orgId?: string): Promise<Application>;
 
   // Alerts
   getAlerts(): Promise<AethexAlert[]>;
@@ -161,6 +161,8 @@ export class SupabaseStorage implements IStorage {
     return data as Profile;
   }
   
+  // Note: Profile updates should be verified at route level via requireAuth + same-user check
+  // Org admin override should be handled in routes.ts with org context
   async updateProfile(id: string, updates: Partial<Profile>): Promise<Profile | undefined> {
     const cleanUpdates = this.filterDefined<Profile>(updates);
     this.ensureUpdates(cleanUpdates, 'profile');
@@ -284,10 +286,16 @@ export class SupabaseStorage implements IStorage {
     return data;
   }
   
-  async getApplications(): Promise<Application[]> {
-    const { data, error } = await supabase
+  async getApplications(orgId?: string): Promise<Application[]> {
+    let query = supabase
       .from('applications')
-      .select('*')
+      .select('*');
+    
+    if (orgId) {
+      query = query.eq('organization_id', orgId);
+    }
+    
+    const { data, error } = await query
       .order('submitted_at', { ascending: false });
 
     if (error || !data) return [];
@@ -328,17 +336,24 @@ export class SupabaseStorage implements IStorage {
     return data as AethexAlert;
   }
 
-  async updateApplication(id: string, updates: Partial<Application>): Promise<Application> {
+  // Note: Org verification should be done at route level before calling this method
+  async updateApplication(id: string, updates: Partial<Application>, orgId?: string): Promise<Application> {
     const updateData = this.filterDefined<Application>({
       status: updates.status,
       response_message: updates.response_message,
     });
     this.ensureUpdates(updateData, 'application');
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('applications')
       .update(updateData)
-      .eq('id', id)
+      .eq('id', id);
+    
+    if (orgId) {
+      query = query.eq('organization_id', orgId);
+    }
+    
+    const { data, error } = await query
       .select()
       .single();
     
@@ -518,6 +533,8 @@ export class SupabaseStorage implements IStorage {
     return data || [];
   }
 
+  // PUBLIC: Events can be public or org-specific
+  // Route layer should check visibility/permissions
   async getEvent(id: string): Promise<any | undefined> {
     const { data, error } = await supabase
       .from('aethex_events')

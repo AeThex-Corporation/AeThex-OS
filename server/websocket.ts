@@ -4,6 +4,7 @@ import { storage } from "./storage.js";
 
 interface SocketData {
   userId?: string;
+  orgId?: string;
   isAdmin?: boolean;
 }
 
@@ -26,9 +27,10 @@ export function setupWebSocket(httpServer: Server) {
     });
 
     // Handle authentication
-    socket.on("auth", async (data: { userId: string; isAdmin?: boolean }) => {
+    socket.on("auth", async (data: { userId: string; orgId?: string; isAdmin?: boolean }) => {
       const socketData = socket.data as SocketData;
       socketData.userId = data.userId;
+      socketData.orgId = data.orgId;
       socketData.isAdmin = data.isAdmin || false;
       
       socket.emit("auth_success", {
@@ -38,6 +40,11 @@ export function setupWebSocket(httpServer: Server) {
 
       // Join user-specific room
       socket.join(`user:${data.userId}`);
+      
+      // Join org-specific room if orgId provided
+      if (data.orgId) {
+        socket.join(`org:${data.orgId}`);
+      }
       
       if (data.isAdmin) {
         socket.join("admins");

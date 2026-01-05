@@ -8,6 +8,8 @@ import { supabase } from "./supabase.js";
 import { getChatResponse } from "./openai.js";
 import { capabilityGuard } from "./capability-guard.js";
 import { startOAuthLinking, handleOAuthCallback } from "./oauth-handlers.js";
+import { attachOrgContext, requireOrgMember, assertProjectAccess } from "./org-middleware.js";
+import { orgScoped, orgEq, getOrgIdOrThrow } from "./org-storage.js";
 
 // Extend session type
 declare module 'express-session' {
@@ -35,6 +37,34 @@ function requireAdmin(req: Request, res: Response, next: NextFunction) {
     return res.status(403).json({ error: "Admin access required" });
   }
   next();
+}
+
+// Project access middleware - requires project access with minimum role
+function requireProjectAccess(minRole: 'owner' | 'admin' | 'contributor' | 'viewer' = 'viewer') {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const projectId = req.params.id || req.params.projectId || req.body.project_id;
+    if (!projectId) {
+      return res.status(400).json({ error: "Project ID required" });
+    }
+
+    const userId = req.session.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const accessCheck = await assertProjectAccess(projectId, userId, minRole);
+    
+    if (!accessCheck.hasAccess) {
+      return res.status(403).json({ 
+        error: "Access denied",
+        message: accessCheck.reason || "You do not have permission to access this project"
+      });
+    }
+
+    // Attach project to request for later use
+    (req as any).project = accessCheck.project;
+    next();
+  };
 }
 
 export async function registerRoutes(
@@ -135,6 +165,161 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Policy fetch error:", error);
       res.status(500).json({ error: "Failed to fetch workspace policy" });
+    }
+  });
+  
+  // ========== ORGANIZATION ROUTES (Multi-tenancy) ==========
+  
+  // Apply org context middleware to all org-scoped routes
+  app.use("/api/orgs", requireAuth, attachOrgContext);
+  app.use("/api/projects", attachOrgContext);
+  app.use("/api/files", attachOrgContext);
+  app.use("/api/marketplace", attachOrgContext);
+  
+  // Get user's organizations
+  app.get("/api/orgs", async (req, res) => {
+    try {
+      const { data: memberships, error } = await supabase
+        .from("organization_members")
+        .select("organization_id, role, organizations(*)")
+        .eq("user_id", req.session.userId);
+
+      if (error) throw error;
+
+      const orgs = memberships?.map(m => ({
+        ...m.organizations,
+        userRole: m.role,
+      })) || [];
+
+      res.json({ organizations: orgs });
+    } catch (error: any) {
+      console.error("Fetch orgs error:", error);
+      res.status(500).json({ error: "Failed to fetch organizations" });
+    }
+  });
+
+  // Create new organization
+  app.post("/api/orgs", async (req, res) => {
+    try {
+      const { name, slug } = req.body;
+      
+      if (!name || !slug) {
+        return res.status(400).json({ error: "Name and slug are required" });
+      }
+
+      // Check slug uniqueness
+      const { data: existing } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+
+      if (existing) {
+        return res.status(400).json({ error: "Slug already taken" });
+      }
+
+      // Create organization
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .insert({
+          name,
+          slug,
+          owner_user_id: req.session.userId,
+          plan: "free",
+        })
+        .select()
+        .single();
+
+      if (orgError) throw orgError;
+
+      // Add creator as owner member
+      const { error: memberError } = await supabase
+        .from("organization_members")
+        .insert({
+          organization_id: org.id,
+          user_id: req.session.userId,
+          role: "owner",
+        });
+
+      if (memberError) throw memberError;
+
+      res.status(201).json({ organization: org });
+    } catch (error: any) {
+      console.error("Create org error:", error);
+      res.status(500).json({ error: error.message || "Failed to create organization" });
+    }
+  });
+
+  // Get organization by slug
+  app.get("/api/orgs/:slug", async (req, res) => {
+    try {
+      const { data: org, error } = await supabase
+        .from("organizations")
+        .select("*")
+        .eq("slug", req.params.slug)
+        .single();
+
+      if (error || !org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // Check if user is member
+      const { data: membership } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("organization_id", org.id)
+        .eq("user_id", req.session.userId)
+        .single();
+
+      if (!membership) {
+        return res.status(403).json({ error: "Not a member of this organization" });
+      }
+
+      res.json({ organization: { ...org, userRole: membership.role } });
+    } catch (error: any) {
+      console.error("Fetch org error:", error);
+      res.status(500).json({ error: "Failed to fetch organization" });
+    }
+  });
+
+  // Get organization members
+  app.get("/api/orgs/:slug/members", async (req, res) => {
+    try {
+      // Get org
+      const { data: org, error: orgError } = await supabase
+        .from("organizations")
+        .select("id")
+        .eq("slug", req.params.slug)
+        .single();
+
+      if (orgError || !org) {
+        return res.status(404).json({ error: "Organization not found" });
+      }
+
+      // Check if user is member
+      const { data: userMembership } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("organization_id", org.id)
+        .eq("user_id", req.session.userId)
+        .single();
+
+      if (!userMembership) {
+        return res.status(403).json({ error: "Not a member of this organization" });
+      }
+
+      // Get all members
+      const { data: members, error: membersError } = await supabase
+        .from("organization_members")
+        .select("id, user_id, role, created_at, profiles(username, full_name, avatar_url, email)")
+        .eq("organization_id", org.id);
+
+      if (membersError) throw membersError;
+
+      res.json({ members });
+    } catch (error: any) {
+      console.error("Fetch members error:", error);
+      res.status(500).json({ error: "Failed to fetch members" });
     }
   });
   
@@ -444,10 +629,29 @@ export async function registerRoutes(
     }
   });
   
-  // Update profile (admin only)
-  app.patch("/api/profiles/:id", requireAdmin, async (req, res) => {
+  // Update profile (self-update OR org admin)
+  app.patch("/api/profiles/:id", requireAuth, attachOrgContext, async (req, res) => {
     try {
-      const profile = await storage.updateProfile(req.params.id, req.body);
+      const targetProfileId = req.params.id;
+      const requesterId = req.session.userId!;
+      
+      // Check authorization: self-update OR org admin/owner
+      const isSelfUpdate = requesterId === targetProfileId;
+      const isOrgAdmin = req.orgRole && ['admin', 'owner'].includes(req.orgRole);
+      
+      if (!isSelfUpdate && !isOrgAdmin) {
+        return res.status(403).json({ 
+          error: "Forbidden",
+          message: "You can only update your own profile or must be an org admin/owner"
+        });
+      }
+      
+      // Log org admin updates for audit trail
+      if (!isSelfUpdate && isOrgAdmin && req.orgId) {
+        console.log(`[AUDIT] Org ${req.orgRole} ${requesterId} updating profile ${targetProfileId} (org: ${req.orgId})`);
+      }
+      
+      const profile = await storage.updateProfile(targetProfileId, req.body);
       if (!profile) {
         return res.status(404).json({ error: "Profile not found" });
       }
@@ -457,24 +661,179 @@ export async function registerRoutes(
     }
   });
   
-  // Get all projects (admin only)
-  app.get("/api/projects", requireAdmin, async (req, res) => {
+  // Get all projects (admin only OR org-scoped for user)
+  app.get("/api/projects", requireAuth, async (req, res) => {
     try {
-      const projects = await storage.getProjects();
-      res.json(projects);
+      // Admin sees all
+      if (req.session.isAdmin) {
+        const projects = await storage.getProjects();
+        return res.json(projects);
+      }
+
+      // Regular user: filter by org if available
+      if (req.orgId) {
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*")
+          .eq("organization_id", req.orgId);
+
+        if (error) throw error;
+        return res.json(data || []);
+      }
+
+      // Fallback: user's own projects
+      const { data, error } = await supabase
+        .from("projects")
+        .select("*")
+        .or(`owner_user_id.eq.${req.session.userId},user_id.eq.${req.session.userId}`);
+
+      if (error) throw error;
+      res.json(data || []);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
   
-  // Get single project (admin only)
-  app.get("/api/projects/:id", requireAdmin, async (req, res) => {
+  // Get single project
+  app.get("/api/projects/:id", requireAuth, requireProjectAccess('viewer'), async (req, res) => {
     try {
-      const project = await storage.getProject(req.params.id);
-      if (!project) {
-        return res.status(404).json({ error: "Project not found" });
+      res.json((req as any).project);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get project collaborators
+  app.get("/api/projects/:id/collaborators", requireAuth, requireProjectAccess('contributor'), async (req, res) => {
+    try {
+      const { data, error } = await supabase
+        .from("project_collaborators")
+        .select("id, user_id, role, permissions, created_at, profiles(username, full_name, avatar_url, email)")
+        .eq("project_id", req.params.id);
+
+      if (error) throw error;
+
+      res.json({ collaborators: data || [] });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Add project collaborator
+  app.post("/api/projects/:id/collaborators", requireAuth, async (req, res) => {
+    try {
+      const accessCheck = await assertProjectAccess(
+        req.params.id,
+        req.session.userId!,
+        'admin'
+      );
+
+      if (!accessCheck.hasAccess) {
+        return res.status(403).json({ error: "Only project owners/admins can add collaborators" });
       }
-      res.json(project);
+
+      const { user_id, role = 'contributor' } = req.body;
+
+      if (!user_id) {
+        return res.status(400).json({ error: "user_id is required" });
+      }
+
+      // Check if user exists
+      const { data: userExists } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user_id)
+        .single();
+
+      if (!userExists) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Add collaborator
+      const { data, error } = await supabase
+        .from("project_collaborators")
+        .insert({
+          project_id: req.params.id,
+          user_id,
+          role,
+        })
+        .select()
+        .single();
+
+      if (error) {
+        if (error.code === '23505') { // Unique violation
+          return res.status(400).json({ error: "User is already a collaborator" });
+        }
+        throw error;
+      }
+
+      res.status(201).json({ collaborator: data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Update collaborator role/permissions
+  app.patch("/api/projects/:id/collaborators/:collabId", requireAuth, async (req, res) => {
+    try {
+      const accessCheck = await assertProjectAccess(
+        req.params.id,
+        req.session.userId!,
+        'admin'
+      );
+
+      if (!accessCheck.hasAccess) {
+        return res.status(403).json({ error: "Only project owners/admins can modify collaborators" });
+      }
+
+      const { role, permissions } = req.body;
+      const updates: any = {};
+
+      if (role) updates.role = role;
+      if (permissions !== undefined) updates.permissions = permissions;
+
+      const { data, error } = await supabase
+        .from("project_collaborators")
+        .update(updates)
+        .eq("id", req.params.collabId)
+        .eq("project_id", req.params.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      if (!data) {
+        return res.status(404).json({ error: "Collaborator not found" });
+      }
+
+      res.json({ collaborator: data });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Remove collaborator
+  app.delete("/api/projects/:id/collaborators/:collabId", requireAuth, async (req, res) => {
+    try {
+      const accessCheck = await assertProjectAccess(
+        req.params.id,
+        req.session.userId!,
+        'admin'
+      );
+
+      if (!accessCheck.hasAccess) {
+        return res.status(403).json({ error: "Only project owners/admins can remove collaborators" });
+      }
+
+      const { error } = await supabase
+        .from("project_collaborators")
+        .delete()
+        .eq("id", req.params.collabId)
+        .eq("project_id", req.params.id);
+
+      if (error) throw error;
+
+      res.json({ success: true });
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -484,44 +843,71 @@ export async function registerRoutes(
   
   // Get all aethex sites (admin only)
   // List all sites
-  app.get("/api/sites", requireAdmin, async (req, res) => {
+  app.get("/api/sites", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const sites = await storage.getSites();
-      res.json(sites);
+      const { data, error } = await orgScoped('aethex_sites', req)
+        .select('*')
+        .order('last_check', { ascending: false });
+      
+      if (error) throw error;
+      res.json(data || []);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Create a new site
-  app.post("/api/sites", requireAdmin, async (req, res) => {
+  app.post("/api/sites", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const site = await storage.createSite(req.body);
-      res.status(201).json(site);
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_sites')
+        .insert({ ...req.body, organization_id: orgId })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      res.status(201).json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Update a site
-  app.patch("/api/sites/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/sites/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const site = await storage.updateSite(req.params.id, req.body);
-      if (!site) {
-        return res.status(404).json({ error: "Site not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_sites')
+        .update(req.body)
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: "Site not found or access denied" });
       }
-      res.json(site);
+      res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Delete a site
-  app.delete("/api/sites/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/sites/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const deleted = await storage.deleteSite(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ error: "Site not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { error, count } = await supabase
+        .from('aethex_sites')
+        .delete({ count: 'exact' })
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId);
+      
+      if (error) throw error;
+      if ((count ?? 0) === 0) {
+        return res.status(404).json({ error: "Site not found or access denied" });
       }
       res.json({ success: true });
     } catch (err: any) {
@@ -732,15 +1118,28 @@ export async function registerRoutes(
   // Get all opportunities (public)
   app.get("/api/opportunities", async (req, res) => {
     try {
-      const opportunities = await storage.getOpportunities();
-      res.json(opportunities);
+      let query = supabase
+        .from('aethex_opportunities')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      // Optional org filter
+      if (req.query.org_id) {
+        query = query.eq('organization_id', req.query.org_id as string);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      res.json(data || []);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Get single opportunity
+  // PUBLIC: Opportunities are publicly viewable for discovery
   app.get("/api/opportunities/:id", async (req, res) => {
+    const IS_PUBLIC = true; // Intentionally public for marketplace discovery
     try {
       const opportunity = await storage.getOpportunity(req.params.id);
       if (!opportunity) {
@@ -753,34 +1152,57 @@ export async function registerRoutes(
   });
 
   // Create opportunity (admin only)
-  app.post("/api/opportunities", requireAdmin, async (req, res) => {
+  app.post("/api/opportunities", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const opportunity = await storage.createOpportunity(req.body);
-      res.status(201).json(opportunity);
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_opportunities')
+        .insert({ ...req.body, organization_id: orgId })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      res.status(201).json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Update opportunity (admin only)
-  app.patch("/api/opportunities/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/opportunities/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const opportunity = await storage.updateOpportunity(req.params.id, req.body);
-      if (!opportunity) {
-        return res.status(404).json({ error: "Opportunity not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_opportunities')
+        .update({ ...req.body, updated_at: new Date().toISOString() })
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: "Opportunity not found or access denied" });
       }
-      res.json(opportunity);
+      res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Delete opportunity (admin only)
-  app.delete("/api/opportunities/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/opportunities/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const deleted = await storage.deleteOpportunity(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ error: "Opportunity not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { error, count } = await supabase
+        .from('aethex_opportunities')
+        .delete({ count: 'exact' })
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId);
+      
+      if (error) throw error;
+      if ((count ?? 0) === 0) {
+        return res.status(404).json({ error: "Opportunity not found or access denied" });
       }
       res.json({ success: true });
     } catch (err: any) {
@@ -791,17 +1213,32 @@ export async function registerRoutes(
   // ========== AXIOM EVENTS ROUTES ==========
   
   // Get all events (public)
+  // PUBLIC: Events are publicly viewable for community discovery, with optional org filtering
   app.get("/api/events", async (req, res) => {
+    const IS_PUBLIC = true; // Intentionally public for community calendar
     try {
-      const events = await storage.getEvents();
-      res.json(events);
+      let query = supabase
+        .from('aethex_events')
+        .select('*')
+        .order('date', { ascending: true });
+      
+      // Optional org filter
+      if (req.query.org_id) {
+        query = query.eq('organization_id', req.query.org_id as string);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      res.json(data || []);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Get single event
+  // PUBLIC: Events are publicly viewable for sharing/discovery
   app.get("/api/events/:id", async (req, res) => {
+    const IS_PUBLIC = true; // Intentionally public for event sharing
     try {
       const event = await storage.getEvent(req.params.id);
       if (!event) {
@@ -814,34 +1251,57 @@ export async function registerRoutes(
   });
 
   // Create event (admin only)
-  app.post("/api/events", requireAdmin, async (req, res) => {
+  app.post("/api/events", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const event = await storage.createEvent(req.body);
-      res.status(201).json(event);
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_events')
+        .insert({ ...req.body, organization_id: orgId })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      res.status(201).json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Update event (admin only)
-  app.patch("/api/events/:id", requireAdmin, async (req, res) => {
+  app.patch("/api/events/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const event = await storage.updateEvent(req.params.id, req.body);
-      if (!event) {
-        return res.status(404).json({ error: "Event not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { data, error } = await supabase
+        .from('aethex_events')
+        .update({ ...req.body, updated_at: new Date().toISOString() })
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      if (!data) {
+        return res.status(404).json({ error: "Event not found or access denied" });
       }
-      res.json(event);
+      res.json(data);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
   });
 
   // Delete event (admin only)
-  app.delete("/api/events/:id", requireAdmin, async (req, res) => {
+  app.delete("/api/events/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
-      const deleted = await storage.deleteEvent(req.params.id);
-      if (!deleted) {
-        return res.status(404).json({ error: "Event not found" });
+      const orgId = getOrgIdOrThrow(req);
+      const { error, count } = await supabase
+        .from('aethex_events')
+        .delete({ count: 'exact' })
+        .eq('id', req.params.id)
+        .eq('organization_id', orgId);
+      
+      if (error) throw error;
+      if ((count ?? 0) === 0) {
+        return res.status(404).json({ error: "Event not found or access denied" });
       }
       res.json({ success: true });
     } catch (err: any) {
@@ -1188,15 +1648,17 @@ export async function registerRoutes(
     }
   });
 
-  // Simple in-memory file storage (per-user, session-based)
+  // Simple in-memory file storage (per-user, per-org, session-based)
   const fileStore = new Map<string, any[]>();
 
-  app.get("/api/files", requireAuth, async (req, res) => {
+  app.get("/api/files", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
       const userId = req.session.userId;
+      const orgId = getOrgIdOrThrow(req);
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-      const files = fileStore.get(userId) || [];
+      const key = `${userId}:${orgId}`;
+      const files = fileStore.get(key) || [];
       const { path } = req.query;
 
       // Filter by path
@@ -1211,12 +1673,13 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/files", requireAuth, async (req, res) => {
+  app.post("/api/files", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
       const userId = req.session.userId;
+      const orgId = getOrgIdOrThrow(req);
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-      const { name, type, path, content, language } = req.body;
+      const { name, type, path, content, language, project_id } = req.body;
       if (!name || !type || !path) {
         return res.status(400).json({ error: "Missing required fields" });
       }
@@ -1225,6 +1688,8 @@ export async function registerRoutes(
       const newFile = {
         id: fileId,
         user_id: userId,
+        organization_id: orgId,
+        project_id: project_id || null,
         name,
         type,
         path,
@@ -1237,9 +1702,10 @@ export async function registerRoutes(
         updated_at: new Date().toISOString(),
       };
 
-      const files = fileStore.get(userId) || [];
+      const key = `${userId}:${orgId}`;
+      const files = fileStore.get(key) || [];
       files.push(newFile);
-      fileStore.set(userId, files);
+      fileStore.set(key, files);
 
       res.json(newFile);
     } catch (error) {
@@ -1248,15 +1714,17 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/files/:id", requireAuth, async (req, res) => {
+  app.patch("/api/files/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
       const userId = req.session.userId;
+      const orgId = getOrgIdOrThrow(req);
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
       const { id } = req.params;
       const { name, content } = req.body;
 
-      const files = fileStore.get(userId) || [];
+      const key = `${userId}:${orgId}`;
+      const files = fileStore.get(key) || [];
       const file = files.find(f => f.id === id);
 
       if (!file) {
@@ -1274,13 +1742,15 @@ export async function registerRoutes(
     }
   });
 
-  app.delete("/api/files/:id", requireAuth, async (req, res) => {
+  app.delete("/api/files/:id", requireAuth, attachOrgContext, requireOrgMember, async (req, res) => {
     try {
       const userId = req.session.userId;
+      const orgId = getOrgIdOrThrow(req);
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
       const { id } = req.params;
-      let files = fileStore.get(userId) || [];
+      const key = `${userId}:${orgId}`;
+      let files = fileStore.get(key) || [];
       const fileToDelete = files.find(f => f.id === id);
 
       if (!fileToDelete) {
@@ -1294,7 +1764,7 @@ export async function registerRoutes(
         files = files.filter(f => f.id !== id);
       }
 
-      fileStore.set(userId, files);
+      fileStore.set(key, files);
       res.json({ id, deleted: true });
     } catch (error) {
       console.error("File delete error:", error);

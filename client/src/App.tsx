@@ -40,6 +40,8 @@ import HubCodeGallery from "@/pages/hub/code-gallery";
 import HubNotifications from "@/pages/hub/notifications";
 import HubAnalytics from "@/pages/hub/analytics";
 import OsLink from "@/pages/os/link";
+import Orgs from "@/pages/orgs";
+import OrgSettings from "@/pages/orgs/settings";
 import { LabTerminalProvider } from "@/hooks/use-lab-terminal";
 
 function Router() {
@@ -80,6 +82,8 @@ function Router() {
       <Route path="/hub/code-gallery">{() => <ProtectedRoute><HubCodeGallery /></ProtectedRoute>}</Route>
       <Route path="/hub/notifications">{() => <ProtectedRoute><HubNotifications /></ProtectedRoute>}</Route>
       <Route path="/hub/analytics">{() => <ProtectedRoute><HubAnalytics /></ProtectedRoute>}</Route>
+      <Route path="/orgs">{() => <ProtectedRoute><Orgs /></ProtectedRoute>}</Route>
+      <Route path="/orgs/:slug/settings">{() => <ProtectedRoute><OrgSettings /></ProtectedRoute>}</Route>
       <Route component={NotFound} />
     </Switch>
   );
