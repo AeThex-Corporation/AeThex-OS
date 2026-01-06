@@ -4,8 +4,8 @@
   "description": "Join the AeThex Network. Earn credentials as a certified Metaverse Architect. Build the future with Axiom, Codex, and Aegis.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0F172A",
-  "theme_color": "#06B6D4",
+  "background_color": "#000000",
+  "theme_color": "#10b981",
   "orientation": "any",
   "icons": [
     {
@@ -13,10 +13,42 @@
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ],
   "categories": ["productivity", "utilities", "developer", "entertainment"],
   "prefer_related_applications": false,
   "scope": "/",
-  "lang": "en-US"
+  "lang": "en-US",
+  "shortcuts": [
+    {
+      "name": "Mobile Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your mobile dashboard",
+      "url": "/mobile",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Projects",
+      "short_name": "Projects",
+      "description": "Manage projects",
+      "url": "/hub/projects",
+      "icons": [{ "src": "/favicon.png", "sizes": "192x192" }]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

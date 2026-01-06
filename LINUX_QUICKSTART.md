@@ -61,6 +61,14 @@ sudo bash script/build-linux-iso.sh
 - Size: ~2-4GB
 - Checksum: `~/aethex-linux-build/AeThex-Linux-1.0.0-alpha-amd64.iso.sha256`
 
+### Step 1.5: Verify the ISO
+
+```bash
+./script/verify-iso.sh -i ~/aethex-linux-build/AeThex-Linux-1.0.0-alpha-amd64.iso
+```
+
+For strict verification and mount checks, see `docs/ISO_VERIFICATION.md`.
+
 ### Step 2: Test in Virtual Machine
 
 ```bash

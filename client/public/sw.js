@@ -1,16 +1,91 @@
-// Service Worker disabled for development
-// This file unregisters any existing service workers
+// Service Worker for PWA functionality
+const CACHE_NAME = 'aethex-v1';
+const urlsToCache = [
+  '/',
+  '/mobile',
+  '/home',
+  '/manifest.json',
+  '/favicon.png'
+];
 
-self.addEventListener('install', () => {
+// Install event - cache assets
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('[SW] Caching app shell');
+        return cache.addAll(urlsToCache);
+      })
+      .catch((err) => {
+        console.error('[SW] Cache failed:', err);
+      })
+  );
   self.skipWaiting();
 });
 
+// Activate event - clean up old caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    self.registration.unregister().then(() => {
-      return self.clients.matchAll();
-    }).then((clients) => {
-      clients.forEach(client => client.navigate(client.url));
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('[SW] Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
     })
   );
+  self.clients.claim();
+});
+
+// Fetch event - network first, fallback to cache
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET' || !event.request.url.startsWith('http')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (!response || response.status !== 200 || response.type !== 'basic') {
+          return response;
+        }
+        const responseToCache = response.clone();
+        caches.open(CACHE_NAME).then((cache) => {
+          cache.put(event.request, responseToCache);
+        });
+        return response;
+      })
+      .catch(() => {
+        return caches.match(event.request).then((cachedResponse) => {
+          return cachedResponse || (event.request.mode === 'navigate' ? caches.match('/') : null);
+        });
+      })
+  );
+});
+
+// Push notification
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'New notification',
+    icon: '/favicon.png',
+    vibrate: [200, 100, 200],
+    actions: [
+      { action: 'explore', title: 'View' },
+      { action: 'close', title: 'Close' }
+    ]
+  };
+  event.waitUntil(
+    self.registration.showNotification('AeThex OS', options)
+  );
+});
+
+// Notification click
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  if (event.action === 'explore') {
+    event.waitUntil(clients.openWindow('/mobile'));
+  }
 });

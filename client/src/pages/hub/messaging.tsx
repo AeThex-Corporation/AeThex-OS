@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Search, Loader2 } from "lucide-react";
+import { MobileHeader } from "@/components/mobile/MobileHeader";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -97,8 +98,13 @@ export default function Messaging() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-900">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4">
+      {/* Mobile Header */}
+      <div className="md:hidden">
+        <MobileHeader title="Messages" />
+      </div>
+      
+      {/* Desktop Header */}
+      <div className="hidden md:flex bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4">
         <Link href="/">
           <button className="text-slate-400 hover:text-white">
             <ArrowLeft className="w-5 h-5" />

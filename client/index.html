@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     
     <title>AeThex OS - Operating System for the Metaverse</title>
     <meta name="description" content="AeThex is the Operating System for the Metaverse. Join the network, earn credentials, and build the future with Axiom, Codex, and Aegis." />
@@ -30,7 +30,7 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/favicon.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#06B6D4" />
+    <meta name="theme-color" content="#10b981" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -41,18 +41,36 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Orbitron:wght@400..900&family=Oxanium:wght@200..800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <style>
+      /* Mobile safe area support */
+      :root {
+        --safe-area-inset-top: env(safe-area-inset-top, 0px);
+        --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        --safe-area-inset-left: env(safe-area-inset-left, 0px);
+        --safe-area-inset-right: env(safe-area-inset-right, 0px);
+      }
+      .safe-area-inset-top { padding-top: var(--safe-area-inset-top) !important; }
+      .safe-area-inset-bottom { padding-bottom: var(--safe-area-inset-bottom) !important; }
+      .safe-area-inset-left { padding-left: var(--safe-area-inset-left) !important; }
+      .safe-area-inset-right { padding-right: var(--safe-area-inset-right) !important; }
+      /* Disable pull-to-refresh on body */
+      body { overscroll-behavior-y: contain; }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Unregister any existing service workers -->
+    <!-- Register service worker for PWA -->
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
-            console.log('Unregistered service worker:', registration.scope);
-          }
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(registration => {
+              console.log('[SW] Registered:', registration.scope);
+            })
+            .catch(err => {
+              console.log('[SW] Registration failed:', err);
+            });
         });
       }
     </script>

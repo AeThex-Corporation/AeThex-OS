@@ -22,7 +22,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    // For other languages, return a placeholder
+    // TODO: [UNFINISHED FLOW] Add support for additional languages
+    // Priority languages to implement:
+    //   - Python (via pyodide or server-side execution)
+    //   - Go (via server-side compilation)
+    //   - Rust (via server-side compilation)
+    // See: FLOWS.md section "Code Execution API"
     res.status(200).json({
       output: `// Language: ${language}\n// Execution not yet supported in cloud environment\n// Run locally for full support`,
       status: 'info'

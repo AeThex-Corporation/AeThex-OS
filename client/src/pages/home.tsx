@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { motion } from "framer-motion";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { 
   Shield, FileCode, Terminal as TerminalIcon, ChevronRight, BarChart3, Network, 
@@ -13,6 +13,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function Home() {
   const { startTutorial, hasCompletedTutorial, isActive } = useTutorial();
+  const [, navigate] = useLocation();
   
   const { data: metrics } = useQuery({
     queryKey: ["metrics"],
@@ -24,6 +25,13 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-mono selection:bg-primary selection:text-background relative overflow-hidden">
+      {/* Mobile Back Button */}
+      <button
+        onClick={() => navigate('/mobile')}
+        className="fixed top-4 left-4 z-50 md:hidden p-3 rounded-full bg-emerald-600 active:bg-emerald-700 shadow-lg"
+      >
+        <ArrowRight className="w-6 h-6 rotate-180" />
+      </button>
       <div 
         className="absolute inset-0 opacity-20 pointer-events-none z-0"
         style={{ backgroundImage: `url(${gridBg})`, backgroundSize: 'cover' }}

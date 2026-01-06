@@ -517,6 +517,87 @@ export async function registerRoutes(
       res.status(500).json({ error: err.message });
     }
   });
+
+  // Minimal tracking endpoint for upgrade clicks
+  app.post("/api/track/upgrade-click", async (req, res) => {
+    try {
+      const { source, timestamp } = req.body || {};
+      await storage.logFunnelEvent({
+        user_id: req.session.userId,
+        event_type: 'upgrade_click',
+        source: source || 'unknown',
+        created_at: timestamp,
+      });
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Generic funnel event tracking
+  app.post("/api/track/event", async (req, res) => {
+    try {
+      const { event_type, source, payload, timestamp } = req.body || {};
+      if (!event_type) return res.status(400).json({ error: 'event_type is required' });
+      await storage.logFunnelEvent({
+        user_id: req.session.userId,
+        event_type,
+        source,
+        payload,
+        created_at: timestamp,
+      });
+      res.json({ ok: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ========== PAYMENTS ==========
+  // Create Stripe Checkout Session
+  app.post("/api/payments/create-checkout-session", async (req, res) => {
+    try {
+      const secret = process.env.STRIPE_SECRET_KEY;
+      if (!secret) {
+        return res.status(400).json({ error: "Stripe not configured" });
+      }
+      const priceId = process.env.STRIPE_PRICE_ID; // optional
+      const successUrl = process.env.STRIPE_SUCCESS_URL || `${req.headers.origin || "https://aethex.network"}/success`;
+      const cancelUrl = process.env.STRIPE_CANCEL_URL || `${req.headers.origin || "https://aethex.network"}/cancel`;
+
+      const body = new URLSearchParams();
+      body.set("mode", "payment");
+      body.set("success_url", successUrl);
+      body.set("cancel_url", cancelUrl);
+      body.set("client_reference_id", req.session.userId || "guest");
+
+      if (priceId) {
+        body.set("line_items[0][price]", priceId);
+        body.set("line_items[0][quantity]", "1");
+      } else {
+        body.set("line_items[0][price_data][currency]", "usd");
+        body.set("line_items[0][price_data][product_data][name]", "Architect Access");
+        body.set("line_items[0][price_data][unit_amount]", String(50000)); // $500.00
+        body.set("line_items[0][quantity]", "1");
+      }
+
+      const resp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${secret}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+
+      const json = await resp.json();
+      if (!resp.ok) {
+        return res.status(400).json({ error: json.error?.message || "Stripe error" });
+      }
+      res.json({ url: json.url, id: json.id });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
   
   // ========== PUBLIC DIRECTORY ROUTES ==========
   
@@ -1314,7 +1395,7 @@ export async function registerRoutes(
   app.post("/api/os/link/start", async (req, res) => {
     try {
       const { provider } = req.body;
-      const userId = req.session.userId;
+      const userId = (req.headers["x-user-id"] as string) || req.session.userId;
 
       if (!provider || !userId) {
         return res.status(400).json({ error: "Missing provider or user" });
@@ -1340,7 +1421,7 @@ export async function registerRoutes(
   app.post("/api/os/link/complete", async (req, res) => {
     try {
       const { provider, external_id, external_username } = req.body;
-      const userId = req.session.userId;
+      const userId = (req.headers["x-user-id"] as string) || req.session.userId;
 
       if (!provider || !external_id || !userId) {
         return res.status(400).json({ error: "Missing required fields" });
@@ -1390,7 +1471,7 @@ export async function registerRoutes(
   app.post("/api/os/link/unlink", async (req, res) => {
     try {
       const { provider, external_id } = req.body;
-      const userId = req.session.userId;
+      const userId = (req.headers["x-user-id"] as string) || req.session.userId;
 
       if (!provider || !external_id) {
         return res.status(400).json({ error: "Missing provider or external_id" });

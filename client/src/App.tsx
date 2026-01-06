@@ -17,6 +17,7 @@ import Curriculum from "@/pages/curriculum";
 import Login from "@/pages/login";
 import Admin from "@/pages/admin";
 import Pitch from "@/pages/pitch";
+import Builds from "@/pages/builds";
 import AdminArchitects from "@/pages/admin-architects";
 import AdminProjects from "@/pages/admin-projects";
 import AdminCredentials from "@/pages/admin-credentials";
@@ -40,14 +41,31 @@ import HubCodeGallery from "@/pages/hub/code-gallery";
 import HubNotifications from "@/pages/hub/notifications";
 import HubAnalytics from "@/pages/hub/analytics";
 import OsLink from "@/pages/os/link";
-import Orgs from "@/pages/orgs";
-import OrgSettings from "@/pages/orgs/settings";
+import MobileDashboard from "@/pages/mobile-dashboard"; 
+import SimpleMobileDashboard from "@/pages/mobile-simple"; 
+import MobileCamera from "@/pages/mobile-camera"; 
+import MobileNotifications from "@/pages/mobile-notifications"; 
+import MobileProjects from "@/pages/mobile-projects"; 
+import MobileMessaging from "@/pages/mobile-messaging"; 
+import MobileModules from "@/pages/mobile-modules"; 
 import { LabTerminalProvider } from "@/hooks/use-lab-terminal";
+
+
+function HomeRoute() {
+  // On mobile devices, show the native mobile app
+  // On desktop/web, show the web OS
+  return <AeThexOS />;
+}
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={AeThexOS} />
+      <Route path="/" component={HomeRoute} />
+      <Route path="/camera" component={MobileCamera} />
+      <Route path="/notifications" component={MobileNotifications} />
+      <Route path="/hub/projects" component={MobileProjects} />
+      <Route path="/hub/messaging" component={MobileMessaging} />
+      <Route path="/hub/code-gallery" component={MobileModules} />
       <Route path="/home" component={Home} />
       <Route path="/passport" component={Passport} />
       <Route path="/achievements" component={Achievements} />
@@ -69,6 +87,7 @@ function Router() {
       <Route path="/admin/activity">{() => <ProtectedRoute><AdminActivity /></ProtectedRoute>}</Route>
       <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
+      <Route path="/builds" component={Builds} />
       <Route path="/os" component={AeThexOS} />
       <Route path="/os/link">{() => <ProtectedRoute><OsLink /></ProtectedRoute>}</Route>
       <Route path="/network" component={Network} />
@@ -82,8 +101,6 @@ function Router() {
       <Route path="/hub/code-gallery">{() => <ProtectedRoute><HubCodeGallery /></ProtectedRoute>}</Route>
       <Route path="/hub/notifications">{() => <ProtectedRoute><HubNotifications /></ProtectedRoute>}</Route>
       <Route path="/hub/analytics">{() => <ProtectedRoute><HubAnalytics /></ProtectedRoute>}</Route>
-      <Route path="/orgs">{() => <ProtectedRoute><Orgs /></ProtectedRoute>}</Route>
-      <Route path="/orgs/:slug/settings">{() => <ProtectedRoute><OrgSettings /></ProtectedRoute>}</Route>
       <Route component={NotFound} />
     </Switch>
   );

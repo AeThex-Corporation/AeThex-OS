@@ -35,8 +35,14 @@ const allowlist = [
 async function buildAll() {
   await rm("dist", { recursive: true, force: true });
 
+  const enableSourcemap = process.argv.includes("--sourcemap");
+
   console.log("building client...");
-  await viteBuild();
+  await viteBuild({
+    build: {
+      sourcemap: enableSourcemap,
+    },
+  });
 
   console.log("building server...");
   const pkg = JSON.parse(await readFile("package.json", "utf-8"));
@@ -56,6 +62,7 @@ async function buildAll() {
       "process.env.NODE_ENV": '"production"',
     },
     minify: true,
+    sourcemap: enableSourcemap,
     external: externals,
     logLevel: "info",
     banner: {

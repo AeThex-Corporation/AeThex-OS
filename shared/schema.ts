@@ -767,6 +767,25 @@ export const aethex_entitlement_events = pgTable("aethex_entitlement_events", {
   created_at: timestamp("created_at").defaultNow(),
 });
 
+// ============================================
+// Funnel Events (Sales & engagement tracking)
+// ============================================
+export const funnel_events = pgTable("funnel_events", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id"),
+  event_type: text("event_type").notNull(), // e.g., 'intel_open', 'directory_view', 'drive_d_open', 'upgrade_click'
+  source: text("source"), // e.g., 'tray-upgrade', 'intel-app', 'drives-app'
+  payload: json("payload").$type<Record<string, any> | null>(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertFunnelEventSchema = createInsertSchema(funnel_events).omit({
+  created_at: true,
+});
+
+export type InsertFunnelEvent = z.infer<typeof insertFunnelEventSchema>;
+export type FunnelEvent = typeof funnel_events.$inferSelect;
+
 // Audit Log: All OS actions
 export const aethex_audit_log = pgTable("aethex_audit_log", {
   id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),

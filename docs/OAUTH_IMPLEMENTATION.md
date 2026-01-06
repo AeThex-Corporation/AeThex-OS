@@ -268,10 +268,12 @@ function getRedirectUri(provider: string): string {
 
 ---
 
-## 🚧 TODO / Future Improvements
+## 🚧 TODO / Future Improvements (UNFINISHED FLOWS)
+
+> **Note:** These items are tracked in `/FLOWS.md` - update both documents when completing items.
 
 ### High Priority
-- [ ] Implement unlink endpoint: `DELETE /api/oauth/unlink/:provider`
+- [ ] **[UNFINISHED]** Implement unlink endpoint: `DELETE /api/oauth/unlink/:provider`
 - [ ] Add frontend UI for identity linking (Settings page)
 - [ ] Redis/database for state storage (replace in-memory Map)
 - [ ] Rate limiting on OAuth endpoints
