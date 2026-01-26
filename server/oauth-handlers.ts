@@ -47,7 +47,8 @@ export async function startOAuthLinking(req: Request, res: Response) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
-  if (!["discord", "roblox", "github"].includes(provider)) {
+  const validProviders = ["discord", "roblox", "github", "minecraft", "steam", "meta", "twitch", "youtube"];
+  if (!validProviders.includes(provider)) {
     return res.status(400).json({ error: "Invalid provider" });
   }
 
@@ -317,6 +318,46 @@ function getProviderConfig(provider: string) {
       tokenUrl: "https://github.com/login/oauth/access_token",
       userInfoUrl: "https://api.github.com/user",
       scope: "read:user user:email"
+    },
+    minecraft: {
+      clientId: process.env.MINECRAFT_CLIENT_ID!,
+      clientSecret: process.env.MINECRAFT_CLIENT_SECRET!,
+      authUrl: "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize",
+      tokenUrl: "https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+      userInfoUrl: "https://api.minecraftservices.com/minecraft/profile",
+      scope: "XboxLive.signin offline_access"
+    },
+    steam: {
+      clientId: process.env.STEAM_API_KEY!,
+      clientSecret: process.env.STEAM_API_KEY!,
+      authUrl: "https://steamcommunity.com/openid/login",
+      tokenUrl: "https://steamcommunity.com/openid/login",
+      userInfoUrl: "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2",
+      scope: ""
+    },
+    meta: {
+      clientId: process.env.META_APP_ID!,
+      clientSecret: process.env.META_APP_SECRET!,
+      authUrl: "https://www.facebook.com/v18.0/dialog/oauth",
+      tokenUrl: "https://graph.instagram.com/v18.0/oauth/access_token",
+      userInfoUrl: "https://graph.instagram.com/me?fields=id,name,picture,username",
+      scope: "user_profile,user_friends"
+    },
+    twitch: {
+      clientId: process.env.TWITCH_CLIENT_ID!,
+      clientSecret: process.env.TWITCH_CLIENT_SECRET!,
+      authUrl: "https://id.twitch.tv/oauth2/authorize",
+      tokenUrl: "https://id.twitch.tv/oauth2/token",
+      userInfoUrl: "https://api.twitch.tv/helix/users",
+      scope: "user:read:email channel:read:stream_key"
+    },
+    youtube: {
+      clientId: process.env.YOUTUBE_CLIENT_ID!,
+      clientSecret: process.env.YOUTUBE_CLIENT_SECRET!,
+      authUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+      tokenUrl: "https://oauth2.googleapis.com/token",
+      userInfoUrl: "https://www.googleapis.com/oauth2/v2/userinfo",
+      scope: "https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/youtube"
     }
   };
 

@@ -20,3 +20,12 @@ vite.config.ts.*
 .env
 .env.local
 .env.*.local
+
+# Ignore Linux build artifacts and special files
+shell/aethex-shell/aethex-linux-build/rootfs/
+!shell/aethex-shell/aethex-linux-build/rootfs/**/*.sh
+!shell/aethex-shell/aethex-linux-build/rootfs/**/*.conf
+!shell/aethex-shell/aethex-linux-build/rootfs/**/*.txt
+
+# Ignore all binaries and device files
+shell/aethex-shell/aethex-linux-build/rootfs/usr/bin/*

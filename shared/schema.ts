@@ -1,4 +1,4 @@
-import { pgTable, text, varchar, boolean, integer, timestamp, json, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, boolean, integer, timestamp, json, decimal, numeric } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -757,3 +757,230 @@ export const aethex_workspace_policy = pgTable("aethex_workspace_policy", {
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
 });
+
+// ============================================
+// Revenue & Ledger (LEDGER-2)
+// ============================================
+export const revenue_events = pgTable("revenue_events", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  org_id: varchar("org_id"), // Optional org scoping (for multi-org revenue tracking)
+  project_id: varchar("project_id"), // Optional project association
+  source_type: varchar("source_type").notNull(), // 'marketplace', 'api', 'subscription', 'donation'
+  source_id: varchar("source_id").notNull(), // Reference to transaction/event
+  gross_amount: varchar("gross_amount").notNull(), // Stored as string for decimal precision
+  platform_fee: varchar("platform_fee").default(sql`'0'`), // Stored as string
+  net_amount: varchar("net_amount").notNull(), // Calculated: gross_amount - platform_fee
+  currency: varchar("currency").default("USD").notNull(),
+  metadata: json("metadata").$type<Record<string, any> | null>(), // Flexible event data
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertRevenueEventSchema = createInsertSchema(revenue_events).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertRevenueEvent = z.infer<typeof insertRevenueEventSchema>;
+export type RevenueEvent = typeof revenue_events.$inferSelect;
+
+// ============================================
+// Revenue Splits (SPLITS-1)
+// ============================================
+// Project collaborators: Who contributes to a project
+export const project_collaborators = pgTable("project_collaborators", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  project_id: varchar("project_id").notNull(),
+  user_id: varchar("user_id").notNull(),
+  role: varchar("role").notNull(), // 'creator', 'contributor', 'maintainer'
+  joined_at: timestamp("joined_at").defaultNow(),
+  left_at: timestamp("left_at"), // Null if still active
+});
+
+export const insertProjectCollaboratorSchema = createInsertSchema(
+  project_collaborators
+).omit({
+  joined_at: true,
+});
+
+export type InsertProjectCollaborator = z.infer<
+  typeof insertProjectCollaboratorSchema
+>;
+export type ProjectCollaborator = typeof project_collaborators.$inferSelect;
+
+// Revenue splits: Time-versioned allocation rules
+export const revenue_splits = pgTable("revenue_splits", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  project_id: varchar("project_id").notNull(),
+  split_version: integer("split_version").notNull(), // Version number (1, 2, 3, ...)
+  active_from: timestamp("active_from").notNull(), // When this split rule becomes active
+  active_until: timestamp("active_until"), // Null = currently active
+  rule: json("rule")
+    .$type<Record<string, number>>()
+    .notNull(), // e.g., { "user-123": 0.7, "user-456": 0.3 }
+  created_by: varchar("created_by").notNull(), // Who created this split rule
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertRevenueSplitSchema = createInsertSchema(revenue_splits).omit({
+  created_at: true,
+});
+
+export type InsertRevenueSplit = z.infer<typeof insertRevenueSplitSchema>;
+export type RevenueSplit = typeof revenue_splits.$inferSelect;
+
+// Split allocations: Immutable record of how revenue was allocated
+export const split_allocations = pgTable("split_allocations", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  revenue_event_id: varchar("revenue_event_id").notNull(),
+  project_id: varchar("project_id").notNull(),
+  user_id: varchar("user_id").notNull(),
+  split_version: integer("split_version").notNull(),
+  allocated_amount: varchar("allocated_amount").notNull(), // Stored as string for precision
+  allocated_percentage: numeric("allocated_percentage", { precision: 5, scale: 2 }), // e.g., 70.00
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertSplitAllocationSchema = createInsertSchema(
+  split_allocations
+).omit({
+  created_at: true,
+});
+
+export type InsertSplitAllocation = z.infer<typeof insertSplitAllocationSchema>;
+export type SplitAllocation = typeof split_allocations.$inferSelect;
+
+// Split proposals: Propose new split rules for voting
+export const split_proposals = pgTable("split_proposals", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  project_id: varchar("project_id").notNull(),
+  proposed_by: varchar("proposed_by").notNull(), // User who created the proposal
+  proposed_rule: json("proposed_rule")
+    .$type<Record<string, number>>()
+    .notNull(), // New rule being proposed
+  proposal_status: text("proposal_status").default("pending"), // pending, approved, rejected
+  voting_rule: text("voting_rule").notNull().default("unanimous"), // unanimous or majority
+  description: text("description"), // Why this change is being proposed
+  created_at: timestamp("created_at").defaultNow(),
+  expires_at: timestamp("expires_at"), // When voting closes
+});
+
+export const insertSplitProposalSchema = createInsertSchema(
+  split_proposals
+).omit({
+  created_at: true,
+});
+
+export type InsertSplitProposal = z.infer<typeof insertSplitProposalSchema>;
+export type SplitProposal = typeof split_proposals.$inferSelect;
+
+// Split votes: Track votes on split proposals
+export const split_votes = pgTable("split_votes", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  proposal_id: varchar("proposal_id").notNull(),
+  voter_id: varchar("voter_id").notNull(), // User voting
+  vote: text("vote").notNull(), // 'approve' or 'reject'
+  reason: text("reason"), // Optional reason for vote
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertSplitVoteSchema = createInsertSchema(split_votes).omit({
+  created_at: true,
+});
+
+export type InsertSplitVote = z.infer<typeof insertSplitVoteSchema>;
+export type SplitVote = typeof split_votes.$inferSelect;
+
+// Escrow accounts: Track allocated revenue held for users per project
+export const escrow_accounts = pgTable("escrow_accounts", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  project_id: varchar("project_id").notNull(),
+  user_id: varchar("user_id").notNull(),
+  balance: varchar("balance").notNull().default("0.00"), // Stored as string for precision
+  held_amount: varchar("held_amount").notNull().default("0.00"), // Amount pending payout
+  released_amount: varchar("released_amount").notNull().default("0.00"), // Total paid out
+  last_updated: timestamp("last_updated").defaultNow(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertEscrowAccountSchema = createInsertSchema(
+  escrow_accounts
+).omit({
+  created_at: true,
+  last_updated: true,
+});
+
+export type InsertEscrowAccount = z.infer<typeof insertEscrowAccountSchema>;
+export type EscrowAccount = typeof escrow_accounts.$inferSelect;
+
+// Payout methods: How users prefer to receive payments (Stripe, PayPal, bank transfer)
+export const payout_methods = pgTable("payout_methods", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull(),
+  method_type: text("method_type").notNull(), // 'stripe_connect', 'paypal', 'bank_transfer', 'crypto'
+  is_primary: boolean("is_primary").default(false),
+  metadata: json("metadata")
+    .$type<Record<string, any>>()
+    .notNull(), // Store API identifiers, account details (encrypted in prod)
+  verified: boolean("verified").default(false),
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertPayoutMethodSchema = createInsertSchema(
+  payout_methods
+).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertPayoutMethod = z.infer<typeof insertPayoutMethodSchema>;
+export type PayoutMethod = typeof payout_methods.$inferSelect;
+
+// Payout requests: User initiated payout requests
+export const payout_requests = pgTable("payout_requests", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  user_id: varchar("user_id").notNull(),
+  escrow_account_id: varchar("escrow_account_id").notNull(),
+  request_amount: varchar("request_amount").notNull(), // Amount requested
+  requested_at: timestamp("requested_at").defaultNow(),
+  status: text("status").default("pending"), // pending, approved, rejected, processing
+  reason: text("reason"), // Why requesting payout
+  notes: text("notes"), // Admin notes on approval/rejection
+  expires_at: timestamp("expires_at"), // When request expires if not processed
+});
+
+export const insertPayoutRequestSchema = createInsertSchema(
+  payout_requests
+).omit({
+  requested_at: true,
+});
+
+export type InsertPayoutRequest = z.infer<typeof insertPayoutRequestSchema>;
+export type PayoutRequest = typeof payout_requests.$inferSelect;
+
+// Payouts: Completed or in-progress payments to users
+export const payouts = pgTable("payouts", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  payout_request_id: varchar("payout_request_id"),
+  user_id: varchar("user_id").notNull(),
+  escrow_account_id: varchar("escrow_account_id").notNull(),
+  payout_method_id: varchar("payout_method_id").notNull(),
+  amount: varchar("amount").notNull(), // Stored as string for precision
+  currency: text("currency").default("USD"),
+  status: text("status").default("pending"), // pending, processing, completed, failed
+  external_transaction_id: varchar("external_transaction_id"), // Stripe/PayPal ref
+  failure_reason: text("failure_reason"),
+  processed_at: timestamp("processed_at"),
+  completed_at: timestamp("completed_at"),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertPayoutSchema = createInsertSchema(payouts).omit({
+  created_at: true,
+  processed_at: true,
+  completed_at: true,
+});
+
+export type InsertPayout = z.infer<typeof insertPayoutSchema>;
+export type Payout = typeof payouts.$inferSelect;

@@ -8,6 +8,7 @@ import { supabase } from "./supabase.js";
 import { getChatResponse } from "./openai.js";
 import { capabilityGuard } from "./capability-guard.js";
 import { startOAuthLinking, handleOAuthCallback } from "./oauth-handlers.js";
+import communityRoutes from "./community-routes.js";
 
 // Extend session type
 declare module 'express-session' {
@@ -58,6 +59,9 @@ export async function registerRoutes(
   app.use("/api/hub/*", capabilityGuard);
   app.use("/api/os/entitlements/*", capabilityGuard);
   app.use("/api/os/link/*", capabilityGuard);
+  
+  // Mount community routes (events, opportunities, messages)
+  app.use("/api", communityRoutes);
   
   // ========== OAUTH ROUTES ==========
   
@@ -929,6 +933,950 @@ export async function registerRoutes(
       res.status(500).json({ error: err.message });
     }
   });
+
+  // ========== MARKETPLACE ROUTES (LEDGER-3) ==========
+  // Purchase marketplace listing
+  app.post("/api/marketplace/purchase", requireAuth, async (req, res) => {
+    try {
+      const { listing_id } = req.body;
+      const buyer_id = req.session.userId!;
+
+      if (!listing_id) {
+        return res.status(400).json({ error: "listing_id is required" });
+      }
+
+      // Fetch listing details
+      const { data: listing, error: listingError } = await supabase
+        .from("marketplace_listings")
+        .select("*")
+        .eq("id", listing_id)
+        .single();
+
+      if (listingError || !listing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+
+      // Prevent self-purchase
+      if (listing.seller_id === buyer_id) {
+        return res.status(400).json({ error: "Cannot purchase your own listing" });
+      }
+
+      // Create transaction
+      const transactionId = randomUUID();
+      const { error: transError } = await supabase
+        .from("marketplace_transactions")
+        .insert({
+          id: transactionId,
+          buyer_id,
+          seller_id: listing.seller_id,
+          listing_id,
+          amount: listing.price,
+          status: "completed",
+        });
+
+      if (transError) throw transError;
+
+      // Emit revenue event (LEDGER-3)
+      const { recordRevenueEvent } = await import("./revenue.js");
+      const revResult = await recordRevenueEvent({
+        source_type: "marketplace",
+        source_id: transactionId,
+        gross_amount: listing.price,
+        platform_fee: 0, // Can be configured per transaction or org policy
+        currency: "POINTS",
+        project_id: (listing as any).project_id || null,
+        metadata: {
+          listing_id,
+          buyer_id,
+          seller_id: listing.seller_id,
+          title: listing.title,
+          category: listing.category,
+        },
+      });
+
+      if (revResult.success && revResult.id && (listing as any).project_id) {
+        // Compute and record splits if project_id exists (SPLITS-1)
+        const { computeRevenueSplits, recordSplitAllocations } = await import(
+          "./splits.js"
+        );
+        const splitsResult = await computeRevenueSplits(
+          (listing as any).project_id,
+          listing.price
+        );
+        if (splitsResult.success && splitsResult.allocations) {
+          await recordSplitAllocations(
+            revResult.id,
+            (listing as any).project_id,
+            splitsResult.allocations,
+            splitsResult.splitVersion || 1
+          );
+        }
+      }
+
+      // Update listing purchase count
+      await supabase
+        .from("marketplace_listings")
+        .update({ purchase_count: (listing.purchase_count || 0) + 1 })
+        .eq("id", listing_id);
+
+      res.status(201).json({
+        success: true,
+        transaction_id: transactionId,
+        message: "Purchase completed",
+      });
+    } catch (err: any) {
+      console.error("Marketplace purchase error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get organization revenue summary by month (LEDGER-4)
+  app.get("/api/revenue/summary", requireAuth, async (req, res) => {
+    try {
+      const org_id = (req.headers["x-org-id"] as string) || req.session.userId; // Org context from header or user
+      const monthsParam = parseInt(req.query.months as string) || 6;
+      const months = Math.min(monthsParam, 24); // Cap at 24 months
+
+      if (!org_id) {
+        return res.status(400).json({ error: "Org context required" });
+      }
+
+      // Query revenue events for this org, past N months
+      const startDate = new Date();
+      startDate.setMonth(startDate.getMonth() - months);
+
+      const { data: events, error } = await supabase
+        .from("revenue_events")
+        .select("*")
+        .eq("org_id", org_id)
+        .gte("created_at", startDate.toISOString())
+        .order("created_at", { ascending: true });
+
+      if (error) throw error;
+
+      // Aggregate by month
+      const byMonth: Record<
+        string,
+        { gross: number; fees: number; net: number }
+      > = {};
+
+      (events || []).forEach((event: any) => {
+        const date = new Date(event.created_at);
+        const monthKey = date.toISOString().substring(0, 7); // "2026-01"
+        if (!byMonth[monthKey]) {
+          byMonth[monthKey] = { gross: 0, fees: 0, net: 0 };
+        }
+        byMonth[monthKey].gross += parseFloat(event.gross_amount || "0");
+        byMonth[monthKey].fees += parseFloat(event.platform_fee || "0");
+        byMonth[monthKey].net += parseFloat(event.net_amount || "0");
+      });
+
+      // Format response
+      const summary = Object.entries(byMonth)
+        .map(([month, { gross, fees, net }]) => ({
+          month,
+          gross: gross.toFixed(2),
+          fees: fees.toFixed(2),
+          net: net.toFixed(2),
+        }))
+        .sort();
+
+      res.json(summary);
+    } catch (err: any) {
+      console.error("Revenue summary error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get revenue splits for a project (SPLITS-1)
+  app.get("/api/revenue/splits/:projectId", requireAuth, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+
+      // Fetch the currently active split rule
+      const { data: splits, error: splitsError } = await supabase
+        .from("revenue_splits")
+        .select("*")
+        .eq("project_id", projectId)
+        .is("active_until", null) // Only active rules
+        .order("split_version", { ascending: false })
+        .limit(1);
+
+      if (splitsError) throw splitsError;
+
+      if (!splits || splits.length === 0) {
+        return res.json({
+          split_version: 0,
+          rule: {},
+          allocations: [],
+        });
+      }
+
+      const split = splits[0];
+
+      // Fetch all allocations for this project (for reporting)
+      const { data: allocations, error: allocError } = await supabase
+        .from("split_allocations")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (allocError) throw allocError;
+
+      // Aggregate allocations by user
+      const byUser: Record<
+        string,
+        {
+          user_id: string;
+          total_allocated: number;
+          allocation_count: number;
+        }
+      > = {};
+
+      (allocations || []).forEach((alloc: any) => {
+        if (!byUser[alloc.user_id]) {
+          byUser[alloc.user_id] = {
+            user_id: alloc.user_id,
+            total_allocated: 0,
+            allocation_count: 0,
+          };
+        }
+        byUser[alloc.user_id].total_allocated += parseFloat(
+          alloc.allocated_amount || "0"
+        );
+        byUser[alloc.user_id].allocation_count += 1;
+      });
+
+      res.json({
+        split_version: split.split_version,
+        rule: split.rule,
+        active_from: split.active_from,
+        allocations_summary: Object.values(byUser),
+      });
+    } catch (err: any) {
+      console.error("Revenue splits fetch error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get split rule history for a project (SPLITS-HISTORY)
+  app.get("/api/revenue/splits/:projectId/history", requireAuth, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+
+      // Fetch all split versions for this project, ordered by version desc
+      const { data: splitHistory, error: historyError } = await supabase
+        .from("revenue_splits")
+        .select("*")
+        .eq("project_id", projectId)
+        .order("split_version", { ascending: false });
+
+      if (historyError) throw historyError;
+
+      if (!splitHistory || splitHistory.length === 0) {
+        return res.json({
+          project_id: projectId,
+          total_versions: 0,
+          history: [],
+        });
+      }
+
+      // Enrich history with allocation counts per version
+      const enriched = await Promise.all(
+        splitHistory.map(async (split: any) => {
+          const { count, error: countError } = await supabase
+            .from("split_allocations")
+            .select("id", { count: "exact" })
+            .eq("project_id", projectId)
+            .eq("split_version", split.split_version);
+
+          if (countError) console.error("Count error:", countError);
+
+          return {
+            split_version: split.split_version,
+            rule: split.rule,
+            active_from: split.active_from,
+            active_until: split.active_until,
+            is_active: !split.active_until,
+            created_by: split.created_by,
+            created_at: split.created_at,
+            allocations_count: count || 0,
+          };
+        })
+      );
+
+      res.json({
+        project_id: projectId,
+        total_versions: enriched.length,
+        history: enriched,
+      });
+    } catch (err: any) {
+      console.error("Split history fetch error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ========== GOVERNANCE: SPLIT VOTING SYSTEM ==========
+  // Import voting functions
+  const { createSplitProposal, castVote, evaluateProposal, getProposalWithVotes } = await import(
+    "./votes.js"
+  );
+
+  // Create a proposal to change split rules (SPLITS-VOTING-1)
+  app.post("/api/revenue/splits/:projectId/propose", requireAuth, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const { proposed_rule, voting_rule, description, expires_at } = req.body;
+      const userId = req.session.userId;
+
+      if (!proposed_rule || !voting_rule) {
+        return res
+          .status(400)
+          .json({ error: "Missing proposed_rule or voting_rule" });
+      }
+
+      if (voting_rule !== "unanimous" && voting_rule !== "majority") {
+        return res
+          .status(400)
+          .json({ error: "voting_rule must be 'unanimous' or 'majority'" });
+      }
+
+      const result = await createSplitProposal({
+        project_id: projectId,
+        proposed_by: userId,
+        proposed_rule,
+        voting_rule,
+        description,
+        expires_at: expires_at ? new Date(expires_at) : undefined,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.status(201).json({
+        success: true,
+        proposal_id: result.proposal_id,
+        message: "Proposal created successfully",
+      });
+    } catch (err: any) {
+      console.error("Create proposal error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Cast a vote on a proposal (SPLITS-VOTING-2)
+  app.post("/api/revenue/splits/proposals/:proposalId/vote", requireAuth, async (req, res) => {
+    try {
+      const { proposalId } = req.params;
+      const { vote, reason } = req.body;
+      const userId = req.session.userId;
+
+      if (!vote || (vote !== "approve" && vote !== "reject")) {
+        return res.status(400).json({ error: "vote must be 'approve' or 'reject'" });
+      }
+
+      const result = await castVote({
+        proposal_id: proposalId,
+        voter_id: userId,
+        vote,
+        reason,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.status(201).json({
+        success: true,
+        vote_id: result.vote_id,
+        message: "Vote recorded successfully",
+      });
+    } catch (err: any) {
+      console.error("Cast vote error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get proposal details with vote counts (SPLITS-VOTING-3)
+  app.get(
+    "/api/revenue/splits/proposals/:proposalId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { proposalId } = req.params;
+
+        const result = await getProposalWithVotes(proposalId);
+
+        if (!result.success) {
+          return res.status(404).json({ error: result.error });
+        }
+
+        res.json({
+          proposal: result.proposal,
+          votes: result.votes,
+          stats: result.stats,
+        });
+      } catch (err: any) {
+        console.error("Get proposal error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Evaluate proposal consensus and apply if approved (SPLITS-VOTING-4)
+  app.post(
+    "/api/revenue/splits/proposals/:proposalId/evaluate",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { proposalId } = req.params;
+        const userId = req.session.userId;
+
+        const result = await evaluateProposal(proposalId, userId);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          success: result.success,
+          approved: result.approved,
+          stats: {
+            approve_count: result.approve_count,
+            reject_count: result.reject_count,
+            total_votes: result.total_votes,
+          },
+          message: result.message,
+        });
+      } catch (err: any) {
+        console.error("Evaluate proposal error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // List all proposals for a project (SPLITS-VOTING-5)
+  app.get(
+    "/api/revenue/splits/:projectId/proposals",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { projectId } = req.params;
+
+        const { data: proposals, error } = await supabase
+          .from("split_proposals")
+          .select("*")
+          .eq("project_id", projectId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json({
+          project_id: projectId,
+          proposals: proposals || [],
+          count: proposals?.length || 0,
+        });
+      } catch (err: any) {
+        console.error("List proposals error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // ========== SETTLEMENT: ESCROW & PAYOUT SYSTEM ==========
+  // Import settlement functions
+  const {
+    getEscrowBalance,
+    depositToEscrow,
+    createPayoutRequest,
+    reviewPayoutRequest,
+    registerPayoutMethod,
+    processPayout,
+    completePayout,
+    failPayout,
+    getPayoutHistory,
+  } = await import("./settlement.js");
+
+  // Get escrow balance for user on a project (SETTLEMENT-1)
+  app.get(
+    "/api/settlement/escrow/:projectId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { projectId } = req.params;
+        const userId = req.session.userId;
+
+        const result = await getEscrowBalance(userId, projectId);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          user_id: userId,
+          project_id: projectId,
+          balance: result.balance,
+          held_amount: result.held,
+          released_amount: result.released,
+        });
+      } catch (err: any) {
+        console.error("Get escrow balance error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Create a payout request (SETTLEMENT-2)
+  app.post("/api/settlement/payout-request", requireAuth, async (req, res) => {
+    try {
+      const { escrow_account_id, request_amount, reason } = req.body;
+      const userId = req.session.userId;
+
+      if (!escrow_account_id || !request_amount) {
+        return res
+          .status(400)
+          .json({ error: "Missing escrow_account_id or request_amount" });
+      }
+
+      const result = await createPayoutRequest({
+        user_id: userId,
+        escrow_account_id,
+        request_amount,
+        reason,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.status(201).json({
+        success: true,
+        request_id: result.request_id,
+        message: "Payout request created successfully",
+      });
+    } catch (err: any) {
+      console.error("Create payout request error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get user's payout requests (SETTLEMENT-3)
+  app.get("/api/settlement/payout-requests", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+
+      const { data: requests, error } = await supabase
+        .from("payout_requests")
+        .select("*")
+        .eq("user_id", userId)
+        .order("requested_at", { ascending: false });
+
+      if (error) throw error;
+
+      res.json({
+        user_id: userId,
+        payout_requests: requests || [],
+        count: requests?.length || 0,
+      });
+    } catch (err: any) {
+      console.error("Get payout requests error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Register a payout method (SETTLEMENT-4)
+  app.post("/api/settlement/payout-methods", requireAuth, async (req, res) => {
+    try {
+      const { method_type, metadata, is_primary } = req.body;
+      const userId = req.session.userId;
+
+      if (!method_type || !metadata) {
+        return res
+          .status(400)
+          .json({ error: "Missing method_type or metadata" });
+      }
+
+      const result = await registerPayoutMethod({
+        user_id: userId,
+        method_type,
+        metadata,
+        is_primary,
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.status(201).json({
+        success: true,
+        method_id: result.method_id,
+        message: "Payout method registered successfully",
+      });
+    } catch (err: any) {
+      console.error("Register payout method error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get user's payout methods (SETTLEMENT-5)
+  app.get(
+    "/api/settlement/payout-methods",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const userId = req.session.userId;
+
+        const { data: methods, error } = await supabase
+          .from("payout_methods")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json({
+          user_id: userId,
+          payout_methods: methods || [],
+          count: methods?.length || 0,
+        });
+      } catch (err: any) {
+        console.error("Get payout methods error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Process a payout (admin/system) (SETTLEMENT-6)
+  app.post(
+    "/api/settlement/payouts/process",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const {
+          payout_request_id,
+          escrow_account_id,
+          payout_method_id,
+          amount,
+        } = req.body;
+        const userId = req.session.userId;
+
+        if (
+          !escrow_account_id ||
+          !payout_method_id ||
+          !amount
+        ) {
+          return res.status(400).json({
+            error:
+              "Missing escrow_account_id, payout_method_id, or amount",
+          });
+        }
+
+        const result = await processPayout({
+          payout_request_id,
+          user_id: userId,
+          escrow_account_id,
+          payout_method_id,
+          amount,
+        });
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.status(201).json({
+          success: true,
+          payout_id: result.payout_id,
+          message: "Payout processing started",
+        });
+      } catch (err: any) {
+        console.error("Process payout error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Complete a payout (SETTLEMENT-7)
+  app.post(
+    "/api/settlement/payouts/:payoutId/complete",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { payoutId } = req.params;
+        const { external_transaction_id } = req.body;
+
+        const result = await completePayout(payoutId, external_transaction_id);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          success: true,
+          message: "Payout completed successfully",
+        });
+      } catch (err: any) {
+        console.error("Complete payout error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Fail a payout (SETTLEMENT-8)
+  app.post(
+    "/api/settlement/payouts/:payoutId/fail",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { payoutId } = req.params;
+        const { failure_reason } = req.body;
+
+        const result = await failPayout(payoutId, failure_reason);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json({
+          success: true,
+          message: "Payout marked as failed, funds restored to escrow",
+        });
+      } catch (err: any) {
+        console.error("Fail payout error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // Get user's payout history (SETTLEMENT-9)
+  app.get("/api/settlement/payouts", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const limit = parseInt(req.query.limit as string) || 50;
+
+      const result = await getPayoutHistory(userId, limit);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        user_id: userId,
+        payouts: result.payouts,
+        count: result.count,
+      });
+    } catch (err: any) {
+      console.error("Get payout history error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // ========== CONTRIBUTOR DASHBOARD: EARNINGS VIEW ==========
+  // Import dashboard functions
+  const {
+    getUserEarnings,
+    getProjectEarnings,
+    getEarningsSummary,
+    getProjectLeaderboard,
+  } = await import("./dashboard.js");
+
+  // Get all earnings for authenticated user (DASHBOARD-1)
+  app.get("/api/dashboard/earnings", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const result = await getUserEarnings(userId);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json(result.data);
+    } catch (err: any) {
+      console.error("Get user earnings error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get earnings for a specific project (DASHBOARD-2)
+  app.get("/api/dashboard/earnings/:projectId", requireAuth, async (req, res) => {
+    try {
+      const { projectId } = req.params;
+      const userId = req.session.userId;
+
+      const result = await getProjectEarnings(userId, projectId);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json(result.data);
+    } catch (err: any) {
+      console.error("Get project earnings error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get earnings summary for user (DASHBOARD-3)
+  app.get("/api/dashboard/summary", requireAuth, async (req, res) => {
+    try {
+      const userId = req.session.userId;
+      const result = await getEarningsSummary(userId);
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json(result.data);
+    } catch (err: any) {
+      console.error("Get earnings summary error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get leaderboard for a project (DASHBOARD-4)
+  app.get(
+    "/api/dashboard/leaderboard/:projectId",
+    async (req, res) => {
+      try {
+        const { projectId } = req.params;
+        const limit = parseInt(req.query.limit as string) || 20;
+
+        const result = await getProjectLeaderboard(projectId, limit);
+
+        if (!result.success) {
+          return res.status(400).json({ error: result.error });
+        }
+
+        res.json(result.data);
+      } catch (err: any) {
+        console.error("Get leaderboard error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
+
+  // ========== API-TRIGGERED REVENUE ==========
+  // Record custom revenue event (API trigger) (API-REVENUE-1)
+  app.post("/api/revenue/trigger", requireAuth, async (req, res) => {
+    try {
+      const {
+        source_type,
+        project_id,
+        gross_amount,
+        platform_fee,
+        metadata,
+      } = req.body;
+      const userId = req.session.userId;
+
+      if (!source_type || !project_id || !gross_amount) {
+        return res.status(400).json({
+          error: "Missing source_type, project_id, or gross_amount",
+        });
+      }
+
+      if (!["api", "subscription", "donation"].includes(source_type)) {
+        return res.status(400).json({
+          error: "source_type must be 'api', 'subscription', or 'donation'",
+        });
+      }
+
+      // Record revenue event
+      const eventResult = await recordRevenueEvent({
+        source_type,
+        source_id: `api-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        gross_amount: parseFloat(gross_amount),
+        platform_fee: platform_fee ? parseFloat(platform_fee) : 0,
+        currency: "USD",
+        project_id,
+        org_id: null,
+        metadata,
+        requester_org_id: userId,
+      });
+
+      if (!eventResult.success) {
+        return res.status(400).json({ error: eventResult.error });
+      }
+
+      // Compute and record splits
+      const splitsResult = await computeRevenueSplits(
+        project_id,
+        (parseFloat(gross_amount) - (platform_fee ? parseFloat(platform_fee) : 0)).toFixed(2),
+        new Date()
+      );
+
+      if (!splitsResult.success) {
+        return res.status(400).json({
+          error: `Failed to compute splits: ${splitsResult.error}`,
+        });
+      }
+
+      // Record allocations
+      const allocResult = await recordSplitAllocations(
+        eventResult.id,
+        project_id,
+        splitsResult.allocations,
+        splitsResult.split_version
+      );
+
+      if (!allocResult.success) {
+        return res.status(400).json({
+          error: `Failed to record allocations: ${allocResult.error}`,
+        });
+      }
+
+      // Deposit to escrow for each contributor
+      for (const [userId, allocation] of Object.entries(
+        splitsResult.allocations || {}
+      )) {
+        const allocationData = allocation as any;
+        await depositToEscrow(
+          userId,
+          project_id,
+          allocationData.allocated_amount
+        );
+      }
+
+      res.status(201).json({
+        success: true,
+        revenue_event_id: eventResult.id,
+        allocations: splitsResult.allocations,
+        message: "Revenue recorded and splits computed",
+      });
+    } catch (err: any) {
+      console.error("API revenue trigger error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Get API revenue events for a project (API-REVENUE-2)
+  app.get(
+    "/api/revenue/api-events/:projectId",
+    requireAuth,
+    async (req, res) => {
+      try {
+        const { projectId } = req.params;
+
+        const { data: events, error } = await supabase
+          .from("revenue_events")
+          .select("*")
+          .eq("project_id", projectId)
+          .eq("source_type", "api")
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        res.json({
+          project_id: projectId,
+          api_events: events || [],
+          count: events?.length || 0,
+        });
+      } catch (err: any) {
+        console.error("Get API revenue events error:", err);
+        res.status(500).json({ error: err.message });
+      }
+    }
+  );
 
   // ========== OS KERNEL ROUTES ==========
   // Identity Linking

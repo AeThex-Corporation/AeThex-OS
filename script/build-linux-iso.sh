@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # AeThex Linux ISO Builder - Containerized Edition
 # Creates a bootable ISO using debootstrap + chroot
@@ -50,7 +50,7 @@ mount -t sysfs sys "$ROOTFS_DIR/sys" || true
 mount --bind /dev "$ROOTFS_DIR/dev" || true
 mount --bind /dev/pts "$ROOTFS_DIR/dev/pts" || true
 
-echo "[+] Installing Xfce desktop, Firefox, and system tools..."
+echo "[+] Installing Xfce desktop, browser, and system tools..."
 echo "    (packages installing, ~15-20 minutes...)"
 chroot "$ROOTFS_DIR" bash -c '
   export DEBIAN_FRONTEND=noninteractive
@@ -66,7 +66,7 @@ chroot "$ROOTFS_DIR" bash -c '
     grub-pc-bin grub-efi-amd64-bin grub-common xorriso \
     casper live-boot live-boot-initramfs-tools \
     xorg xfce4 xfce4-goodies lightdm \
-    firefox network-manager \
+    epiphany-browser network-manager \
     sudo curl wget git ca-certificates gnupg \
     pipewire-audio wireplumber \
     file-roller thunar-archive-plugin \
@@ -200,13 +200,13 @@ SERVICEEOF
 chroot "$ROOTFS_DIR" systemctl enable aethex-mobile-server.service 2>/dev/null || echo "    Mobile server service added"
 chroot "$ROOTFS_DIR" systemctl enable aethex-desktop.service 2>/dev/null || echo "    Desktop service added"
 
-# Create auto-start script for Firefox kiosk pointing to mobile server
+# Create auto-start script for browser pointing to mobile server
 mkdir -p "$ROOTFS_DIR/home/aethex/.config/autostart"
 cat > "$ROOTFS_DIR/home/aethex/.config/autostart/aethex-kiosk.desktop" << 'KIOSK'
 [Desktop Entry]
 Type=Application
 Name=AeThex Mobile UI
-Exec=sh -c "sleep 5 && firefox --kiosk http://localhost:5000"
+Exec=sh -c "sleep 5 && epiphany-browser --incognito --new-window http://localhost:5000"
 Hidden=false
 NoDisplay=false
 X-GNOME-Autostart-enabled=true
