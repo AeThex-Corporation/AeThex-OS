@@ -9,6 +9,7 @@ import { registerRoutes } from "./routes.js";
 import { serveStatic } from "./static.js";
 import { createServer } from "http";
 import { setupWebSocket, websocket } from "./websocket.js";
+import { attachOrgContext, requireOrgMember } from "./org-middleware.js";
 
 const app = express();
 const httpServer = createServer(app);
@@ -112,6 +113,7 @@ app.use((req, res, next) => {
 
 
 (async () => {
+  // Register routes (org middleware applied selectively within routes.ts)
   await registerRoutes(httpServer, app);
 
   // Setup WebSocket server for real-time notifications and Aegis alerts

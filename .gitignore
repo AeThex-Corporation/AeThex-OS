@@ -18,6 +18,14 @@ vite.config.ts.*
 
 # Environment variables
 .env
+
+# Jekyll / GitHub Pages
+/.bundle/
+/vendor/
+/_site/
+/.jekyll-cache/
+/.jekyll-metadata
+Gemfile.lock
 .env.local
 .env.*.local
 

@@ -37,22 +37,63 @@ export const insertProfileSchema = createInsertSchema(profiles).omit({
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type Profile = typeof profiles.$inferSelect;
 
+// ============================================
+// MULTI-TENANCY: Organizations
+// ============================================
+
+// Organizations table
+export const organizations = pgTable("organizations", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  owner_user_id: varchar("owner_user_id").notNull(),
+  plan: text("plan").default("free"), // free/pro/enterprise
+  created_at: timestamp("created_at").defaultNow(),
+  updated_at: timestamp("updated_at").defaultNow(),
+});
+
+export const insertOrganizationSchema = createInsertSchema(organizations).omit({
+  created_at: true,
+  updated_at: true,
+});
+
+export type InsertOrganization = z.infer<typeof insertOrganizationSchema>;
+export type Organization = typeof organizations.$inferSelect;
+
+// Organization Members table
+export const organization_members = pgTable("organization_members", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organization_id: varchar("organization_id").notNull(),
+  user_id: varchar("user_id").notNull(),
+  role: text("role").notNull().default("member"), // owner/admin/member/viewer
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertOrganizationMemberSchema = createInsertSchema(organization_members).omit({
+  created_at: true,
+});
+
+export type InsertOrganizationMember = z.infer<typeof insertOrganizationMemberSchema>;
+export type OrganizationMember = typeof organization_members.$inferSelect;
+
 // Projects table
 export const projects = pgTable("projects", {
   id: varchar("id").primaryKey(),
-  owner_id: varchar("owner_id"),
+  owner_id: varchar("owner_id"), // Legacy - keep for now
   title: text("title").notNull(),
   description: text("description"),
   status: text("status").default("planning"),
   github_url: text("github_url"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
-  user_id: varchar("user_id"),
+  user_id: varchar("user_id"), // Legacy - keep for now
   engine: text("engine"),
   priority: text("priority").default("medium"),
   progress: integer("progress").default(0),
   live_url: text("live_url"),
   technologies: json("technologies").$type<string[] | null>(),
+  owner_user_id: varchar("owner_user_id"), // New standardized owner
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertProjectSchema = createInsertSchema(projects).omit({
@@ -63,6 +104,23 @@ export const insertProjectSchema = createInsertSchema(projects).omit({
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type Project = typeof projects.$inferSelect;
+
+// Project Collaborators table
+export const project_collaborators = pgTable("project_collaborators", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  project_id: varchar("project_id").notNull(),
+  user_id: varchar("user_id").notNull(),
+  role: text("role").notNull().default("contributor"), // owner/admin/contributor/viewer
+  permissions: json("permissions").$type<Record<string, any> | null>(),
+  created_at: timestamp("created_at").defaultNow(),
+});
+
+export const insertProjectCollaboratorSchema = createInsertSchema(project_collaborators).omit({
+  created_at: true,
+});
+
+export type InsertProjectCollaborator = z.infer<typeof insertProjectCollaboratorSchema>;
+export type ProjectCollaborator = typeof project_collaborators.$inferSelect;
 
 // Login schema for Supabase Auth (email + password)
 export const loginSchema = z.object({
@@ -116,6 +174,7 @@ export const aethex_sites = pgTable("aethex_sites", {
   api_key_hash: text("api_key_hash"),
   handshake_token: text("handshake_token"),
   handshake_token_expires_at: timestamp("handshake_token_expires_at"),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertAethexSiteSchema = createInsertSchema(aethex_sites).omit({
@@ -216,6 +275,7 @@ export const aethex_projects = pgTable("aethex_projects", {
   is_featured: boolean("is_featured").default(false),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertAethexProjectSchema = createInsertSchema(aethex_projects).omit({
@@ -359,6 +419,7 @@ export const aethex_opportunities = pgTable("aethex_opportunities", {
   status: text("status").default("open"),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertAethexOpportunitySchema = createInsertSchema(aethex_opportunities).omit({
@@ -390,6 +451,7 @@ export const aethex_events = pgTable("aethex_events", {
   full_description: text("full_description"),
   map_url: text("map_url"),
   ticket_types: json("ticket_types"),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertAethexEventSchema = createInsertSchema(aethex_events).omit({
@@ -434,6 +496,7 @@ export const marketplace_listings = pgTable("marketplace_listings", {
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
   purchase_count: integer("purchase_count").default(0),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertMarketplaceListingSchema = createInsertSchema(marketplace_listings).omit({
@@ -453,6 +516,7 @@ export const marketplace_transactions = pgTable("marketplace_transactions", {
   amount: integer("amount").notNull(),
   status: text("status").default("completed"), // 'pending', 'completed', 'refunded'
   created_at: timestamp("created_at").defaultNow(),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertMarketplaceTransactionSchema = createInsertSchema(marketplace_transactions).omit({
@@ -501,6 +565,7 @@ export const files = pgTable("files", {
   language: text("language"), // 'typescript', 'javascript', etc
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertFileSchema = createInsertSchema(files).omit({
@@ -612,6 +677,7 @@ export const custom_apps = pgTable("custom_apps", {
   installations: integer("installations").default(0),
   created_at: timestamp("created_at").defaultNow(),
   updated_at: timestamp("updated_at").defaultNow(),
+  organization_id: varchar("organization_id"), // Multi-tenancy
 });
 
 export const insertCustomAppSchema = createInsertSchema(custom_apps).omit({
@@ -758,6 +824,7 @@ export const aethex_workspace_policy = pgTable("aethex_workspace_policy", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
+<<<<<<< HEAD
 // ============================================
 // Revenue & Ledger (LEDGER-2)
 // ============================================
@@ -779,10 +846,31 @@ export const revenue_events = pgTable("revenue_events", {
 export const insertRevenueEventSchema = createInsertSchema(revenue_events).omit({
   created_at: true,
   updated_at: true,
+=======
+// Revenue Events: Track platform revenue by organization and project
+export const revenue_events = pgTable("revenue_events", {
+  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+  organization_id: varchar("organization_id").notNull().references(() => organizations.id),
+  project_id: varchar("project_id").references(() => projects.id, { onDelete: "set null" }),
+  source_type: text("source_type").notNull(), // 'subscription' | 'marketplace' | 'service'
+  source_id: text("source_id").notNull(),
+  gross_amount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(),
+  platform_fee: decimal("platform_fee", { precision: 10, scale: 2 }).notNull().default("0"),
+  net_amount: decimal("net_amount", { precision: 10, scale: 2 }).notNull(),
+  currency: text("currency").notNull().default("USD"),
+  metadata: json("metadata").$type<Record<string, any> | null>(),
+  created_at: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertRevenueEventSchema = createInsertSchema(revenue_events).omit({
+  id: true,
+  created_at: true,
+>>>>>>> c0119e07fe449018227f534d4e3c24a61efae2b1
 });
 
 export type InsertRevenueEvent = z.infer<typeof insertRevenueEventSchema>;
 export type RevenueEvent = typeof revenue_events.$inferSelect;
+<<<<<<< HEAD
 
 // ============================================
 // Revenue Splits (SPLITS-1)
@@ -984,3 +1072,5 @@ export const insertPayoutSchema = createInsertSchema(payouts).omit({
 
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type Payout = typeof payouts.$inferSelect;
+=======
+>>>>>>> c0119e07fe449018227f534d4e3c24a61efae2b1

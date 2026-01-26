@@ -11,6 +11,49 @@ Where:
 - **C** = Settings/Workspace system
 - **1-10** = 10 supporting features/apps
 
+---
+
+## 📋 Multi-Tenancy & Project Ownership
+
+### Projects vs AeThex Projects
+
+**Two separate project tables exist in the system:**
+
+#### `projects` Table - *Canonical Project Graph*
+- **Purpose:** Internal project management and portfolio
+- **Use Case:** Hub projects, user portfolios, development tracking
+- **Ownership:** Individual users or organizations
+- **Features:**
+  - Full CRUD operations
+  - Organization scoping (`organization_id`)
+  - Collaborators support (`project_collaborators`)
+  - Status tracking, progress, priorities
+  - Technologies and external links (GitHub, live URL)
+- **Access:** Org-scoped by default when org context available
+- **When to use:** For actual project work, team collaboration, development tracking
+
+#### `aethex_projects` Table - *Public Showcase*
+- **Purpose:** Public-facing project showcase/gallery
+- **Use Case:** Creator portfolios, featured projects, public discovery
+- **Ownership:** Individual creators
+- **Features:**
+  - Public-facing metadata (title, description, URL)
+  - Image URLs for showcasing
+  - Tags for categorization
+  - Featured flag for highlighting
+- **Access:** Public or filtered by creator
+- **When to use:** For displaying finished work to the public, creator profiles
+
+#### Migration Plan (Future)
+1. **Phase 1** (Current): Both tables coexist with independent data
+2. **Phase 2** (TBD): Add link field `aethex_projects.source_project_id` → `projects.id`
+3. **Phase 3** (TBD): Allow users to "publish" a project from `projects` to `aethex_projects`
+4. **Phase 4** (TBD): Unified UI for managing both internal + showcase projects
+
+**For now:** Use `projects` for actual work, `aethex_projects` for showcasing.
+
+---
+
 ## ✨ Deliverables
 
 ### 🎯 8 Complete Applications
