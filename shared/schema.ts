@@ -824,29 +824,9 @@ export const aethex_workspace_policy = pgTable("aethex_workspace_policy", {
   updated_at: timestamp("updated_at").defaultNow(),
 });
 
-<<<<<<< HEAD
 // ============================================
 // Revenue & Ledger (LEDGER-2)
 // ============================================
-export const revenue_events = pgTable("revenue_events", {
-  id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
-  org_id: varchar("org_id"), // Optional org scoping (for multi-org revenue tracking)
-  project_id: varchar("project_id"), // Optional project association
-  source_type: varchar("source_type").notNull(), // 'marketplace', 'api', 'subscription', 'donation'
-  source_id: varchar("source_id").notNull(), // Reference to transaction/event
-  gross_amount: varchar("gross_amount").notNull(), // Stored as string for decimal precision
-  platform_fee: varchar("platform_fee").default(sql`'0'`), // Stored as string
-  net_amount: varchar("net_amount").notNull(), // Calculated: gross_amount - platform_fee
-  currency: varchar("currency").default("USD").notNull(),
-  metadata: json("metadata").$type<Record<string, any> | null>(), // Flexible event data
-  created_at: timestamp("created_at").defaultNow(),
-  updated_at: timestamp("updated_at").defaultNow(),
-});
-
-export const insertRevenueEventSchema = createInsertSchema(revenue_events).omit({
-  created_at: true,
-  updated_at: true,
-=======
 // Revenue Events: Track platform revenue by organization and project
 export const revenue_events = pgTable("revenue_events", {
   id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
@@ -865,12 +845,10 @@ export const revenue_events = pgTable("revenue_events", {
 export const insertRevenueEventSchema = createInsertSchema(revenue_events).omit({
   id: true,
   created_at: true,
->>>>>>> c0119e07fe449018227f534d4e3c24a61efae2b1
 });
 
 export type InsertRevenueEvent = z.infer<typeof insertRevenueEventSchema>;
 export type RevenueEvent = typeof revenue_events.$inferSelect;
-<<<<<<< HEAD
 
 // ============================================
 // Revenue Splits (SPLITS-1)
@@ -1072,5 +1050,3 @@ export const insertPayoutSchema = createInsertSchema(payouts).omit({
 
 export type InsertPayout = z.infer<typeof insertPayoutSchema>;
 export type Payout = typeof payouts.$inferSelect;
-=======
->>>>>>> c0119e07fe449018227f534d4e3c24a61efae2b1
