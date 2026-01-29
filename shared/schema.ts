@@ -853,8 +853,8 @@ export type RevenueEvent = typeof revenue_events.$inferSelect;
 // ============================================
 // Revenue Splits (SPLITS-1)
 // ============================================
-// Project collaborators: Who contributes to a project
-export const project_collaborators = pgTable("project_collaborators", {
+// Revenue split collaborators: Historical tracking of who contributes to revenue splits
+export const revenue_split_collaborators = pgTable("revenue_split_collaborators", {
   id: varchar("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   project_id: varchar("project_id").notNull(),
   user_id: varchar("user_id").notNull(),
@@ -863,16 +863,16 @@ export const project_collaborators = pgTable("project_collaborators", {
   left_at: timestamp("left_at"), // Null if still active
 });
 
-export const insertProjectCollaboratorSchema = createInsertSchema(
-  project_collaborators
+export const insertRevenueSplitCollaboratorSchema = createInsertSchema(
+  revenue_split_collaborators
 ).omit({
   joined_at: true,
 });
 
-export type InsertProjectCollaborator = z.infer<
-  typeof insertProjectCollaboratorSchema
+export type InsertRevenueSplitCollaborator = z.infer<
+  typeof insertRevenueSplitCollaboratorSchema
 >;
-export type ProjectCollaborator = typeof project_collaborators.$inferSelect;
+export type RevenueSplitCollaborator = typeof revenue_split_collaborators.$inferSelect;
 
 // Revenue splits: Time-versioned allocation rules
 export const revenue_splits = pgTable("revenue_splits", {
