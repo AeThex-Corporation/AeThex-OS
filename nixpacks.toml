@@ -1,3 +1,6 @@
+# Only use Node.js provider, ignore Ruby files
+providers = ["node"]
+
 [phases.setup]
 nixPkgs = ["nodejs_20", "npm"]
 
