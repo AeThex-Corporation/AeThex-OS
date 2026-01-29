@@ -1,0 +1,41 @@
+# Ruby files (used only for GitHub Pages documentation)
+Gemfile
+Gemfile.lock
+.ruby-version
+
+# Git files
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Build artifacts
+node_modules/
+dist/
+build/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Development files
+.devcontainer/
+attached_assets/
