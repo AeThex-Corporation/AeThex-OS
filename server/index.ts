@@ -19,10 +19,10 @@ app.get("/health", (_req, res) => {
   res.json({ status: "healthy", timestamp: new Date().toISOString() });
 });
 
-// Root endpoint
-app.get("/", (_req, res) => {
-  res.json({ 
-    status: "AeThex OS Kernel: ONLINE", 
+// API status endpoint (moved from root to /api/status)
+app.get("/api/status", (_req, res) => {
+  res.json({
+    status: "AeThex OS Kernel: ONLINE",
     version: "1.0.0",
     endpoints: {
       link: "/api/os/link/*",
