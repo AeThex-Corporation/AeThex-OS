@@ -9,7 +9,3 @@ cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"
-
-# Ignore Ruby files - they're only for GitHub Pages documentation
-[providers]
-ruby = false
