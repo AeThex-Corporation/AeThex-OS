@@ -18,6 +18,7 @@ import Login from "@/pages/login";
 import Admin from "@/pages/admin";
 import Pitch from "@/pages/pitch";
 import Builds from "@/pages/builds";
+import Downloads from "@/pages/downloads";
 import AdminArchitects from "@/pages/admin-architects";
 import AdminProjects from "@/pages/admin-projects";
 import AdminCredentials from "@/pages/admin-credentials";
@@ -90,6 +91,7 @@ function Router() {
       <Route path="/admin/notifications">{() => <ProtectedRoute><AdminNotifications /></ProtectedRoute>}</Route>
       <Route path="/pitch" component={Pitch} />
       <Route path="/builds" component={Builds} />
+      <Route path="/downloads" component={Downloads} />
       <Route path="/os" component={AeThexOS} />
       <Route path="/os/link">{() => <ProtectedRoute><OsLink /></ProtectedRoute>}</Route>
       <Route path="/network" component={Network} />

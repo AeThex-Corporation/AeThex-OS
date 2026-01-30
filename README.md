@@ -16,6 +16,15 @@
 - 📱 **Mobile Application** - Capacitor-based app (Android/iOS)
 - 🐧 **Linux Distribution** - Bootable OS replacing traditional operating systems
 
+## 📥 Downloads
+
+### Desktop Application
+- **[Download for Windows, macOS, or Linux](https://github.com/AeThex-Corporation/AeThex-OS/releases/latest)** - Latest desktop releases
+- **[All Releases](https://github.com/AeThex-Corporation/AeThex-OS/releases)** - View all versions
+
+### Web Application
+- **[Use Online](https://aethex.app)** - No installation required
+
 ## 🚀 Quick Start
 
 Choose your deployment mode:
