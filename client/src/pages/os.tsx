@@ -1184,39 +1184,41 @@ export default function AeThexOS() {
   const dragX = useMotionValue(0);
   const dragOpacity = useTransform(dragX, [-200, 0, 200], [0.5, 1, 0.5]);
 
+  // Hide system navigation bar on mount (Android only) - MUST be outside conditional
+  useEffect(() => {
+    if (!layout.isMobile) return;
+
+    const setupStatusBar = async () => {
+      try {
+        // Hide the status bar for full immersion
+        await StatusBar.hide();
+
+        // Set navigation bar to transparent and hide it
+        if ((window as any).NavigationBar) {
+          await (window as any).NavigationBar.backgroundColorByHexString('#00000000', false);
+          await (window as any).NavigationBar.hide();
+        }
+
+        // Enable edge-to-edge mode
+        document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
+      } catch (error) {
+        console.log('StatusBar not available on this platform');
+      }
+    };
+
+    setupStatusBar();
+
+    return () => {
+      // Show status bar when leaving
+      StatusBar.show().catch(() => {});
+    };
+  }, [layout.isMobile]);
+
   // Native Android App Layout
   if (layout.isMobile) {
     const activeWindows = windows.filter(w => !w.minimized);
     const currentWindow = activeWindows[activeWindows.length - 1];
-    
-    // Hide system navigation bar on mount (Android only)
-    useEffect(() => {
-      const setupStatusBar = async () => {
-        try {
-          // Hide the status bar for full immersion
-          await StatusBar.hide();
-          
-          // Set navigation bar to transparent and hide it
-          if ((window as any).NavigationBar) {
-            await (window as any).NavigationBar.backgroundColorByHexString('#00000000', false);
-            await (window as any).NavigationBar.hide();
-          }
-          
-          // Enable edge-to-edge mode
-          document.documentElement.style.setProperty('--safe-area-inset-bottom', 'env(safe-area-inset-bottom)');
-        } catch (error) {
-          console.log('StatusBar not available on this platform');
-        }
-      };
-      
-      setupStatusBar();
-      
-      return () => {
-        // Show status bar when leaving
-        StatusBar.show().catch(() => {});
-      };
-    }, []);
-    
+
     return (
       <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
         <style>{`
