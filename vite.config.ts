@@ -44,11 +44,20 @@ export default defineConfig({
   server: {
     cors: true,
     host: "0.0.0.0",
-    hmr: {
-      host: "orange-journey-wvwxgw4r6vrf577-5000.app.github.dev",
-      protocol: "wss",
-      clientPort: 443,
-    },
+    port: 5000,
+    // HMR configuration - use different settings for Capacitor live reload vs cloud dev
+    hmr: process.env.CAPACITOR_LIVE_RELOAD === 'true'
+      ? {
+          // For Capacitor live reload: use default WebSocket on same host
+          protocol: 'ws',
+          host: undefined, // Uses request host automatically
+        }
+      : {
+          // For cloud development (GitHub Codespaces, Replit, etc.)
+          host: "orange-journey-wvwxgw4r6vrf577-5000.app.github.dev",
+          protocol: "wss",
+          clientPort: 443,
+        },
     allowedHosts: true,
     fs: {
       strict: true,
