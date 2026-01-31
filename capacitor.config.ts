@@ -1,12 +1,21 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
+// Live reload config - set LIVE_RELOAD_IP to your machine's local IP
+// Example: LIVE_RELOAD_IP=192.168.1.100 npx cap sync
+const liveReloadIP = process.env.LIVE_RELOAD_IP;
+
 const config: CapacitorConfig = {
   appId: 'com.aethex.os',
   appName: 'AeThex OS',
   webDir: 'dist/public',
   server: {
     androidScheme: 'https',
-    iosScheme: 'https'
+    iosScheme: 'https',
+    // Enable live reload when LIVE_RELOAD_IP is set
+    ...(liveReloadIP && {
+      url: `http://${liveReloadIP}:5000`,
+      cleartext: true
+    })
   },
   plugins: {
     SplashScreen: {
