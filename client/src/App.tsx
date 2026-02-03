@@ -69,7 +69,7 @@ function Router() {
       <Route path="/hub/messaging" component={MobileMessaging} />
       <Route path="/hub/code-gallery" component={MobileModules} />
       <Route path="/home" component={Home} />
-      <Route path="/passport" component={Passport} />
+      <Route path="/passport">{() => <ProtectedRoute><Passport /></ProtectedRoute>}</Route>
       <Route path="/achievements" component={Achievements} />
       <Route path="/opportunities" component={Opportunities} />
       <Route path="/events" component={Events} />

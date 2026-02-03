@@ -234,12 +234,14 @@ export async function getEarningsSummary(userId: string): Promise<EarningsResult
     const { data: projects, error: projectsError } = await supabase
       .from("split_allocations")
       .select("project_id")
-      .eq("user_id", userId)
-      .distinct();
+      .eq("user_id", userId);
 
     if (projectsError) {
       console.error("Projects fetch error:", projectsError);
     }
+
+    // Get unique project count
+    const uniqueProjects = new Set((projects || []).map((p: any) => p.project_id));
 
     return {
       success: true,
@@ -249,7 +251,7 @@ export async function getEarningsSummary(userId: string): Promise<EarningsResult
         total_in_escrow: totalEscrowBalance.toFixed(2),
         total_held_pending: totalHeld.toFixed(2),
         total_paid_out: totalReleased.toFixed(2),
-        projects_earned_from: projects?.length || 0,
+        projects_earned_from: uniqueProjects.size,
       },
     };
   } catch (err: any) {

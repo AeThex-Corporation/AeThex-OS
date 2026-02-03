@@ -329,6 +329,9 @@ export async function evaluateProposal(
       };
     }
 
+    // Track the applied split version for the success message
+    let appliedVersion = 0;
+
     // If approved, apply the split
     if (approved) {
       // Get the current split version
@@ -351,6 +354,7 @@ export async function evaluateProposal(
       }
 
       const nextVersion = (currentSplit?.split_version || 0) + 1;
+      appliedVersion = nextVersion;
 
       // Apply the new split rule
       const splitResult = await updateRevenueSplit(
@@ -358,7 +362,7 @@ export async function evaluateProposal(
         {
           split_version: nextVersion,
           rule: proposal.proposed_rule,
-          created_by: requester_user_id,
+          created_by: Number(requester_user_id) || 0,
         },
         requester_user_id
       );
@@ -382,7 +386,7 @@ export async function evaluateProposal(
       approve_count: approveCount,
       reject_count: rejectCount,
       message: approved
-        ? `Proposal approved! Applied new split rule version ${(currentSplit?.split_version || 0) + 1}`
+        ? `Proposal approved! Applied new split rule version ${appliedVersion}`
         : `Proposal rejected. Approvals: ${approveCount}, Rejections: ${rejectCount}, Required: ${proposal.voting_rule === "unanimous" ? totalEligible : Math.ceil(totalEligible / 2)}`,
     };
   } catch (err: any) {

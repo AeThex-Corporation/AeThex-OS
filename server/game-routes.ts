@@ -1,26 +1,26 @@
-import { Request, Response } from "express";
+import { Request, Response, Express } from "express";
 import { supabase } from "./supabase.js";
 import { GameDevAPIs } from "./game-dev-apis.js";
-import { requireAuth } from "./auth.js";
+import { requireAuth } from "./auth";
 import crypto from "crypto";
 
 // Game Marketplace Routes
-export function registerGameRoutes(app: Express) {
+export function registerGameRoutes(app: Express): void {
   
   // ========== GAME MARKETPLACE ==========
   
   // Get marketplace items
-  app.get("/api/game/marketplace", async (req, res) => {
+  app.get("/api/game/marketplace", async (req: Request, res: Response) => {
     try {
       const { category, platform, search, sort = "newest", limit = 20, offset = 0 } = req.query;
       
       let query = supabase.from("game_items").select("*");
       
       if (category && category !== "all") {
-        query = query.eq("type", category);
+        query = query.eq("type", category as string);
       }
       if (platform && platform !== "all") {
-        query = query.eq("platform", platform);
+        query = query.eq("platform", platform as string);
       }
       if (search) {
         query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
@@ -53,7 +53,7 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Get item details
-  app.get("/api/game/marketplace/:itemId", async (req, res) => {
+  app.get("/api/game/marketplace/:itemId", async (req: Request, res: Response) => {
     try {
       const { data, error } = await supabase
         .from("game_items")
@@ -69,17 +69,17 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Purchase marketplace item
-  app.post("/api/game/marketplace/purchase", requireAuth, async (req, res) => {
+  app.post("/api/game/marketplace/purchase", requireAuth, async (req: Request, res: Response) => {
     try {
       const { itemId, price } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
       // Check user wallet balance
       const { data: wallet, error: walletError } = await supabase
         .from("game_wallets")
-        .select("balance")
+        .select("id, balance")
         .eq("user_id", userId)
         .single();
       
@@ -128,14 +128,14 @@ export function registerGameRoutes(app: Express) {
   // ========== MOD WORKSHOP ==========
   
   // Get mods
-  app.get("/api/game/workshop", async (req, res) => {
+  app.get("/api/game/workshop", async (req: Request, res: Response) => {
     try {
       const { category, game, search, sort = "trending", limit = 20, offset = 0 } = req.query;
       
       let query = supabase.from("game_mods").select("*");
       
       if (category && category !== "all") {
-        query = query.eq("category", category);
+        query = query.eq("category", category as string);
       }
       if (game && game !== "all") {
         query = query.or(`game.eq.${game},game.eq.All Games`);
@@ -171,10 +171,10 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Upload mod
-  app.post("/api/game/workshop/upload", requireAuth, async (req, res) => {
+  app.post("/api/game/workshop/upload", requireAuth, async (req: Request, res: Response) => {
     try {
       const { name, description, category, game, version, fileSize } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
@@ -210,11 +210,11 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Rate mod
-  app.post("/api/game/workshop/:modId/rate", requireAuth, async (req, res) => {
+  app.post("/api/game/workshop/:modId/rate", requireAuth, async (req: Request, res: Response) => {
     try {
       const { modId } = req.params;
       const { rating, review } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       if (rating < 1 || rating > 5) {
@@ -237,7 +237,7 @@ export function registerGameRoutes(app: Express) {
         .eq("mod_id", modId);
       
       if (reviews && reviews.length > 0) {
-        const avgRating = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+        const avgRating = reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length;
         await supabase
           .from("game_mods")
           .update({ rating: avgRating, review_count: reviews.length })
@@ -251,10 +251,10 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Download mod
-  app.post("/api/game/workshop/:modId/download", requireAuth, async (req, res) => {
+  app.post("/api/game/workshop/:modId/download", requireAuth, async (req: Request, res: Response) => {
     try {
       const { modId } = req.params;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
@@ -277,14 +277,14 @@ export function registerGameRoutes(app: Express) {
   // ========== GAME STREAMING ==========
   
   // Get streams
-  app.get("/api/game/streams", async (req, res) => {
+  app.get("/api/game/streams", async (req: Request, res: Response) => {
     try {
       const { platform, live = false, limit = 20 } = req.query;
       
       let query = supabase.from("game_streams").select("*");
       
       if (platform && platform !== "all") {
-        query = query.eq("platform", platform);
+        query = query.eq("platform", platform as string);
       }
       if (live) {
         query = query.eq("is_live", true);
@@ -302,10 +302,10 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Create stream event
-  app.post("/api/game/streams", requireAuth, async (req, res) => {
+  app.post("/api/game/streams", requireAuth, async (req: Request, res: Response) => {
     try {
       const { title, platform, game, description, streamUrl } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
@@ -331,9 +331,9 @@ export function registerGameRoutes(app: Express) {
   // ========== GAME WALLET & TRANSACTIONS ==========
   
   // Get user wallet
-  app.get("/api/game/wallet", requireAuth, async (req, res) => {
+  app.get("/api/game/wallet", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
       const { data, error } = await supabase
@@ -360,9 +360,9 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Get transaction history
-  app.get("/api/game/transactions", requireAuth, async (req, res) => {
+  app.get("/api/game/transactions", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
       const { limit = 50 } = req.query;
@@ -383,7 +383,7 @@ export function registerGameRoutes(app: Express) {
   // ========== PLAYER PROFILES & ACHIEVEMENTS ==========
   
   // Get player profile
-  app.get("/api/game/profiles/:userId", async (req, res) => {
+  app.get("/api/game/profiles/:userId", async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       
@@ -401,7 +401,7 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Get achievements
-  app.get("/api/game/achievements/:userId", async (req, res) => {
+  app.get("/api/game/achievements/:userId", async (req: Request, res: Response) => {
     try {
       const { userId } = req.params;
       
@@ -419,10 +419,10 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Grant achievement
-  app.post("/api/game/achievements/grant", requireAuth, async (req, res) => {
+  app.post("/api/game/achievements/grant", requireAuth, async (req: Request, res: Response) => {
     try {
       const { achievementId } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
@@ -442,11 +442,11 @@ export function registerGameRoutes(app: Express) {
   // ========== OAUTH GAME LINKING ==========
   
   // Link game account (Minecraft, Steam, etc.)
-  app.post("/api/game/oauth/link/:provider", requireAuth, async (req, res) => {
+  app.post("/api/game/oauth/link/:provider", requireAuth, async (req: Request, res: Response) => {
     try {
       const { provider } = req.params;
       const { accountId, accountName, metadata } = req.body;
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
@@ -467,9 +467,9 @@ export function registerGameRoutes(app: Express) {
   });
 
   // Get linked accounts
-  app.get("/api/game/accounts", requireAuth, async (req, res) => {
+  app.get("/api/game/accounts", requireAuth, async (req: Request, res: Response) => {
     try {
-      const userId = req.session?.userId;
+      const userId = (req.session as any)?.userId;
       if (!userId) return res.status(401).json({ error: "Unauthorized" });
       
       const { data, error } = await supabase

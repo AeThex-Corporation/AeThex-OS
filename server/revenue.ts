@@ -77,7 +77,7 @@ export async function recordRevenueEvent(
     net_amount: net_amount_str,
     currency,
     project_id,
-    org_id,
+    organization_id: org_id || '',
     metadata,
   };
 

@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 // Live reload configuration
 // Set CAPACITOR_LIVE_RELOAD=true and CAPACITOR_SERVER_URL to enable
-const isLiveReload = process.env.CAPACITOR_LIVE_RELOAD === 'true';
+const isLiveReload = false; // process.env.CAPACITOR_LIVE_RELOAD === 'true';
 const serverUrl = process.env.CAPACITOR_SERVER_URL || 'http://192.168.1.100:5000';
 
 const config: CapacitorConfig = {
@@ -67,4 +67,3 @@ const config: CapacitorConfig = {
 };
 
 export default config;
-

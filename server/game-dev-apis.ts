@@ -259,7 +259,7 @@ export class PlayFabAPI {
     const res = await fetch(`${this.baseUrl}/Server/GrantItemsToUser`, {
       method: "POST",
       headers: {
-        "X-SecretKey": this.developerSecretKey,
+        "X-SecretKey": this.developerSecretKey || "",
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -669,7 +669,7 @@ export class AWSS3Storage {
     const res = await fetch(`${this.baseUrl}/${key}`, {
       method: "PUT",
       headers: { "Content-Type": contentType },
-      body: file
+      body: file as unknown as BodyInit
     });
     return res.ok;
   }

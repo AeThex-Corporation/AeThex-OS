@@ -26,7 +26,8 @@ import {
   TrendingUp, ArrowUp, ArrowDown, Hash, Key, HardDrive, FolderSearch, 
   AlertTriangle, Briefcase, CalendarDays, FolderGit2, MessageSquare,
   ShoppingCart, Folder, Code, Home, Flag, Cookie, ChevronLeft,
-  MoreVertical, Search, Mic, ArrowLeft, RefreshCw, Star, Clock, MapPin
+  MoreVertical, Search, Mic, ArrowLeft, RefreshCw, Star, Clock, MapPin,
+  Target, Check
 } from "lucide-react";
 
 interface WindowState {
@@ -4572,25 +4573,29 @@ function FilesApp() {
 function AchievementsApp() {
   const { user } = useAuth();
   
-  const { data: userAchievements, isLoading: achievementsLoading } = useQuery({
+  const { data: userAchievementsData, isLoading: achievementsLoading } = useQuery<any[]>({
     queryKey: ['/api/me/achievements'],
     enabled: !!user,
   });
 
-  const { data: allAchievements, isLoading: allLoading } = useQuery({
+  const { data: allAchievementsData, isLoading: allLoading } = useQuery<any[]>({
     queryKey: ['/api/achievements'],
     enabled: !!user,
   });
 
   const isLoading = achievementsLoading || allLoading;
+  
+  // Ensure arrays (API may return {} on error)
+  const userAchievements = Array.isArray(userAchievementsData) ? userAchievementsData : [];
+  const allAchievements = Array.isArray(allAchievementsData) ? allAchievementsData : [];
 
   // Create a set of unlocked achievement IDs
-  const unlockedIds = new Set((userAchievements || []).map((a: any) => a.achievement_id || a.id));
+  const unlockedIds = new Set(userAchievements.map((a: any) => a.achievement_id || a.id));
   
   // Combine unlocked and locked achievements
   const achievements = [
-    ...(userAchievements || []).map((a: any) => ({ ...a, unlocked: true })),
-    ...(allAchievements || []).filter((a: any) => !unlockedIds.has(a.id)).map((a: any) => ({ ...a, unlocked: false }))
+    ...userAchievements.map((a: any) => ({ ...a, unlocked: true })),
+    ...allAchievements.filter((a: any) => !unlockedIds.has(a.id)).map((a: any) => ({ ...a, unlocked: false }))
   ];
 
   return (
@@ -4599,7 +4604,7 @@ function AchievementsApp() {
         <Trophy className="w-5 h-5 md:w-6 md:h-6 text-yellow-400" />
         <h2 className="text-base md:text-lg font-display text-white uppercase tracking-wider">Achievements</h2>
         <span className="ml-auto text-xs text-white/40 font-mono shrink-0">
-          {(userAchievements || []).length} / {(allAchievements || []).length}
+          {userAchievements.length} / {allAchievements.length}
         </span>
       </div>
       
@@ -5186,7 +5191,7 @@ function NetworkMapApp() {
 }
 
 function MetricsDashboardApp() {
-  const layout = useLayout();
+  const layout = usePlatformLayout();
   const { data: metrics, isLoading } = useQuery({
     queryKey: ['os-dashboard-metrics'],
     queryFn: async () => {
