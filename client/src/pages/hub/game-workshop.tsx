@@ -7,7 +7,7 @@ import {
   Trash2, Award, User, Calendar, Search, Filter, Plus, Loader2,
   Package, AlertCircle, CheckCircle
 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 
 interface Mod {
   id: string;
@@ -201,6 +201,233 @@ export default function ModWorkshop() {
   const games = ["all", "Minecraft", "Roblox", "Steam Games", "All Games"];
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Package className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Mod Workshop</h1>
+                <p className="text-zinc-500 text-xs">{sortedMods.length} mods</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              className={`${theme.activeBtn} ${theme.hoverBtn} gap-1`}
+              size="sm"
+            >
+              <Upload className="w-4 h-4" />
+            </Button>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
+            <input
+              placeholder="Search mods..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-4 py-2 ${theme.inputBg} border border-zinc-700 rounded-xl text-white text-sm`}
+            />
+          </div>
+
+          {/* Category Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {(["all", "gameplay", "cosmetic", "utility", "enhancement"] as const).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors capitalize ${
+                  selectedCategory === cat
+                    ? `${theme.activeBtn} text-white`
+                    : `${theme.cardBg} text-zinc-400 border ${theme.borderClass}`
+                }`}
+              >
+                {cat === "all" ? "All" : cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort & Game Filter */}
+          <div className="flex gap-2 mb-4">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className={`flex-1 px-3 py-2 ${theme.inputBg} border border-zinc-700 rounded-lg text-white text-xs`}
+            >
+              <option value="trending">Trending</option>
+              <option value="newest">Newest</option>
+              <option value="popular">Most Downloaded</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+            <select
+              value={selectedGame}
+              onChange={(e) => setSelectedGame(e.target.value)}
+              className={`flex-1 px-3 py-2 ${theme.inputBg} border border-zinc-700 rounded-lg text-white text-xs`}
+            >
+              {games.map(game => (
+                <option key={game} value={game}>
+                  {game === "all" ? "All Games" : game}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Mods Grid */}
+          <div className="space-y-3">
+            {sortedMods.length === 0 ? (
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                <Package className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                <p className="text-zinc-500 text-sm">No mods found</p>
+              </div>
+            ) : (
+              sortedMods.map((mod) => (
+                <div
+                  key={mod.id}
+                  className={`${theme.cardBg} border ${theme.borderClass} rounded-xl overflow-hidden active:scale-[0.98] transition-transform`}
+                >
+                  {/* Image */}
+                  <div className="h-24 bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-4xl relative">
+                    {mod.image}
+                    <div className={`absolute top-2 right-2 px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 ${
+                      mod.status === "approved" ? "bg-green-500/20 text-green-400" :
+                      mod.status === "reviewing" ? "bg-yellow-500/20 text-yellow-400" :
+                      "bg-red-500/20 text-red-400"
+                    }`}>
+                      {mod.status === "approved" ? <CheckCircle className="w-2 h-2" /> : <AlertCircle className="w-2 h-2" />}
+                      {mod.status}
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-4">
+                    {/* Badges */}
+                    <div className="flex gap-2 mb-2">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
+                        mod.category === "gameplay" ? "bg-purple-500/20 text-purple-400" :
+                        mod.category === "cosmetic" ? "bg-pink-500/20 text-pink-400" :
+                        mod.category === "utility" ? `${theme.bgAccent} ${theme.primaryClass}` :
+                        "bg-green-500/20 text-green-400"
+                      }`}>
+                        {mod.category}
+                      </span>
+                      <span className="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">
+                        v{mod.version}
+                      </span>
+                    </div>
+
+                    {/* Name & Author */}
+                    <h3 className="text-white font-bold text-sm mb-1 line-clamp-1">{mod.name}</h3>
+                    <p className="text-[10px] text-zinc-400 flex items-center gap-1 mb-2">
+                      <User className="w-2 h-2" /> {mod.author}
+                    </p>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-2 mb-3 text-[10px]">
+                      <div className="bg-zinc-800/50 p-2 rounded">
+                        <div className="text-zinc-500">Rating</div>
+                        <div className="font-bold text-yellow-400">{mod.rating} ⭐</div>
+                      </div>
+                      <div className="bg-zinc-800/50 p-2 rounded">
+                        <div className="text-zinc-500">Downloads</div>
+                        <div className={`font-bold ${theme.primaryClass}`}>{(mod.downloads / 1000).toFixed(0)}K</div>
+                      </div>
+                    </div>
+
+                    {/* Download Button */}
+                    <Button className={`w-full ${theme.activeBtn} ${theme.hoverBtn} gap-1 text-xs`} size="sm">
+                      <Download className="w-3 h-3" /> Download ({mod.fileSize})
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Upload Modal */}
+        {showUploadModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl w-full max-w-sm p-4`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-white font-bold text-sm">Upload Mod</h2>
+                <button onClick={() => setShowUploadModal(false)} className="text-zinc-400">✕</button>
+              </div>
+
+              {uploadStatus === "idle" && (
+                <div className="space-y-3">
+                  <div
+                    className={`border-2 border-dashed ${theme.borderClass} rounded-xl p-6 text-center cursor-pointer`}
+                    onClick={handleUploadClick}
+                  >
+                    <Upload className={`w-6 h-6 mx-auto mb-2 ${theme.iconClass}`} />
+                    <p className="text-xs text-zinc-400">Tap to select mod file</p>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".zip,.rar"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Mod Title"
+                    className={`w-full px-3 py-2 ${theme.inputBg} border border-zinc-700 rounded-lg text-white text-xs`}
+                  />
+                  <textarea
+                    placeholder="Description..."
+                    rows={2}
+                    className={`w-full px-3 py-2 ${theme.inputBg} border border-zinc-700 rounded-lg text-white text-xs resize-none`}
+                  />
+                  <div className="flex gap-2">
+                    <Button onClick={() => setShowUploadModal(false)} variant="outline" className="flex-1 border-zinc-700 text-xs" size="sm">
+                      Cancel
+                    </Button>
+                    <Button onClick={() => setUploadStatus("uploading")} className={`flex-1 ${theme.activeBtn} text-xs`} size="sm">
+                      Upload
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {uploadStatus === "uploading" && (
+                <div className="text-center py-6">
+                  <Loader2 className={`w-6 h-6 mx-auto mb-3 animate-spin ${theme.iconClass}`} />
+                  <p className="text-zinc-400 text-xs">Uploading...</p>
+                </div>
+              )}
+
+              {uploadStatus === "success" && (
+                <div className="text-center py-6">
+                  <CheckCircle className="w-6 h-6 mx-auto mb-3 text-green-400" />
+                  <p className="text-white text-xs font-bold">Upload Complete!</p>
+                </div>
+              )}
+
+              {uploadStatus === "error" && (
+                <div className="text-center py-6">
+                  <AlertCircle className="w-6 h-6 mx-auto mb-3 text-red-400" />
+                  <p className="text-white text-xs font-bold">Upload Failed</p>
+                  <Button onClick={() => setUploadStatus("idle")} className={`mt-3 ${theme.activeBtn} text-xs`} size="sm">
+                    Try Again
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 text-white">
@@ -271,25 +498,26 @@ export default function ModWorkshop() {
                     {cat === "all" ? "All Categories" : cat}
                   </button>
                 ))}
-              </div>
+                </div>
 
-              <div className="ml-auto">
-                <select
-                  value={selectedGame}
-                  onChange={(e) => setSelectedGame(e.target.value)}
-                  className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs"
-                >
-                  {games.map(game => (
-                    <option key={game} value={game}>
-                      {game === "all" ? "All Games" : game}
-                    </option>
-                  ))}
-                </select>
+                <div className="ml-auto">
+                  <select
+                    value={selectedGame}
+                    onChange={(e) => setSelectedGame(e.target.value)}
+                    className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-lg text-white text-xs"
+                  >
+                    {games.map(game => (
+                      <option key={game} value={game}>
+                        {game === "all" ? "All Games" : game}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Mods Grid */}
       <div className="max-w-7xl mx-auto p-4 md:p-6">

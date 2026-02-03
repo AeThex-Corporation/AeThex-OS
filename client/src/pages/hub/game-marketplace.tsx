@@ -8,7 +8,7 @@ import {
   ArrowLeft, ShoppingCart, Star, Plus, Loader2, Gamepad2, 
   Zap, Trophy, Users, DollarSign, TrendingUp, Filter, Search
 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -198,6 +198,155 @@ export default function GameMarketplace() {
   );
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Gamepad2 className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Game Shop</h1>
+                <p className="text-zinc-500 text-xs">{items.length} items</p>
+              </div>
+            </div>
+            <div className={`${theme.cardBg} px-3 py-1.5 rounded-lg border ${theme.borderClass} flex items-center gap-1`}>
+              <DollarSign className="w-3 h-3 text-yellow-400" />
+              <span className={`text-sm font-bold ${theme.primaryClass}`}>{wallet.balance} LP</span>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
+            <input
+              placeholder="Search games, assets..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-4 py-2 ${theme.inputBg} border border-zinc-700 rounded-xl text-white text-sm`}
+            />
+          </div>
+
+          {/* Category Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {["all", "game", "cosmetic", "pass", "asset"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === cat
+                    ? `${theme.activeBtn} text-white`
+                    : `${theme.cardBg} text-zinc-400 border ${theme.borderClass}`
+                }`}
+              >
+                {cat === "all" ? "All" : cat.charAt(0).toUpperCase() + cat.slice(1) + "s"}
+              </button>
+            ))}
+          </div>
+
+          {/* Platform Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {["all", "minecraft", "roblox", "steam", "meta"].map((platform) => (
+              <button
+                key={platform}
+                onClick={() => setSelectedPlatform(platform)}
+                className={`px-3 py-1 rounded-lg text-[10px] font-medium capitalize whitespace-nowrap ${
+                  selectedPlatform === platform
+                    ? `${theme.bgAccent} ${theme.primaryClass}`
+                    : 'bg-zinc-800 text-zinc-500'
+                }`}
+              >
+                {platform === "all" ? "All" : platform}
+              </button>
+            ))}
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Items Grid */}
+          {!loading && (
+            <div className="space-y-3">
+              {filteredItems.length === 0 ? (
+                <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                  <Gamepad2 className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                  <p className="text-zinc-500 text-sm">No items found</p>
+                </div>
+              ) : (
+                filteredItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`${theme.cardBg} border ${theme.borderClass} rounded-xl overflow-hidden active:scale-[0.98] transition-transform`}
+                  >
+                    {/* Image */}
+                    <div className="h-24 bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-4xl">
+                      {item.image}
+                    </div>
+
+                    {/* Content */}
+                    <div className="p-4">
+                      {/* Badges */}
+                      <div className="flex gap-2 mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded capitalize ${
+                          item.type === "game" ? "bg-purple-500/20 text-purple-400" :
+                          item.type === "cosmetic" ? "bg-pink-500/20 text-pink-400" :
+                          item.type === "pass" ? `${theme.bgAccent} ${theme.primaryClass}` :
+                          "bg-green-500/20 text-green-400"
+                        }`}>
+                          {item.type}
+                        </span>
+                        <span className="text-[10px] text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded capitalize">
+                          {item.platform}
+                        </span>
+                      </div>
+
+                      {/* Name */}
+                      <h3 className="text-white font-bold text-sm mb-1 line-clamp-1">{item.name}</h3>
+                      <p className="text-[10px] text-zinc-500 mb-2 line-clamp-1">{item.description}</p>
+
+                      {/* Stats */}
+                      <div className="flex items-center gap-3 mb-3 text-[10px] text-zinc-500">
+                        <span className="flex items-center gap-1">
+                          <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {item.rating}
+                        </span>
+                        <span>{item.purchases.toLocaleString()} sold</span>
+                      </div>
+
+                      {/* Price & Buy */}
+                      <div className="flex items-center justify-between">
+                        <div className={`text-lg font-bold ${theme.primaryClass}`}>
+                          {item.price}
+                          <span className="text-xs text-zinc-500 ml-1">LP</span>
+                        </div>
+                        <Button
+                          onClick={() => handlePurchase(item)}
+                          className={`${theme.activeBtn} ${theme.hoverBtn} gap-1 text-xs`}
+                          size="sm"
+                          disabled={wallet.balance < item.price}
+                        >
+                          <ShoppingCart className="w-3 h-3" /> Buy
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 text-white">

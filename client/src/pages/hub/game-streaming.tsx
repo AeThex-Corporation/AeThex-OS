@@ -5,9 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Radio, Eye, Heart, MessageCircle, Share2, 
-  Twitch, Youtube, Play, Clock, Users, TrendingUp, Filter, Search
+  Twitch, Youtube, Play, Clock, Users, TrendingUp, Filter, Search, Loader2
 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 
 interface Stream {
   id: string;
@@ -182,6 +182,156 @@ export default function GameStreaming() {
   const recordedStreams = filteredStreams.filter(s => !s.isLive);
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Radio className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Streaming</h1>
+                <p className="text-zinc-500 text-xs">{liveStreams.length} live now</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search */}
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-2.5 w-4 h-4 text-zinc-500" />
+            <input
+              placeholder="Search streams..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full pl-10 pr-4 py-2 ${theme.inputBg} border border-zinc-700 rounded-xl text-white text-sm`}
+            />
+          </div>
+
+          {/* Platform Pills */}
+          <div className="flex gap-2 mb-4">
+            {(["all", "twitch", "youtube"] as const).map((platform) => (
+              <button
+                key={platform}
+                onClick={() => setSelectedPlatform(platform)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium capitalize ${
+                  selectedPlatform === platform
+                    ? `${theme.activeBtn} text-white`
+                    : `${theme.cardBg} text-zinc-400 border ${theme.borderClass}`
+                }`}
+              >
+                {platform === "all" ? "All" : platform}
+              </button>
+            ))}
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 gap-2 mb-6">
+            {mockStats.slice(0, 2).map((stat, idx) => (
+              <div key={idx} className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-3`}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] text-zinc-500 uppercase">{stat.label}</span>
+                  {stat.icon}
+                </div>
+                <div className="text-lg font-bold text-white">{stat.value}</div>
+                {stat.change && <span className="text-[10px] text-green-400">{stat.change}</span>}
+              </div>
+            ))}
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Live Streams */}
+          {!loading && liveStreams.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Radio className="w-4 h-4 text-red-500 animate-pulse" />
+                <h2 className="text-white font-bold text-sm">Live Now ({liveStreams.length})</h2>
+              </div>
+              <div className="space-y-3">
+                {liveStreams.map((stream) => (
+                  <div
+                    key={stream.id}
+                    className={`${theme.cardBg} border-2 border-red-500/30 rounded-xl overflow-hidden active:scale-[0.98] transition-transform`}
+                  >
+                    {/* Thumbnail */}
+                    <div className="relative h-32 bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-3xl">
+                      {stream.thumbnail}
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                        <Radio className="w-2 h-2 animate-pulse" /> LIVE
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="p-3">
+                      <h3 className="text-white font-bold text-sm mb-1 line-clamp-2">{stream.title}</h3>
+                      <p className="text-[10px] text-zinc-400 mb-2">{stream.channel} • {stream.game}</p>
+                      <div className="flex items-center justify-between">
+                        <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                          <Eye className="w-3 h-3" /> {stream.viewers.toLocaleString()}
+                        </span>
+                        <Button className={`${theme.activeBtn} ${theme.hoverBtn} gap-1 text-xs`} size="sm">
+                          <Play className="w-3 h-3" /> Watch
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recorded Streams */}
+          {!loading && recordedStreams.length > 0 && (
+            <div>
+              <h2 className="text-white font-bold text-sm mb-3">Recorded</h2>
+              <div className="space-y-2">
+                {recordedStreams.map((stream) => (
+                  <div
+                    key={stream.id}
+                    className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-3 active:scale-[0.98] transition-transform`}
+                  >
+                    <div className="flex gap-3">
+                      <div className="w-20 h-14 bg-gradient-to-br from-zinc-700 to-zinc-900 rounded flex items-center justify-center text-xl flex-shrink-0 relative">
+                        {stream.thumbnail}
+                        {stream.duration && (
+                          <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[8px] px-1 rounded">
+                            {stream.duration}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-white font-medium text-xs mb-1 line-clamp-2">{stream.title}</h3>
+                        <p className="text-[10px] text-zinc-500">{stream.channel}</p>
+                        <div className="flex items-center gap-2 mt-1 text-[10px] text-zinc-500">
+                          <span className="flex items-center gap-1">
+                            <Eye className="w-2 h-2" /> {stream.viewers.toLocaleString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-2 h-2" /> {stream.likes.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 text-white">

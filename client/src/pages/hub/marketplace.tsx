@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, ShoppingCart, Star, Plus, Loader2 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -77,6 +77,106 @@ export default function Marketplace() {
   };
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <ShoppingCart className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Marketplace</h1>
+                <p className="text-zinc-500 text-xs">{listings.length} items</p>
+              </div>
+            </div>
+            <div className={`${theme.cardBg} px-3 py-1.5 rounded-lg border ${theme.borderClass}`}>
+              <p className={`text-sm font-bold ${theme.primaryClass}`}>{balance} LP</p>
+            </div>
+          </div>
+
+          {/* Category Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {["all", "code", "achievement", "service", "credential"].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedCategory === cat
+                    ? `${theme.activeBtn} text-white`
+                    : `${theme.cardBg} text-zinc-400 border ${theme.borderClass}`
+                }`}
+              >
+                {cat === "all" ? "All" : cat.charAt(0).toUpperCase() + cat.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Listings Grid */}
+          {!loading && (
+            <div className="space-y-3">
+              {filteredListings.length === 0 ? (
+                <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                  <ShoppingCart className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                  <p className="text-zinc-500 text-sm">No items found</p>
+                </div>
+              ) : (
+                filteredListings.map((listing) => (
+                  <div
+                    key={listing.id}
+                    className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 active:scale-[0.98] transition-transform`}
+                  >
+                    {/* Category Badge */}
+                    <div className="mb-2">
+                      <span className={`${getCategoryColor(listing.category)} text-white text-[10px] font-bold px-2 py-0.5 rounded capitalize`}>
+                        {listing.category}
+                      </span>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-white font-bold text-sm mb-1">{listing.title}</h3>
+                    <p className="text-zinc-400 text-xs mb-2">by {listing.seller}</p>
+
+                    {/* Rating & Stats */}
+                    <div className="flex items-center gap-3 mb-3 text-xs text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+                        {listing.rating}
+                      </span>
+                      <span>{listing.purchases} sold</span>
+                    </div>
+
+                    {/* Price & Buy */}
+                    <div className="flex items-center justify-between">
+                      <div className={`text-lg font-bold ${theme.primaryClass}`}>
+                        {listing.price}
+                        <span className="text-xs text-zinc-500 ml-1">LP</span>
+                      </div>
+                      <Button className={`${theme.activeBtn} ${theme.hoverBtn} gap-1 text-xs`} size="sm">
+                        <ShoppingCart className="w-3 h-3" /> Buy
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">

@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Settings, Bell, Lock, Palette, HardDrive, User, Loader2 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -90,6 +90,189 @@ export default function SettingsWorkspace() {
   };
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Settings className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Settings</h1>
+                <p className="text-zinc-500 text-xs">Workspace preferences</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Settings Sections */}
+          {!loading && (
+            <div className="space-y-4">
+              {/* Appearance */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Palette className={`w-4 h-4 ${theme.iconClass}`} />
+                  <h2 className="text-white font-bold text-sm">Appearance</h2>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Theme</label>
+                    <select
+                      value={settings.theme}
+                      onChange={(e) => handleChange("theme", e.target.value)}
+                      className={`w-full ${theme.inputBg} border border-zinc-700 text-white text-sm rounded-lg px-3 py-2`}
+                    >
+                      <option value="dark">Dark</option>
+                      <option value="light">Light</option>
+                      <option value="auto">Auto (System)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Font Size</label>
+                    <select
+                      value={settings.fontSize}
+                      onChange={(e) => handleChange("fontSize", e.target.value)}
+                      className={`w-full ${theme.inputBg} border border-zinc-700 text-white text-sm rounded-lg px-3 py-2`}
+                    >
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between pt-2">
+                    <span className="text-xs text-zinc-400">Collapse Sidebar</span>
+                    <button
+                      onClick={() => handleToggle("sidebarCollapsed")}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        settings.sidebarCollapsed ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Notifications */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Bell className={`w-4 h-4 ${theme.iconClass}`} />
+                  <h2 className="text-white font-bold text-sm">Notifications</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-zinc-300">Push Notifications</p>
+                      <p className="text-[10px] text-zinc-500">Get alerts for events</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggle("notificationsEnabled")}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        settings.notificationsEnabled ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-zinc-300">Email Notifications</p>
+                      <p className="text-[10px] text-zinc-500">Receive email digests</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggle("emailNotifications")}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        settings.emailNotifications ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'
+                      }`}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs text-zinc-300">Sound Effects</p>
+                      <p className="text-[10px] text-zinc-500">Play notification sounds</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggle("soundEnabled")}
+                      className={`w-10 h-5 rounded-full transition-colors ${
+                        settings.soundEnabled ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'
+                      }`}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Editor */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <HardDrive className={`w-4 h-4 ${theme.iconClass}`} />
+                  <h2 className="text-white font-bold text-sm">Editor</h2>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-zinc-300">Auto-save</p>
+                    <p className="text-[10px] text-zinc-500">Automatically save work</p>
+                  </div>
+                  <button
+                    onClick={() => handleToggle("autoSave")}
+                    className={`w-10 h-5 rounded-full transition-colors ${
+                      settings.autoSave ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'
+                    }`}
+                  />
+                </div>
+              </div>
+
+              {/* Privacy */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <Lock className={`w-4 h-4 ${theme.iconClass}`} />
+                  <h2 className="text-white font-bold text-sm">Privacy</h2>
+                </div>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs text-zinc-400 mb-1.5">Profile Privacy</label>
+                    <select
+                      value={settings.privacyLevel}
+                      onChange={(e) => handleChange("privacyLevel", e.target.value)}
+                      className={`w-full ${theme.inputBg} border border-zinc-700 text-white text-sm rounded-lg px-3 py-2`}
+                    >
+                      <option value="private">Private (Only you)</option>
+                      <option value="friends">Friends Only</option>
+                      <option value="public">Public</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Account */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <div className="flex items-center gap-2 mb-4">
+                  <User className={`w-4 h-4 ${theme.iconClass}`} />
+                  <h2 className="text-white font-bold text-sm">Account</h2>
+                </div>
+                <div className="space-y-3">
+                  <div className={`${theme.inputBg} p-3 rounded-lg`}>
+                    <p className="text-[10px] text-zinc-500">Email</p>
+                    <p className="text-white text-xs font-medium">user@example.com</p>
+                  </div>
+                  <Button variant="outline" className={`w-full border-red-600 text-red-400 text-xs`} size="sm">
+                    Log Out
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">

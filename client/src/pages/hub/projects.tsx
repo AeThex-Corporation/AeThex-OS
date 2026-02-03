@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Trash2, ExternalLink, Github, Globe, Loader2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, ExternalLink, Github, Globe, Loader2, FolderKanban } from "lucide-react";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -104,7 +104,168 @@ export default function Projects() {
   };
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
 
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <FolderKanban className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Projects</h1>
+                <p className="text-zinc-500 text-xs">{projects.length} total</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setShowForm(!showForm)}
+              className={`${theme.activeBtn} ${theme.hoverBtn} gap-2`}
+              size="sm"
+            >
+              <Plus className="w-4 h-4" />
+              New
+            </Button>
+          </div>
+
+          {/* Add Project Form */}
+          {showForm && (
+            <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 mb-6`}>
+              <h2 className={`text-sm font-bold ${theme.secondaryClass} mb-4`}>Create New Project</h2>
+              <div className="space-y-3">
+                <Input
+                  placeholder="Project Title"
+                  value={newProject.title}
+                  onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
+                  className={`${theme.inputBg} border-zinc-700 text-white text-sm`}
+                />
+                <textarea
+                  placeholder="Description..."
+                  value={newProject.description}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                  className={`w-full ${theme.inputBg} border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:${theme.activeBorder}`}
+                  rows={2}
+                />
+                <Input
+                  placeholder="Technologies (comma-separated)"
+                  value={newProject.technologies}
+                  onChange={(e) => setNewProject({ ...newProject, technologies: e.target.value })}
+                  className={`${theme.inputBg} border-zinc-700 text-white text-sm`}
+                />
+                <div className="flex gap-2">
+                  <Button onClick={handleAddProject} className={`flex-1 ${theme.activeBtn} ${theme.hoverBtn}`} size="sm">
+                    Create
+                  </Button>
+                  <Button onClick={() => setShowForm(false)} variant="outline" className="border-zinc-700 text-zinc-400" size="sm">
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Projects Grid */}
+          {!loading && (
+            <div className="space-y-3">
+              {projects.length === 0 ? (
+                <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                  <FolderKanban className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                  <p className="text-zinc-500 text-sm">No projects yet</p>
+                  <p className="text-zinc-600 text-xs mt-1">Create your first project to get started</p>
+                </div>
+              ) : (
+                projects.map((project) => (
+                  <div
+                    key={project.id}
+                    className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 active:scale-[0.98] transition-transform`}
+                  >
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`${getStatusColor(project.status)} text-white text-[10px] font-bold px-2 py-0.5 rounded capitalize`}>
+                            {project.status}
+                          </span>
+                        </div>
+                        <h3 className="text-white font-bold text-sm">{project.title}</h3>
+                      </div>
+                      <button onClick={() => deleteProject(project.id)} className="text-red-400 p-2 -m-2">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Description */}
+                    {project.description && (
+                      <p className="text-zinc-400 text-xs mb-3 line-clamp-2">{project.description}</p>
+                    )}
+
+                    {/* Progress */}
+                    <div className="mb-3">
+                      <div className="flex justify-between mb-1">
+                        <span className="text-xs text-zinc-500">Progress</span>
+                        <span className={`text-xs ${theme.primaryClass}`}>{project.progress}%</span>
+                      </div>
+                      <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${theme.isFoundation ? 'bg-red-500' : 'bg-blue-500'}`}
+                          style={{ width: `${project.progress}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Technologies */}
+                    {Array.isArray(project.tech_stack) && project.tech_stack.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-3">
+                        {project.tech_stack.slice(0, 4).map((tech) => (
+                          <span key={tech} className={`${theme.bgAccent} ${theme.primaryClass} text-[10px] px-2 py-0.5 rounded`}>
+                            {tech}
+                          </span>
+                        ))}
+                        {project.tech_stack.length > 4 && (
+                          <span className="text-zinc-500 text-[10px] px-2 py-0.5">+{project.tech_stack.length - 4}</span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Links */}
+                    {(project.live_url || project.github_url) && (
+                      <div className="flex gap-2">
+                        {project.live_url && (
+                          <a href={project.live_url} target="_blank" rel="noopener noreferrer"
+                            className={`flex-1 flex items-center justify-center gap-1.5 ${theme.activeBtn} text-white text-xs font-medium py-2 rounded-lg`}>
+                            <Globe className="w-3.5 h-3.5" /> Live
+                          </a>
+                        )}
+                        {project.github_url && (
+                          <a href={project.github_url} target="_blank" rel="noopener noreferrer"
+                            className="flex-1 flex items-center justify-center gap-1.5 bg-zinc-800 text-white text-xs font-medium py-2 rounded-lg">
+                            <Github className="w-3.5 h-3.5" /> Code
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Desktop layout (original)
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Headers - hidden when embedded in OS iframe */}

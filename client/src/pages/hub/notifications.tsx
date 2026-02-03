@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Bell, Check, Trash2, Filter, CheckCircle, Loader2 } from "lucide-react";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -121,6 +122,148 @@ export default function Notifications() {
     if (days < 7) return `${days}d ago`;
     return date.toLocaleDateString();
   };
+
+  const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Bell className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Notifications</h1>
+                <p className="text-zinc-500 text-xs">
+                  {unreadCount > 0 ? `${unreadCount} unread` : "All caught up!"}
+                </p>
+              </div>
+            </div>
+            {unreadCount > 0 && (
+              <Button
+                onClick={handleMarkAllAsRead}
+                variant="outline"
+                size="sm"
+                className={`border ${theme.borderClass} text-xs gap-1`}
+              >
+                <CheckCircle className="w-3 h-3" />
+                All
+              </Button>
+            )}
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {[
+              { key: null, label: "All" },
+              { key: "achievement", label: "🏆" },
+              { key: "message", label: "💬" },
+              { key: "event", label: "📅" },
+              { key: "marketplace", label: "🛍️" }
+            ].map((filter) => (
+              <button
+                key={filter.key || "all"}
+                onClick={() => setFilterType(filter.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  filterType === filter.key
+                    ? `${theme.activeBtn} text-white`
+                    : `${theme.cardBg} text-zinc-400 border ${theme.borderClass}`
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Notifications List */}
+          {!loading && (
+            <div className="space-y-2">
+              {filteredNotifications.length === 0 ? (
+                <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                  <Bell className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                  <p className="text-zinc-500 text-sm">No notifications</p>
+                </div>
+              ) : (
+                filteredNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className={`${theme.cardBg} border-l-4 ${
+                      notification.read
+                        ? `border ${theme.borderClass} border-l-zinc-600`
+                        : `border ${theme.borderClass} ${theme.isFoundation ? 'border-l-red-400' : 'border-l-blue-400'}`
+                    } rounded-xl p-4 active:scale-[0.98] transition-all`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="text-xl mt-0.5">{getTypeIcon(notification.type)}</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="text-white font-medium text-sm">{notification.title}</h3>
+                          {!notification.read && (
+                            <span className={`w-2 h-2 rounded-full ${theme.isFoundation ? 'bg-red-400' : 'bg-blue-400'}`} />
+                          )}
+                        </div>
+                        <p className="text-zinc-400 text-xs mb-2 line-clamp-2">{notification.description}</p>
+                        <p className="text-zinc-600 text-[10px]">{formatTime(notification.timestamp)}</p>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        {!notification.read && (
+                          <button
+                            onClick={() => handleMarkAsRead(notification.id)}
+                            className={`p-1.5 rounded ${theme.bgAccent}`}
+                          >
+                            <Check className={`w-3 h-3 ${theme.iconClass}`} />
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(notification.id)}
+                          className="p-1.5 rounded bg-red-500/10"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-400" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Notification Preferences */}
+          <div className={`mt-6 ${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+            <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+              <Filter className={`w-4 h-4 ${theme.iconClass}`} />
+              Preferences
+            </h3>
+            <div className="space-y-3">
+              {[
+                { label: "Achievement Notifications", enabled: true },
+                { label: "Message Alerts", enabled: true },
+                { label: "Event Reminders", enabled: true },
+                { label: "Marketplace Updates", enabled: false }
+              ].map((pref, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <label className="text-xs text-zinc-400">{pref.label}</label>
+                  <div className={`w-8 h-4 rounded-full ${pref.enabled ? (theme.isFoundation ? 'bg-red-600' : 'bg-blue-600') : 'bg-zinc-700'}`} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 p-6">

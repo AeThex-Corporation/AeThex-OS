@@ -58,22 +58,29 @@ public class MainActivity extends BridgeActivity {
 
 	private void enableImmersiveMode() {
 		View decorView = getWindow().getDecorView();
+		
+		// Full immersive mode - hide everything
 		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
 		
 		WindowInsetsControllerCompat controller = WindowCompat.getInsetsController(getWindow(), decorView);
 		if (controller != null) {
-			// Hide both status and navigation bars
+			// Hide BOTH status bar and navigation bar completely
 			controller.hide(WindowInsetsCompat.Type.systemBars());
-			// Make them sticky so they stay hidden
+			// Swipe from edge to temporarily show bars
 			controller.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
 		}
 
-		// Additional flags for fullscreen
+		// Set bars to transparent when they do show
+		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+		getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+
+		// Keep screen on + extend into cutout areas
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-		getWindow().setFlags(
-			WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-			WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
-		);
+		
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+			getWindow().getAttributes().layoutInDisplayCutoutMode = 
+				WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+		}
 	}
 }
 

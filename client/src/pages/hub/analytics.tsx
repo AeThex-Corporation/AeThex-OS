@@ -16,6 +16,7 @@ import {
   Download,
   Loader2
 } from "lucide-react";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -127,6 +128,135 @@ export default function Analytics() {
   const maxValue = Math.max(
     ...activityData.map(d => Math.max(d.projects, d.messages, d.earnings / 50, d.achievements))
   );
+
+  const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <BarChart3 className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Analytics</h1>
+                <p className="text-zinc-500 text-xs">Track your growth</p>
+              </div>
+            </div>
+            <select
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className={`px-3 py-1.5 ${theme.inputBg} border border-zinc-700 rounded-lg text-xs text-zinc-300`}
+            >
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+              <option value="90d">90 days</option>
+            </select>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          {!loading && (
+            <>
+              <div className="grid grid-cols-2 gap-2 mb-6">
+                {stats.slice(0, 4).map((stat, idx) => (
+                  <div key={idx} className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-3`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className={`p-2 bg-zinc-800 rounded-lg ${stat.color}`}>
+                        {stat.icon}
+                      </div>
+                      <span className="text-[10px] font-semibold text-green-400 bg-green-500/10 px-1.5 py-0.5 rounded">
+                        +{stat.change}%
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 mb-1">{stat.label}</p>
+                    <p className="text-lg font-bold text-white">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Activity Chart */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 mb-4`}>
+                <h3 className="text-white font-bold text-sm mb-4 flex items-center gap-2">
+                  <TrendingUp className={`w-4 h-4 ${theme.iconClass}`} />
+                  Weekly Activity
+                </h3>
+                <div className="flex items-end justify-between gap-1 h-20 mb-2">
+                  {activityData.map((data, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center">
+                      <div
+                        className={`w-full ${theme.isFoundation ? 'bg-gradient-to-t from-red-500/40 to-red-500' : 'bg-gradient-to-t from-blue-500/40 to-blue-500'} rounded-t`}
+                        style={{ height: `${(data.projects / maxValue) * 60}px` }}
+                      />
+                      <p className="text-[8px] text-zinc-500 mt-1">{data.date}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Top Activities */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 mb-4`}>
+                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+                  <Target className={`w-4 h-4 ${theme.iconClass}`} />
+                  Top Activities
+                </h3>
+                <div className="space-y-2">
+                  {topActivities.slice(0, 3).map((activity, idx) => (
+                    <div key={idx} className="bg-zinc-800/50 p-3 rounded-lg">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-zinc-300">{activity.name}</span>
+                        <span className="text-[10px] text-green-400 font-semibold">{activity.growth}</span>
+                      </div>
+                      <div className="text-sm font-bold text-white mt-1">{activity.count}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Goals Progress */}
+              <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4`}>
+                <h3 className="text-white font-bold text-sm mb-3 flex items-center gap-2">
+                  <Zap className={`w-4 h-4 ${theme.iconClass}`} />
+                  Goals
+                </h3>
+                <div className="space-y-3">
+                  {[
+                    { goal: "Complete 15 Projects", current: 12, target: 15 },
+                    { goal: "Earn 5,000 LP", current: 2450, target: 5000 },
+                    { goal: "Unlock 30 Achievements", current: 23, target: 30 }
+                  ].map((item, idx) => (
+                    <div key={idx}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-zinc-400">{item.goal}</span>
+                        <span className="text-[10px] text-zinc-500">{item.current}/{item.target}</span>
+                      </div>
+                      <div className="w-full bg-zinc-800 rounded-full h-1.5">
+                        <div
+                          className={`h-1.5 rounded-full ${theme.isFoundation ? 'bg-red-500' : 'bg-blue-500'}`}
+                          style={{ width: `${(item.current / item.target) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-slate-50 p-6">

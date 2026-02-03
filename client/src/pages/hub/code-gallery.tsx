@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, TrendingUp, Code, Star, Eye, Heart, Share2, Loader2 } from "lucide-react";
-import { isEmbedded } from "@/lib/embed-utils";
+import { isEmbedded, getResponsiveStyles } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -55,6 +55,120 @@ export default function CodeGallery() {
   };
 
   const embedded = isEmbedded();
+  const { useMobileStyles, theme } = getResponsiveStyles();
+
+  // Mobile-optimized layout when embedded or on mobile device
+  if (useMobileStyles) {
+    return (
+      <div className="min-h-screen" style={{ background: theme.gradientBg }}>
+        <div className="p-4 pb-20">
+          {/* Mobile Header */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-xl ${theme.bgAccent} border ${theme.borderClass} flex items-center justify-center`}>
+                <Code className={`w-5 h-5 ${theme.iconClass}`} />
+              </div>
+              <div>
+                <h1 className={`${theme.primaryClass} font-bold text-lg`}>Code Gallery</h1>
+                <p className="text-zinc-500 text-xs">{snippets.length} snippets</p>
+              </div>
+            </div>
+            <Button className={`${theme.activeBtn} ${theme.hoverBtn} gap-1`} size="sm">
+              Share
+            </Button>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className={`w-6 h-6 ${theme.iconClass} animate-spin`} />
+            </div>
+          )}
+
+          {/* Snippets List */}
+          {!loading && (
+            <div className="space-y-3">
+              {snippets.length === 0 ? (
+                <div className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-8 text-center`}>
+                  <Code className={`w-12 h-12 ${theme.iconClass} mx-auto mb-3 opacity-50`} />
+                  <p className="text-zinc-500 text-sm">No snippets yet</p>
+                  <p className="text-zinc-600 text-xs mt-1">Share your first code snippet</p>
+                </div>
+              ) : (
+                snippets.map((snippet) => (
+                  <div
+                    key={snippet.id}
+                    onClick={() => setSelectedSnippet(snippet)}
+                    className={`${theme.cardBg} border ${theme.borderClass} rounded-xl p-4 active:scale-[0.98] transition-all ${
+                      selectedSnippet?.id === snippet.id ? `border-2 ${theme.isFoundation ? 'border-red-500' : 'border-blue-500'}` : ''
+                    }`}
+                  >
+                    {/* Language & Category */}
+                    <div className="flex gap-2 mb-2">
+                      <span className={`${theme.isFoundation ? 'bg-red-500' : 'bg-blue-500'} text-white text-[10px] px-2 py-0.5 rounded`}>
+                        {snippet.language.toUpperCase()}
+                      </span>
+                      <span className="bg-purple-500 text-white text-[10px] px-2 py-0.5 rounded capitalize">
+                        {snippet.category}
+                      </span>
+                    </div>
+
+                    {/* Title & Author */}
+                    <h3 className="text-white font-bold text-sm mb-1">{snippet.title}</h3>
+                    <p className="text-zinc-400 text-xs mb-2">by {snippet.creator}</p>
+
+                    {/* Stats */}
+                    <div className="flex gap-4 text-xs text-zinc-500">
+                      <span className="flex items-center gap-1">
+                        <Eye className="w-3 h-3" /> {snippet.views}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Heart className="w-3 h-3" /> {snippet.likes}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          {/* Selected Snippet Preview */}
+          {selectedSnippet && (
+            <div className={`mt-4 ${theme.cardBg} border ${theme.borderClass} rounded-xl overflow-hidden`}>
+              <div className={`px-4 py-3 border-b ${theme.borderClass} flex items-center justify-between`}>
+                <span className="text-white font-medium text-sm">{selectedSnippet.title}</span>
+                <button onClick={() => setSelectedSnippet(null)} className="text-zinc-400">✕</button>
+              </div>
+              
+              {/* Code Preview */}
+              <div className="bg-zinc-950 p-4 font-mono text-xs text-zinc-300 overflow-x-auto max-h-40">
+                {selectedSnippet.code}
+              </div>
+
+              {/* Tags */}
+              <div className="px-4 py-3 flex flex-wrap gap-1">
+                {selectedSnippet.tags.map((tag) => (
+                  <span key={tag} className={`${theme.bgAccent} ${theme.primaryClass} text-[10px] px-2 py-0.5 rounded`}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+
+              {/* Actions */}
+              <div className={`px-4 py-3 border-t ${theme.borderClass} flex gap-2`}>
+                <Button className={`flex-1 ${theme.activeBtn} ${theme.hoverBtn} gap-1 text-xs`} size="sm">
+                  <Heart className="w-3 h-3" /> Like
+                </Button>
+                <Button variant="outline" className="flex-1 border-zinc-700 text-zinc-300 gap-1 text-xs" size="sm">
+                  <Share2 className="w-3 h-3" /> Share
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">

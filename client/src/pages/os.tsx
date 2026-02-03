@@ -171,8 +171,8 @@ export default function AeThexOS() {
   const native = useNativeFeatures();
   const biometric = useBiometricAuth();
   
-  // Skip boot sequence on mobile
-  const [isBooting, setIsBooting] = useState(!layout.isMobile);
+  // Mobile also gets a quick boot sequence
+  const [isBooting, setIsBooting] = useState(true);
   const [bootProgress, setBootProgress] = useState(0);
   const [bootStep, setBootStep] = useState('');
   const [windows, setWindows] = useState<WindowState[]>([]);
@@ -869,6 +869,8 @@ export default function AeThexOS() {
         theme={theme}
         setTheme={setTheme}
         savedLayouts={savedLayouts}
+        clearanceMode={clearanceMode}
+        setClearanceMode={setClearanceMode}
         onSaveLayout={(name) => {
           const layout: DesktopLayout = {
             name,
@@ -959,6 +961,122 @@ export default function AeThexOS() {
       high: 'bg-red-500/20 border-red-500/50'
     };
     
+    // Mobile boot screen - simplified and themed
+    if (layout.isMobile) {
+      const isFoundation = clearanceMode === 'foundation';
+      const bootTheme = {
+        primary: isFoundation ? 'text-red-500' : 'text-blue-500',
+        secondary: isFoundation ? 'text-amber-400' : 'text-slate-300',
+        glow: isFoundation ? 'from-red-600 to-amber-500' : 'from-blue-600 to-cyan-400',
+        bar: isFoundation ? 'from-red-600 via-red-500 to-amber-500' : 'from-blue-600 via-blue-500 to-cyan-400',
+      };
+      
+      return (
+        <div className="h-screen w-screen bg-black flex flex-col items-center justify-center relative overflow-hidden">
+          {/* Animated background grid */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `linear-gradient(${isFoundation ? 'rgba(220,38,38,0.3)' : 'rgba(59,130,246,0.3)'} 1px, transparent 1px),
+                               linear-gradient(90deg, ${isFoundation ? 'rgba(220,38,38,0.3)' : 'rgba(59,130,246,0.3)'} 1px, transparent 1px)`,
+              backgroundSize: '50px 50px',
+              animation: 'pulse 2s ease-in-out infinite'
+            }} />
+          </div>
+          
+          {/* Logo with animated glow */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative mb-8"
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${bootTheme.glow} rounded-3xl blur-2xl opacity-50 animate-pulse`} />
+            <div className={`relative w-24 h-24 bg-gradient-to-br ${bootTheme.glow} rounded-3xl flex items-center justify-center`}>
+              <div className="absolute inset-1 bg-black rounded-2xl" />
+              <span className="relative text-4xl font-display font-bold text-white z-10">Æ</span>
+            </div>
+          </motion.div>
+          
+          {/* Brand name */}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className={`text-3xl font-display font-bold ${bootTheme.primary} mb-2`}
+          >
+            AETHEX OS
+          </motion.h1>
+          
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className={`text-sm font-mono ${bootTheme.secondary} opacity-60 uppercase tracking-widest mb-12`}
+          >
+            {isFoundation ? 'FOUNDATION' : 'CORPORATION'}
+          </motion.p>
+          
+          {/* Boot step with cursor */}
+          <motion.div 
+            key={bootStep}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className={`${bootTheme.primary} font-mono text-xs mb-6 h-5 text-center px-8`}
+          >
+            {bootStep}
+            <motion.span
+              animate={{ opacity: [1, 0] }}
+              transition={{ duration: 0.5, repeat: Infinity }}
+            >
+              _
+            </motion.span>
+          </motion.div>
+          
+          {/* Progress bar */}
+          <div className="w-64 px-4">
+            <div className="flex justify-between text-[10px] font-mono text-white/40 mb-2">
+              <span>INITIALIZING</span>
+              <span>{bootProgress}%</span>
+            </div>
+            <div className="h-1.5 bg-zinc-900 rounded-full overflow-hidden border border-white/10">
+              <motion.div
+                className={`h-full bg-gradient-to-r ${bootTheme.bar} relative`}
+                initial={{ width: 0 }}
+                animate={{ width: `${bootProgress}%` }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse" />
+              </motion.div>
+            </div>
+          </div>
+          
+          {/* Continue button when ready */}
+          <AnimatePresence>
+            {showLoginPrompt && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="mt-12"
+              >
+                <motion.button
+                  onClick={handleGuestContinue}
+                  whileTap={{ scale: 0.95 }}
+                  className={`px-8 py-4 bg-gradient-to-r ${bootTheme.bar} rounded-2xl font-mono font-bold uppercase tracking-wider text-black shadow-lg`}
+                >
+                  Enter System
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
+          {/* Version info */}
+          <div className="absolute bottom-8 text-white/20 text-[10px] font-mono">
+            v4.2.1 • {isFoundation ? 'FOUNDATION' : 'CORP'} BUILD
+          </div>
+        </div>
+      );
+    }
+    
+    // Desktop boot screen
     return (
       <div className="h-screen w-screen bg-black relative overflow-hidden">
         {/* Scan lines overlay */}
@@ -1221,23 +1339,31 @@ export default function AeThexOS() {
   useEffect(() => {
     if (!layout.isMobile || !isMobile()) return;
 
-    const backHandler = CapacitorApp.addListener('backButton', () => {
-      // Get current active windows (non-minimized)
-      const activeWindows = windows.filter(w => !w.minimized);
-      
-      if (activeWindows.length > 0) {
-        // Close the topmost window
-        const topWindow = activeWindows[activeWindows.length - 1];
-        closeWindow(topWindow.id);
-        impact('light');
-      } else {
-        // No windows open - minimize app (don't exit)
-        CapacitorApp.minimizeApp();
-      }
-    });
+    let backHandler: any = null;
+
+    const setupBackHandler = async () => {
+      backHandler = await CapacitorApp.addListener('backButton', () => {
+        // Get current active windows (non-minimized)
+        const activeWindows = windows.filter(w => !w.minimized);
+        
+        if (activeWindows.length > 0) {
+          // Close the topmost window
+          const topWindow = activeWindows[activeWindows.length - 1];
+          closeWindow(topWindow.id);
+          impact('light');
+        } else {
+          // No windows open - minimize app (don't exit)
+          CapacitorApp.minimizeApp();
+        }
+      });
+    };
+
+    setupBackHandler();
 
     return () => {
-      backHandler.remove();
+      if (backHandler && typeof backHandler.remove === 'function') {
+        backHandler.remove();
+      }
     };
   }, [layout.isMobile, windows, closeWindow, impact]);
 
@@ -1262,9 +1388,16 @@ export default function AeThexOS() {
     };
 
     return (
-      <div className="h-screen w-screen overflow-hidden flex flex-col" style={{ background: mobileTheme.gradientBg }}>
+      <div 
+        className="h-screen w-screen overflow-hidden flex flex-col" 
+        style={{ 
+          background: mobileTheme.gradientBg,
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
         {/* AeThex Mobile Status Bar */}
-        <div className={`relative h-10 bg-black/90 ${mobileTheme.borderClass} border-b shrink-0`} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className={`relative h-10 bg-black/80 backdrop-blur-md ${mobileTheme.borderClass} border-b shrink-0`}>
           <div className="relative flex items-center justify-between px-4 h-full">
             <div className="flex items-center gap-3">
               <span className={`${mobileTheme.primaryClass} font-bold text-sm font-mono`}>AeThex</span>
@@ -1425,10 +1558,9 @@ export default function AeThexOS() {
           </AnimatePresence>
         </div>
 
-        {/* Bottom Navigation */}
+        {/* Bottom Navigation - transparent for gesture nav integration */}
         <div 
-          className={`bg-black/95 border-t ${mobileTheme.borderClass} shrink-0`}
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          className={`bg-black/80 backdrop-blur-md border-t ${mobileTheme.borderClass} shrink-0`}
         >
           <div className="flex items-center justify-around py-2 px-4">
             <button
@@ -4951,7 +5083,7 @@ function PitchApp({ onNavigate }: { onNavigate: () => void }) {
   );
 }
 
-function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, secretsUnlocked, theme, setTheme, savedLayouts, onSaveLayout, onLoadLayout, onDeleteLayout }: { 
+function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, secretsUnlocked, theme, setTheme, savedLayouts, onSaveLayout, onLoadLayout, onDeleteLayout, clearanceMode, setClearanceMode }: { 
   wallpaper: typeof WALLPAPERS[0]; 
   setWallpaper: (w: typeof WALLPAPERS[0]) => void;
   soundEnabled: boolean;
@@ -4963,11 +5095,210 @@ function SettingsApp({ wallpaper, setWallpaper, soundEnabled, setSoundEnabled, s
   onSaveLayout: (name: string) => void;
   onLoadLayout: (layout: DesktopLayout) => void;
   onDeleteLayout: (name: string) => void;
+  clearanceMode?: 'foundation' | 'corp';
+  setClearanceMode?: (mode: 'foundation' | 'corp') => void;
 }) {
   const [layoutName, setLayoutName] = useState('');
   const [activeTab, setActiveTab] = useState<'appearance' | 'layouts' | 'system'>('appearance');
   const visibleWallpapers = WALLPAPERS.filter(wp => !wp.secret || secretsUnlocked);
+  const isMobileView = typeof window !== 'undefined' && window.innerWidth < 768;
   
+  // Mobile-specific theme colors based on clearance mode
+  const isFoundation = clearanceMode === 'foundation';
+  const mobileTheme = {
+    primary: isFoundation ? 'rgb(220, 38, 38)' : 'rgb(59, 130, 246)',
+    primaryClass: isFoundation ? 'text-red-500' : 'text-blue-500',
+    secondaryClass: isFoundation ? 'text-amber-400' : 'text-slate-300',
+    borderClass: isFoundation ? 'border-red-900/50' : 'border-blue-900/50',
+    bgAccent: isFoundation ? 'bg-red-900/20' : 'bg-blue-900/20',
+    iconClass: isFoundation ? 'text-red-400' : 'text-blue-400',
+    activeBtn: isFoundation ? 'bg-red-600' : 'bg-blue-500',
+    activeBorder: isFoundation ? 'border-red-500' : 'border-blue-500',
+  };
+
+  // Mobile Settings UI
+  if (isMobileView) {
+    return (
+      <div className="h-full bg-black flex flex-col overflow-hidden">
+        {/* Mobile Tab Bar */}
+        <div className={`flex border-b ${mobileTheme.borderClass} bg-black/90 shrink-0`}>
+          {(['appearance', 'system'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab as any)}
+              className={`flex-1 px-4 py-4 text-xs font-mono uppercase tracking-wider transition-colors ${
+                activeTab === tab 
+                  ? `${mobileTheme.primaryClass} border-b-2 ${mobileTheme.activeBorder}` 
+                  : 'text-zinc-500'
+              }`}
+            >
+              {tab}
+            </button>
+          ))}
+        </div>
+
+        {/* Mobile Content */}
+        <div className="flex-1 overflow-auto p-4 pb-20">
+          {activeTab === 'appearance' && (
+            <div className="space-y-6">
+              {/* Theme Toggle */}
+              {setClearanceMode && (
+                <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                  <div className={`text-xs ${mobileTheme.secondaryClass} uppercase tracking-wider mb-3 font-bold`}>
+                    Identity Mode
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => setClearanceMode('foundation')}
+                      className={`p-4 rounded-xl border transition-all ${
+                        clearanceMode === 'foundation' 
+                          ? 'border-red-500 bg-red-900/30' 
+                          : 'border-zinc-800 bg-zinc-900/50'
+                      }`}
+                    >
+                      <div className="text-red-500 font-bold text-sm mb-1">Foundation</div>
+                      <div className="text-zinc-500 text-xs">Red & Gold</div>
+                    </button>
+                    <button
+                      onClick={() => setClearanceMode('corp')}
+                      className={`p-4 rounded-xl border transition-all ${
+                        clearanceMode === 'corp' 
+                          ? 'border-blue-500 bg-blue-900/30' 
+                          : 'border-zinc-800 bg-zinc-900/50'
+                      }`}
+                    >
+                      <div className="text-blue-500 font-bold text-sm mb-1">Corporation</div>
+                      <div className="text-zinc-500 text-xs">Blue & Silver</div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Accent Color */}
+              <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                <div className={`text-xs ${mobileTheme.secondaryClass} uppercase tracking-wider mb-3 font-bold`}>
+                  Accent Color
+                </div>
+                <div className="grid grid-cols-6 gap-3">
+                  {ACCENT_COLORS.map(color => (
+                    <button
+                      key={color.id}
+                      onClick={() => setTheme({ ...theme, accentColor: color.id })}
+                      className={`w-12 h-12 rounded-xl transition-all ${color.bg} ${
+                        theme.accentColor === color.id 
+                          ? 'ring-2 ring-white ring-offset-2 ring-offset-black scale-110' 
+                          : 'active:scale-95'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Wallpaper Selection */}
+              <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                <div className={`text-xs ${mobileTheme.secondaryClass} uppercase tracking-wider mb-3 font-bold`}>
+                  Wallpaper {secretsUnlocked && <span className="text-yellow-400 ml-2">✨ UNLOCKED</span>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  {visibleWallpapers.map(wp => (
+                    <button
+                      key={wp.id}
+                      onClick={() => setWallpaper(wp)}
+                      className={`p-3 rounded-xl border transition-all active:scale-95 ${
+                        wallpaper.id === wp.id 
+                          ? `${mobileTheme.activeBorder} ${mobileTheme.bgAccent}` 
+                          : wp.secret 
+                            ? 'border-yellow-500/30' 
+                            : 'border-zinc-800'
+                      }`}
+                    >
+                      <div className="w-full h-16 rounded-lg mb-2" style={{ background: wp.bg }} />
+                      <div className="text-xs text-zinc-300 font-medium">{wp.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Transparency */}
+              <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                <div className={`text-xs ${mobileTheme.secondaryClass} uppercase tracking-wider mb-3 font-bold`}>
+                  Transparency
+                </div>
+                <input
+                  type="range"
+                  min="50"
+                  max="100"
+                  value={theme.transparency}
+                  onChange={e => setTheme({ ...theme, transparency: parseInt(e.target.value) })}
+                  className={`w-full h-2 rounded-full appearance-none bg-zinc-800 ${isFoundation ? 'accent-red-500' : 'accent-blue-500'}`}
+                />
+                <div className="flex justify-between text-xs text-zinc-500 mt-2">
+                  <span>Glass</span>
+                  <span className={mobileTheme.primaryClass}>{theme.transparency}%</span>
+                  <span>Solid</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'system' && (
+            <div className="space-y-4">
+              {/* Sound Toggle */}
+              <div className={`flex items-center justify-between p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                <div>
+                  <div className="text-white text-sm font-medium">Sound Effects</div>
+                  <div className="text-zinc-500 text-xs">UI interaction feedback</div>
+                </div>
+                <button 
+                  onClick={() => setSoundEnabled(!soundEnabled)} 
+                  className={`w-14 h-8 rounded-full relative transition-all ${soundEnabled ? mobileTheme.activeBtn : 'bg-zinc-700'}`}
+                >
+                  <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all shadow-lg ${soundEnabled ? 'right-1' : 'left-1'}`} />
+                </button>
+              </div>
+              
+              {/* Version Info */}
+              <div className={`p-4 rounded-xl ${mobileTheme.bgAccent} border ${mobileTheme.borderClass}`}>
+                <div className={`${mobileTheme.primaryClass} text-sm font-mono font-bold`}>AeThex OS v3.0.0</div>
+                <div className="text-zinc-500 text-xs mt-1">Build 2025.12.17 • Mobile</div>
+              </div>
+
+              {/* Secrets Hint */}
+              {!secretsUnlocked && (
+                <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass} text-center`}>
+                  <div className="text-zinc-500 text-xs font-mono">🔒 Hidden features available...</div>
+                  <div className="text-zinc-600 text-[10px] mt-1">Try the Konami Code</div>
+                </div>
+              )}
+
+              {/* Device Info */}
+              <div className={`p-4 rounded-xl bg-zinc-900/80 border ${mobileTheme.borderClass}`}>
+                <div className={`text-xs ${mobileTheme.secondaryClass} uppercase tracking-wider mb-3 font-bold`}>
+                  Device
+                </div>
+                <div className="space-y-2 text-xs">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Platform</span>
+                    <span className="text-zinc-300">Android (Capacitor)</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Mode</span>
+                    <span className={mobileTheme.primaryClass}>{isFoundation ? 'Foundation' : 'Corporation'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-500">Session</span>
+                    <span className="text-zinc-300">Active</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Desktop Settings UI (original)
   return (
     <div className="h-full bg-slate-950 flex flex-col">
       <div className="flex border-b border-white/10">
