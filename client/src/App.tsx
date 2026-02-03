@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/auth";
 import { TutorialProvider } from "@/components/Tutorial";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { HapticProvider } from "@/components/mobile/HapticFeedback";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Passport from "@/pages/passport";
@@ -114,12 +115,14 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <LabTerminalProvider>
-          <TutorialProvider>
-            <Toaster />
-            <Router />
-          </TutorialProvider>
-        </LabTerminalProvider>
+        <HapticProvider enableGlobalTouchFeedback={true}>
+          <LabTerminalProvider>
+            <TutorialProvider>
+              <Toaster />
+              <Router />
+            </TutorialProvider>
+          </LabTerminalProvider>
+        </HapticProvider>
       </AuthProvider>
     </QueryClientProvider>
   );

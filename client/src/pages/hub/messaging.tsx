@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Send, Search, Loader2 } from "lucide-react";
 import { MobileHeader } from "@/components/mobile/MobileHeader";
+import { isEmbedded } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -96,22 +97,29 @@ export default function Messaging() {
     c.username.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const embedded = isEmbedded();
+
   return (
     <div className="h-screen flex flex-col bg-slate-900">
-      {/* Mobile Header */}
-      <div className="md:hidden">
-        <MobileHeader title="Messages" />
-      </div>
-      
-      {/* Desktop Header */}
-      <div className="hidden md:flex bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4">
-        <Link href="/">
-          <button className="text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        </Link>
-        <h1 className="text-2xl font-bold text-white">Messages</h1>
-      </div>
+      {/* Headers - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <>
+          {/* Mobile Header */}
+          <div className="md:hidden">
+            <MobileHeader title="Messages" />
+          </div>
+          
+          {/* Desktop Header */}
+          <div className="hidden md:flex bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4">
+            <Link href="/">
+              <button className="text-slate-400 hover:text-white">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
+            <h1 className="text-2xl font-bold text-white">Messages</h1>
+          </div>
+        </>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Chat List */}

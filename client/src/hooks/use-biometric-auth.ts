@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Capacitor } from '@capacitor/core';
-
-// Note: Biometric auth requires native-auth plugin or similar
-// For now we'll create the interface and you can install the plugin later
+import { NativeBiometric, BiometryType } from 'capacitor-native-biometric';
 
 interface BiometricAuthResult {
   isAvailable: boolean;
   biometricType: 'fingerprint' | 'face' | 'iris' | 'none';
-  authenticate: () => Promise<boolean>;
+  authenticate: (reason?: string) => Promise<boolean>;
   isAuthenticated: boolean;
+  checkCredentials: () => Promise<boolean>;
+  setCredentials: (username: string, password: string) => Promise<void>;
+  deleteCredentials: () => Promise<void>;
 }
 
 export function useBiometricAuth(): BiometricAuthResult {
@@ -23,31 +24,46 @@ export function useBiometricAuth(): BiometricAuthResult {
         return;
       }
 
-      // Check if biometrics are available
-      // This would use @capacitor-community/native-biometric or similar
-      // For now, we'll assume it's available on mobile
-      setIsAvailable(true);
-      setBiometricType('fingerprint'); // Default assumption
+      try {
+        const result = await NativeBiometric.isAvailable();
+        setIsAvailable(result.isAvailable);
+        
+        // Map biometry type
+        switch (result.biometryType) {
+          case BiometryType.FINGERPRINT:
+          case BiometryType.TOUCH_ID:
+            setBiometricType('fingerprint');
+            break;
+          case BiometryType.FACE_ID:
+          case BiometryType.FACE_AUTHENTICATION:
+            setBiometricType('face');
+            break;
+          case BiometryType.IRIS_AUTHENTICATION:
+            setBiometricType('iris');
+            break;
+          default:
+            setBiometricType('none');
+        }
+      } catch (error) {
+        console.error('Biometric availability check failed:', error);
+        setIsAvailable(false);
+      }
     };
 
     checkAvailability();
   }, []);
 
-  const authenticate = async (): Promise<boolean> => {
+  const authenticate = useCallback(async (reason?: string): Promise<boolean> => {
     if (!isAvailable) return false;
 
     try {
-      // This is where you'd call the actual biometric auth
-      // For example with @capacitor-community/native-biometric:
-      // const result = await NativeBiometric.verifyIdentity({
-      //   reason: "Authenticate to access AeThex OS",
-      //   title: "Biometric Authentication",
-      //   subtitle: "Use your fingerprint or face",
-      //   description: "Please authenticate"
-      // });
+      await NativeBiometric.verifyIdentity({
+        reason: reason || 'Authenticate to access AeThex OS',
+        title: 'Biometric Authentication',
+        subtitle: 'Use your fingerprint or face',
+        description: 'Verify your identity to continue',
+      });
       
-      // For now, simulate success
-      console.log('Biometric auth would trigger here');
       setIsAuthenticated(true);
       return true;
     } catch (error) {
@@ -55,12 +71,43 @@ export function useBiometricAuth(): BiometricAuthResult {
       setIsAuthenticated(false);
       return false;
     }
-  };
+  }, [isAvailable]);
+
+  const checkCredentials = useCallback(async (): Promise<boolean> => {
+    if (!Capacitor.isNativePlatform()) return false;
+    try {
+      await NativeBiometric.getCredentials({ server: 'com.aethex.os' });
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  const setCredentials = useCallback(async (username: string, password: string): Promise<void> => {
+    if (!Capacitor.isNativePlatform()) return;
+    await NativeBiometric.setCredentials({
+      server: 'com.aethex.os',
+      username,
+      password,
+    });
+  }, []);
+
+  const deleteCredentials = useCallback(async (): Promise<void> => {
+    if (!Capacitor.isNativePlatform()) return;
+    try {
+      await NativeBiometric.deleteCredentials({ server: 'com.aethex.os' });
+    } catch {
+      // Credentials may not exist
+    }
+  }, []);
 
   return {
     isAvailable,
     biometricType,
     authenticate,
-    isAuthenticated
+    isAuthenticated,
+    checkCredentials,
+    setCredentials,
+    deleteCredentials,
   };
 }

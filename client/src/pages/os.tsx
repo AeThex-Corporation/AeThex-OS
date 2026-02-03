@@ -11,6 +11,8 @@ import { useMobileNative } from "@/hooks/use-mobile-native";
 import { useNativeFeatures } from "@/hooks/use-native-features";
 import { useBiometricAuth } from "@/hooks/use-biometric-auth";
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { App as CapacitorApp } from '@capacitor/app';
+import { isMobile } from '@/lib/platform';
 import { MobileQuickActions } from "@/components/MobileQuickActions";
 import { Minesweeper } from "@/components/games/Minesweeper";
 import { CookieClicker } from "@/components/games/CookieClicker";
@@ -1215,131 +1217,162 @@ export default function AeThexOS() {
     };
   }, [layout.isMobile]);
 
+  // Handle Android hardware back button
+  useEffect(() => {
+    if (!layout.isMobile || !isMobile()) return;
+
+    const backHandler = CapacitorApp.addListener('backButton', () => {
+      // Get current active windows (non-minimized)
+      const activeWindows = windows.filter(w => !w.minimized);
+      
+      if (activeWindows.length > 0) {
+        // Close the topmost window
+        const topWindow = activeWindows[activeWindows.length - 1];
+        closeWindow(topWindow.id);
+        impact('light');
+      } else {
+        // No windows open - minimize app (don't exit)
+        CapacitorApp.minimizeApp();
+      }
+    });
+
+    return () => {
+      backHandler.remove();
+    };
+  }, [layout.isMobile, windows, closeWindow, impact]);
+
   // Native Android App Layout
   if (layout.isMobile) {
     const activeWindows = windows.filter(w => !w.minimized);
     const currentWindow = activeWindows[activeWindows.length - 1];
+    
+    // Dynamic theme colors based on clearance mode
+    const isFoundation = clearanceMode === 'foundation';
+    const mobileTheme = {
+      primary: isFoundation ? 'rgb(220, 38, 38)' : 'rgb(59, 130, 246)', // red-600 or blue-500
+      secondary: isFoundation ? 'rgb(212, 175, 55)' : 'rgb(148, 163, 184)', // gold or slate-400
+      primaryClass: isFoundation ? 'text-red-500' : 'text-blue-500',
+      secondaryClass: isFoundation ? 'text-amber-400' : 'text-slate-300',
+      borderClass: isFoundation ? 'border-red-900/50' : 'border-blue-900/50',
+      bgAccent: isFoundation ? 'bg-red-900/20' : 'bg-blue-900/20',
+      iconClass: isFoundation ? 'text-red-400' : 'text-blue-400',
+      gradientBg: isFoundation 
+        ? 'linear-gradient(135deg, #0a0a0a 0%, #1a0505 50%, #0a0a0a 100%)'
+        : 'linear-gradient(135deg, #0a0a0a 0%, #050a14 50%, #0a0a0a 100%)',
+    };
 
     return (
-      <div className="h-screen w-screen bg-black overflow-hidden flex flex-col">
-        <style>{`
-          @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
-          }
-          @keyframes pulse-border {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 0.8; }
-          }
-        `}</style>
-
-        {/* Ingress Status Bar - Minimal */}
-        <div className="relative h-8 bg-black/90 border-b border-emerald-500/50 shrink-0">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-emerald-500/5 to-transparent"></div>
+      <div className="h-screen w-screen overflow-hidden flex flex-col" style={{ background: mobileTheme.gradientBg }}>
+        {/* AeThex Mobile Status Bar */}
+        <div className={`relative h-10 bg-black/90 ${mobileTheme.borderClass} border-b shrink-0`} style={{ paddingTop: 'env(safe-area-inset-top)' }}>
           <div className="relative flex items-center justify-between px-4 h-full">
             <div className="flex items-center gap-3">
-              <Activity className="w-3.5 h-3.5 text-emerald-400" />
-              <Wifi className="w-3.5 h-3.5 text-cyan-400" />
-              <div className="flex items-center gap-0.5">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="w-0.5 h-1.5 bg-emerald-400 rounded-full" style={{ height: `${(i + 1) * 2}px` }} />
-                ))}
-              </div>
+              <span className={`${mobileTheme.primaryClass} font-bold text-sm font-mono`}>AeThex</span>
+              <span className={`${mobileTheme.secondaryClass} text-xs font-mono opacity-60`}>
+                {isFoundation ? 'FOUNDATION' : 'CORP'}
+              </span>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
             </div>
-            <div className="flex items-center gap-4 text-cyan-400 text-xs font-mono font-bold tracking-wider">
+            <div className={`flex items-center gap-3 ${mobileTheme.secondaryClass} opacity-80 text-xs font-mono`}>
+              <Wifi className="w-3.5 h-3.5" />
               <span>{batteryInfo?.level || 100}%</span>
-              <Battery className="w-4 h-4 text-green-400" />
-              <span className="font-mono text-cyan-400">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              <Battery className="w-4 h-4" />
+              <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-hidden relative bg-black">
-          <AnimatePresence mode="wait">
+        <div className="flex-1 overflow-hidden relative">
+          <AnimatePresence mode="wait" initial={false}>
             {currentWindow ? (
-              // Fullscreen App View with 3D Card Flip
               <motion.div
-                key={currentWindow.id}
-                initial={{ rotateY: 90, opacity: 0 }}
-                animate={{ rotateY: 0, opacity: 1 }}
-                exit={{ rotateY: -90, opacity: 0 }}
-                transition={{ duration: 0.4, type: "spring" }}
-                style={{ transformStyle: "preserve-3d" }}
-                className="h-full w-full flex flex-col relative"
+                key={`window-${currentWindow.id}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="absolute inset-0 flex flex-col"
               >
-                {/* Ingress Style - Minimal App Bar */}
-                <div className="relative h-12 bg-black/95 border-b-2 border-emerald-500/50 shrink-0">
-                  <div className="absolute inset-0" style={{ animation: 'pulse-border 2s ease-in-out infinite' }}>
-                    <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent"></div>
+                {/* App Header */}
+                <div className={`h-14 bg-black/95 ${mobileTheme.borderClass} border-b shrink-0 flex items-center px-4 gap-3`}>
+                  <button
+                    onClick={() => {
+                      impact('light');
+                      closeWindow(currentWindow.id);
+                    }}
+                    className={`w-10 h-10 rounded-lg ${mobileTheme.bgAccent} border ${mobileTheme.borderClass} flex items-center justify-center active:opacity-70`}
+                  >
+                    <ChevronLeft className={`w-5 h-5 ${mobileTheme.iconClass}`} />
+                  </button>
+                  <div className="flex-1">
+                    <h1 className={`${mobileTheme.secondaryClass} font-bold text-lg`}>{currentWindow.title}</h1>
                   </div>
-                  <div className="relative flex items-center px-3 h-full">
-                    <button
-                      onClick={() => {
-                        impact('light');
-                        closeWindow(currentWindow.id);
-                      }}
-                      className="w-10 h-10 flex items-center justify-center border border-emerald-500/50 active:bg-emerald-500/20"
-                      style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
-                    >
-                      <ChevronLeft className="w-5 h-5 text-emerald-400" />
-                    </button>
-                    <div className="flex-1 px-4">
-                      <h1 className="text-cyan-400 font-mono font-bold text-lg uppercase tracking-widest">
-                        {currentWindow.title}
-                      </h1>
-                    </div>
-                    <button
-                      className="w-10 h-10 flex items-center justify-center border border-cyan-500/50 active:bg-cyan-500/20"
-                      style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
-                    >
-                      <MoreVertical className="w-5 h-5 text-cyan-400" />
-                    </button>
-                  </div>
+                  <button className="w-10 h-10 rounded-lg bg-zinc-900/50 border border-zinc-800/40 flex items-center justify-center">
+                    <MoreVertical className="w-5 h-5 text-zinc-400" />
+                  </button>
                 </div>
                 
                 {/* App Content */}
-                <div className="flex-1 overflow-auto relative bg-black">
+                <div className="flex-1 overflow-auto bg-black/80">
                   {renderAppContent(currentWindow.component)}
                 </div>
               </motion.div>
             ) : (
-              // ULTRA FUTURISTIC LAUNCHER
+              // Home Launcher
               <motion.div
-                key="launcher"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                className="h-full flex flex-col relative"
+                key="launcher-home"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="absolute inset-0 flex flex-col"
               >
-                {/* Ingress Style Search Bar */}
-                <div className="px-4 pt-6 pb-4">
-                  <div className="relative bg-black/80 border border-emerald-500/50 p-3">
-                    <div className="absolute inset-0 border border-cyan-500/30" style={{ clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))' }}></div>
-                    <div className="relative flex items-center gap-3">
-                      <Search className="w-5 h-5 text-emerald-400" />
+                {/* Header with Theme Toggle */}
+                <div className="px-4 pt-4 pb-2 flex items-center justify-between">
+                  <div>
+                    <h1 className={`${mobileTheme.primaryClass} font-bold text-xl`}>
+                      {isFoundation ? 'The Foundation' : 'The Corporation'}
+                    </h1>
+                    <p className="text-zinc-500 text-xs">Welcome back, Architect</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      impact('medium');
+                      setClearanceMode(isFoundation ? 'corp' : 'foundation');
+                    }}
+                    className={`px-3 py-1.5 rounded-lg ${mobileTheme.bgAccent} border ${mobileTheme.borderClass}`}
+                  >
+                    <span className={`${mobileTheme.secondaryClass} text-xs font-mono`}>
+                      {isFoundation ? '→ CORP' : '→ FND'}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="px-4 pt-2 pb-3">
+                  <div className={`relative bg-zinc-900/80 border ${mobileTheme.borderClass} rounded-xl p-3`}>
+                    <div className="flex items-center gap-3">
+                      <Search className={`w-5 h-5 ${mobileTheme.iconClass}`} />
                       <input
                         type="text"
-                        placeholder="SCANNER SEARCH..."
-                        className="flex-1 bg-transparent text-emerald-400 placeholder:text-emerald-400/40 outline-none text-sm font-mono uppercase tracking-wide"
+                        placeholder="Search apps..."
+                        className="flex-1 bg-transparent text-white placeholder:text-zinc-500 outline-none text-sm"
                         onFocus={() => impact('light')}
                       />
-                      <Mic className="w-5 h-5 text-cyan-400" />
                     </div>
                   </div>
                 </div>
 
-                {/* App Grid - Hexagonal */}
-                <div className="flex-1 overflow-auto px-4 pb-24">
+                {/* App Grid */}
+                <div className="flex-1 overflow-auto px-4 pb-32">
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-3 px-2">
-                      <div className="w-2 h-2 bg-emerald-400"></div>
-                      <h2 className="text-emerald-400 text-xs uppercase tracking-widest font-mono font-bold">
-                        Quick Access
-                      </h2>
-                      <div className="flex-1 h-[1px] bg-emerald-500/30"></div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: mobileTheme.primary }}></div>
+                      <h2 className={`${mobileTheme.secondaryClass} opacity-90 text-xs uppercase tracking-widest font-bold`}>Quick Access</h2>
+                      <div className={`flex-1 h-px ${mobileTheme.borderClass} bg-current opacity-30`}></div>
                     </div>
-                    <div className="grid grid-cols-4 gap-3">
+                    <div className="grid grid-cols-4 gap-4">
                       {apps.slice(0, 8).map((app) => (
                         <button
                           key={app.id}
@@ -1347,16 +1380,12 @@ export default function AeThexOS() {
                             impact('medium');
                             openApp(app);
                           }}
-                          className="flex flex-col items-center gap-2 p-2 active:bg-emerald-500/10"
+                          className={`flex flex-col items-center gap-2 p-2 rounded-xl active:${mobileTheme.bgAccent}`}
                         >
-                          <div 
-                            className="relative w-16 h-16 bg-black border-2 border-emerald-500/50 flex items-center justify-center active:border-cyan-400"
-                            style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
-                          >
-                            <div className="text-emerald-400 scale-75">{app.icon}</div>
-                            <div className="absolute inset-0 border border-cyan-500/20" style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}></div>
+                          <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-950 border ${mobileTheme.borderClass} flex items-center justify-center shadow-lg`}>
+                            <div className={mobileTheme.iconClass}>{app.icon}</div>
                           </div>
-                          <span className="text-cyan-400 text-[9px] font-mono text-center line-clamp-2 leading-tight uppercase">
+                          <span className="text-zinc-300 text-[10px] font-medium text-center line-clamp-2 leading-tight">
                             {app.title}
                           </span>
                         </button>
@@ -1364,14 +1393,12 @@ export default function AeThexOS() {
                     </div>
                   </div>
 
-                  {/* All Apps - Minimal List */}
+                  {/* All Apps List */}
                   <div>
-                    <div className="flex items-center gap-2 mb-3 px-2">
-                      <div className="w-2 h-2 bg-cyan-400"></div>
-                      <h2 className="text-cyan-400 text-xs uppercase tracking-widest font-mono font-bold">
-                        All Systems
-                      </h2>
-                      <div className="flex-1 h-[1px] bg-cyan-500/30"></div>
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: mobileTheme.secondary }}></div>
+                      <h2 className={`${mobileTheme.secondaryClass} opacity-90 text-xs uppercase tracking-widest font-bold`}>All Apps</h2>
+                      <div className={`flex-1 h-px opacity-30`} style={{ backgroundColor: mobileTheme.secondary }}></div>
                     </div>
                     <div className="space-y-2">
                       {apps.slice(8).map((app) => (
@@ -1381,13 +1408,13 @@ export default function AeThexOS() {
                             impact('medium');
                             openApp(app);
                           }}
-                          className="relative w-full flex items-center gap-3 p-3 border border-emerald-500/30 active:bg-emerald-500/10 active:border-cyan-500"
+                          className={`w-full flex items-center gap-4 p-3 rounded-xl bg-zinc-900/40 border border-zinc-800/40 active:${mobileTheme.bgAccent} active:${mobileTheme.borderClass}`}
                         >
-                          <div className="w-10 h-10 bg-black border border-emerald-500/50 flex items-center justify-center shrink-0">
-                            <div className="text-emerald-400 scale-75">{app.icon}</div>
+                          <div className={`w-11 h-11 rounded-xl bg-gradient-to-br from-zinc-800 to-zinc-900 border ${mobileTheme.borderClass} flex items-center justify-center shrink-0`}>
+                            <div className={`${mobileTheme.iconClass} scale-90`}>{app.icon}</div>
                           </div>
-                          <span className="text-cyan-400 font-mono text-sm text-left flex-1 uppercase tracking-wide">{app.title}</span>
-                          <ChevronRight className="w-4 h-4 text-emerald-400" />
+                          <span className="text-zinc-200 font-medium text-sm text-left flex-1">{app.title}</span>
+                          <ChevronRight className="w-4 h-4 text-zinc-600" />
                         </button>
                       ))}
                     </div>
@@ -1398,30 +1425,27 @@ export default function AeThexOS() {
           </AnimatePresence>
         </div>
 
-        {/* INGRESS STYLE NAVIGATION BAR - Lightweight */}
+        {/* Bottom Navigation */}
         <div 
-          className="relative bg-black/95 border-t-2 border-emerald-500/50 shrink-0 z-50"
-          style={{ 
-            paddingTop: '0.75rem',
-            paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
-          }}
+          className={`bg-black/95 border-t ${mobileTheme.borderClass} shrink-0`}
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
         >
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent" style={{ animation: 'pulse-border 2s ease-in-out infinite' }}></div>
-          <div className="relative flex items-center justify-around px-6">
+          <div className="flex items-center justify-around py-2 px-4">
             <button
               onClick={() => {
                 impact('medium');
                 windows.forEach(w => closeWindow(w.id));
               }}
-              className="relative w-14 h-14 bg-black border-2 border-emerald-500/70 flex items-center justify-center active:bg-emerald-500/20 active:border-cyan-400"
-              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl ${!currentWindow ? mobileTheme.bgAccent : ''}`}
             >
-              <Home className="w-6 h-6 text-emerald-400" />
+              <Home className={`w-6 h-6 ${!currentWindow ? mobileTheme.iconClass : 'text-zinc-500'}`} />
+              <span className={`text-[10px] font-medium ${!currentWindow ? mobileTheme.secondaryClass : 'text-zinc-600'}`}>Home</span>
             </button>
             
             <button
               onClick={() => {
                 impact('medium');
+                // Open apps drawer / show minimized apps
                 const minimized = windows.filter(w => w.minimized);
                 if (minimized.length > 0) {
                   setWindows(prev => prev.map(w => 
@@ -1429,12 +1453,12 @@ export default function AeThexOS() {
                   ));
                 }
               }}
-              className="relative w-14 h-14 bg-black border-2 border-cyan-500/70 flex items-center justify-center active:bg-cyan-500/20 active:border-emerald-400"
-              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+              className="flex flex-col items-center gap-1 p-3 rounded-2xl relative"
             >
-              <Square className="w-6 h-6 text-cyan-400" />
+              <Layers className={`w-6 h-6 ${windows.length > 0 ? mobileTheme.iconClass : 'text-zinc-500'}`} />
+              <span className="text-[10px] text-zinc-600 font-medium">Recents</span>
               {windows.filter(w => w.minimized).length > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-emerald-500 text-black text-xs flex items-center justify-center font-bold">
+                <span className="absolute top-1 right-1 w-5 h-5 text-white text-[10px] flex items-center justify-center rounded-full font-bold" style={{ backgroundColor: mobileTheme.primary }}>
                   {windows.filter(w => w.minimized).length}
                 </span>
               )}
@@ -1443,19 +1467,19 @@ export default function AeThexOS() {
             <button
               onClick={() => {
                 impact('medium');
-                if (currentWindow) {
-                  closeWindow(currentWindow.id);
-                }
+                // Find and open settings app
+                const settingsApp = apps.find(a => a.id === 'settings');
+                if (settingsApp) openApp(settingsApp);
               }}
-              className="relative w-14 h-14 bg-black border-2 border-emerald-500/70 flex items-center justify-center active:bg-emerald-500/20 active:border-cyan-400"
-              style={{ clipPath: 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)' }}
+              className={`flex flex-col items-center gap-1 p-3 rounded-2xl ${currentWindow?.component === 'settings' ? mobileTheme.bgAccent : ''}`}
             >
-              <ArrowLeft className="w-6 h-6 text-emerald-400" />
+              <Settings className={`w-6 h-6 ${currentWindow?.component === 'settings' ? mobileTheme.iconClass : 'text-zinc-500'}`} />
+              <span className={`text-[10px] font-medium ${currentWindow?.component === 'settings' ? mobileTheme.secondaryClass : 'text-zinc-600'}`}>Settings</span>
             </button>
           </div>
         </div>
 
-        {/* Floating Action Button with Orbital Menu */}
+        {/* Floating Quick Actions */}
         <MobileQuickActions />
       </div>
     );

@@ -20,11 +20,11 @@
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc",
     "db:push": "drizzle-kit push",
-  "tauri": "cd shell/aethex-shell && npm run tauri",
-  "tauri:dev": "cd shell/aethex-shell && npm run tauri dev",
-  "tauri:build": "cd shell/aethex-shell && npm run tauri build",
-  "audit:org-scope": "tsx script/org-scope-audit.ts",
-  "test:org-scope": "tsx --test server/org-scoping.test.ts"
+    "tauri": "cd shell/aethex-shell && npm run tauri",
+    "tauri:dev": "cd shell/aethex-shell && npm run tauri dev",
+    "tauri:build": "cd shell/aethex-shell && npm run tauri build",
+    "audit:org-scope": "tsx script/org-scope-audit.ts",
+    "test:org-scope": "tsx --test server/org-scoping.test.ts"
   },
   "dependencies": {
     "@capacitor-community/privacy-screen": "^6.0.0",
@@ -83,6 +83,7 @@
     "@tanstack/react-query": "^5.60.5",
     "@types/bcrypt": "^6.0.0",
     "bcrypt": "^6.0.0",
+    "capacitor-native-biometric": "^4.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",

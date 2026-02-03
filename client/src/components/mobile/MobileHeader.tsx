@@ -8,6 +8,15 @@ interface MobileHeaderProps {
   backPath?: string;
 }
 
+// Check if we're inside an iframe (embedded in the OS)
+const isEmbedded = () => {
+  try {
+    return window.self !== window.top;
+  } catch (e) {
+    return true; // If we can't access parent, assume embedded
+  }
+};
+
 export function MobileHeader({ 
   title = 'AeThex OS', 
   onMenuClick,
@@ -15,6 +24,11 @@ export function MobileHeader({
   backPath = '/mobile'
 }: MobileHeaderProps) {
   const [, navigate] = useLocation();
+
+  // Don't render the header if we're embedded inside the OS iframe
+  if (isEmbedded()) {
+    return null;
+  }
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 bg-black/95 backdrop-blur-xl border-b border-emerald-500/30">

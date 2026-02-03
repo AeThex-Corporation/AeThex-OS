@@ -7,6 +7,7 @@ import {
   Trash2, Award, User, Calendar, Search, Filter, Plus, Loader2,
   Package, AlertCircle, CheckCircle
 } from "lucide-react";
+import { isEmbedded } from "@/lib/embed-utils";
 
 interface Mod {
   id: string;
@@ -199,69 +200,72 @@ export default function ModWorkshop() {
 
   const games = ["all", "Minecraft", "Roblox", "Steam Games", "All Games"];
 
+  const embedded = isEmbedded();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 text-white">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 sticky top-0 z-10 py-4 px-4 md:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 gap-2">
-            <div className="flex items-center gap-3">
-              <Link href="/hub">
-                <button className="text-slate-400 hover:text-white transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Package className="w-6 h-6 text-cyan-400" />
-                <h1 className="text-2xl font-bold">Mod Workshop</h1>
+      {/* Header - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <div className="bg-slate-950 border-b border-slate-700 sticky top-0 z-10 py-4 px-4 md:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <div className="flex items-center gap-3">
+                <Link href="/hub">
+                  <button className="text-slate-400 hover:text-white transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Package className="w-6 h-6 text-cyan-400" />
+                  <h1 className="text-2xl font-bold">Mod Workshop</h1>
+                </div>
               </div>
-            </div>
 
-            <Button
-              onClick={() => setShowUploadModal(true)}
-              className="bg-cyan-600 hover:bg-cyan-700 gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              <span className="hidden sm:inline">Upload Mod</span>
-              <span className="sm:hidden">Upload</span>
-            </Button>
-          </div>
-
-          {/* Search & Filters */}
-          <div className="space-y-2">
-            <div className="flex gap-2">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                <input
-                  placeholder="Search mods, authors..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-400"
-                />
-              </div>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+              <Button
+                onClick={() => setShowUploadModal(true)}
+                className="bg-cyan-600 hover:bg-cyan-700 gap-2"
               >
-                <option value="trending">Trending</option>
-                <option value="newest">Newest</option>
-                <option value="popular">Most Downloaded</option>
-                <option value="rating">Highest Rated</option>
-              </select>
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Upload Mod</span>
+                <span className="sm:hidden">Upload</span>
+              </Button>
             </div>
 
-            {/* Category & Game Filters */}
-            <div className="flex gap-2 flex-wrap">
+            {/* Search & Filters */}
+            <div className="space-y-2">
               <div className="flex gap-2">
-                {(["all", "gameplay", "cosmetic", "utility", "enhancement"] as const).map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
-                      selectedCategory === cat
-                        ? "bg-cyan-600 text-white"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                  <input
+                    placeholder="Search mods, authors..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm placeholder-slate-400"
+                  />
+                </div>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+                >
+                  <option value="trending">Trending</option>
+                  <option value="newest">Newest</option>
+                  <option value="popular">Most Downloaded</option>
+                  <option value="rating">Highest Rated</option>
+                </select>
+              </div>
+
+              {/* Category & Game Filters */}
+              <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2">
+                  {(["all", "gameplay", "cosmetic", "utility", "enhancement"] as const).map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1 rounded-lg text-xs font-medium capitalize transition-colors ${
+                        selectedCategory === cat
+                          ? "bg-cyan-600 text-white"
+                          : "bg-slate-800 text-slate-300 hover:bg-slate-700"
                     }`}
                   >
                     {cat === "all" ? "All Categories" : cat}

@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, TrendingUp, Code, Star, Eye, Heart, Share2, Loader2 } from "lucide-react";
+import { isEmbedded } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -53,21 +54,25 @@ export default function CodeGallery() {
     }
   };
 
+  const embedded = isEmbedded();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <button className="text-slate-400 hover:text-white">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          </Link>
-          <Code className="w-6 h-6 text-cyan-400" />
-          <h1 className="text-2xl font-bold text-white">Code Gallery</h1>
+      {/* Header - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <button className="text-slate-400 hover:text-white">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
+            <Code className="w-6 h-6 text-cyan-400" />
+            <h1 className="text-2xl font-bold text-white">Code Gallery</h1>
+          </div>
+          <Button className="bg-cyan-600 hover:bg-cyan-700">Share Snippet</Button>
         </div>
-        <Button className="bg-cyan-600 hover:bg-cyan-700">Share Snippet</Button>
-      </div>
+      )}
 
       <div className="p-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

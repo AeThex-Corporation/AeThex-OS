@@ -8,6 +8,7 @@ import {
   ArrowLeft, ShoppingCart, Star, Plus, Loader2, Gamepad2, 
   Zap, Trophy, Users, DollarSign, TrendingUp, Filter, Search
 } from "lucide-react";
+import { isEmbedded } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 
@@ -196,55 +197,59 @@ export default function GameMarketplace() {
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const embedded = isEmbedded();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-950 text-white">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 sticky top-0 z-10 py-4 px-4 md:px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-4 gap-2">
-            <div className="flex items-center gap-3">
-              <Link href="/hub">
-                <button className="text-slate-400 hover:text-white transition-colors">
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-              </Link>
-              <div className="flex items-center gap-2">
-                <Gamepad2 className="w-6 h-6 text-cyan-400" />
-                <h1 className="text-2xl font-bold">Game Marketplace</h1>
+      {/* Header - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <div className="bg-slate-950 border-b border-slate-700 sticky top-0 z-10 py-4 px-4 md:px-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between mb-4 gap-2">
+              <div className="flex items-center gap-3">
+                <Link href="/hub">
+                  <button className="text-slate-400 hover:text-white transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Gamepad2 className="w-6 h-6 text-cyan-400" />
+                  <h1 className="text-2xl font-bold">Game Marketplace</h1>
+                </div>
+              </div>
+
+              {/* Wallet Balance */}
+              <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
+                <DollarSign className="w-4 h-4 text-yellow-400" />
+                <span className="font-mono font-bold text-lg text-cyan-400">{wallet.balance} {wallet.currency}</span>
               </div>
             </div>
 
-            {/* Wallet Balance */}
-            <div className="bg-slate-800 px-4 py-2 rounded-lg border border-slate-700 flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-yellow-400" />
-              <span className="font-mono font-bold text-lg text-cyan-400">{wallet.balance} {wallet.currency}</span>
+            {/* Search & Filter */}
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
+                <Input
+                  placeholder="Search games, assets, creators..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 bg-slate-800 border-slate-700 text-white"
+                />
+              </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
+              >
+                <option value="newest">Newest</option>
+                <option value="popular">Popular</option>
+                <option value="price-low">Price: Low→High</option>
+                <option value="price-high">Price: High→Low</option>
+              </select>
             </div>
-          </div>
-
-          {/* Search & Filter */}
-          <div className="flex gap-2">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-              <Input
-                placeholder="Search games, assets, creators..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-slate-800 border-slate-700 text-white"
-              />
-            </div>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-white text-sm"
-            >
-              <option value="newest">Newest</option>
-              <option value="popular">Popular</option>
-              <option value="price-low">Price: Low→High</option>
-              <option value="price-high">Price: High→Low</option>
-            </select>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4 md:p-6">

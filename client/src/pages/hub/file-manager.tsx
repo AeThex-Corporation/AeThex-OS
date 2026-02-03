@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, FileText, Folder, Plus, Trash2, Download, Copy, Loader2 } from "lucide-react";
+import { isEmbedded } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -70,23 +71,27 @@ export default function FileManager() {
     }
   };
 
+  const embedded = isEmbedded();
+
   return (
     <div className="h-screen flex flex-col bg-slate-900">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <button className="text-slate-400 hover:text-white">
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-          </Link>
-          <h1 className="text-2xl font-bold text-white">File Manager</h1>
+      {/* Header - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-4">
+            <Link href="/">
+              <button className="text-slate-400 hover:text-white">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            </Link>
+            <h1 className="text-2xl font-bold text-white">File Manager</h1>
+          </div>
+          <Button className="bg-cyan-600 hover:bg-cyan-700 gap-2">
+            <Plus className="w-4 h-4" />
+            New File
+          </Button>
         </div>
-        <Button className="bg-cyan-600 hover:bg-cyan-700 gap-2">
-          <Plus className="w-4 h-4" />
-          New File
-        </Button>
-      </div>
+      )}
 
       <div className="flex flex-1 overflow-hidden">
         {/* File List */}

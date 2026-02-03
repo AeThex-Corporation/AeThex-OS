@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AeThex Brand Colors -->
+    <color name="colorPrimary">#DC2626</color>
+    <color name="colorPrimaryDark">#0a0a0a</color>
+    <color name="colorAccent">#D4AF37</color>
+    
+    <!-- Splash Screen -->
+    <color name="splash_background">#0a0a0a</color>
+    
+    <!-- Status Bar -->
+    <color name="status_bar">#0a0a0a</color>
+    
+    <!-- Navigation Bar -->
+    <color name="navigation_bar">#0a0a0a</color>
+    
+    <!-- Foundation Theme -->
+    <color name="foundation_primary">#DC2626</color>
+    <color name="foundation_gold">#D4AF37</color>
+    <color name="foundation_dark">#1a0505</color>
+    
+    <!-- Corp Theme -->
+    <color name="corp_primary">#3B82F6</color>
+    <color name="corp_silver">#C0C0C0</color>
+    <color name="corp_dark">#0f172a</color>
+</resources>

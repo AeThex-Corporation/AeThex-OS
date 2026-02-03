@@ -20,22 +20,23 @@ const config: CapacitorConfig = {
   },
   plugins: {
     SplashScreen: {
-      launchShowDuration: 0,
+      launchShowDuration: 2000,
       launchAutoHide: true,
-      backgroundColor: '#000000',
+      launchFadeOutDuration: 500,
+      backgroundColor: '#0a0a0a',
       androidSplashResourceName: 'splash',
       androidScaleType: 'CENTER_CROP',
-      showSpinner: false,
-      androidSpinnerStyle: 'large',
+      showSpinner: true,
+      androidSpinnerStyle: 'small',
       iosSpinnerStyle: 'small',
-      spinnerColor: '#999999',
+      spinnerColor: '#DC2626',
       splashFullScreen: true,
       splashImmersive: true
     },
     StatusBar: {
       style: 'DARK',
-      backgroundColor: '#000000',
-      overlaysWebView: true
+      backgroundColor: '#0a0a0a',
+      overlaysWebView: false
     },
     App: {
       backButtonEnabled: true
@@ -45,8 +46,18 @@ const config: CapacitorConfig = {
     },
     LocalNotifications: {
       smallIcon: 'ic_stat_icon_config_sample',
-      iconColor: '#488AFF',
+      iconColor: '#DC2626',
       sound: 'beep.wav'
+    },
+    Keyboard: {
+      resize: 'body',
+      resizeOnFullScreen: true,
+      style: 'dark'
+    },
+    Haptics: {
+      selectionStart: true,
+      selectionChanged: true,
+      selectionEnd: true
     }
   },
   android: {

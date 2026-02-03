@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ArrowLeft, Settings, Bell, Lock, Palette, HardDrive, User, Loader2 } from "lucide-react";
+import { isEmbedded } from "@/lib/embed-utils";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { nanoid } from "nanoid";
@@ -88,18 +89,22 @@ export default function SettingsWorkspace() {
     saveSettings(newSettings);
   };
 
+  const embedded = isEmbedded();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Header */}
-      <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
-        <Link href="/">
-          <button className="text-slate-400 hover:text-white">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        </Link>
-        <Settings className="w-6 h-6 text-cyan-400" />
-        <h1 className="text-2xl font-bold text-white">Workspace Settings</h1>
-      </div>
+      {/* Header - hidden when embedded in OS iframe */}
+      {!embedded && (
+        <div className="bg-slate-950 border-b border-slate-700 px-6 py-4 flex items-center gap-4 sticky top-0 z-10">
+          <Link href="/">
+            <button className="text-slate-400 hover:text-white">
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          </Link>
+          <Settings className="w-6 h-6 text-cyan-400" />
+          <h1 className="text-2xl font-bold text-white">Workspace Settings</h1>
+        </div>
+      )}
 
       <div className="p-6 max-w-4xl mx-auto">
         {/* Appearance Settings */}
